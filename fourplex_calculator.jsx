@@ -1,0 +1,1014 @@
+import { useState, useMemo, useCallback, useEffect } from "react";
+
+const C={navy:"#0D1F3C",navyM:"#1e3a6e",gold:"#C8922A",goldL:"#FDF3E3",teal:"#14705A",tealL:"#DFF2EC",red:"#9B2335",redL:"#FCEAEC",amber:"#8C5A0A",amberL:"#FDF3E3",slate:"#4A5568",border:"#E2E8F0",bg:"#F7F8FA",white:"#fff",text:"#1A202C"};
+const fmt =n=>new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(n||0);
+const fmtD=n=>(n<0?"−$":"$")+fmt(Math.abs(Math.round(n||0)));
+const fmtP=(n,d=1)=>isFinite(n)?n.toFixed(d)+"%":"—";
+const fmtX=n=>isFinite(n)?n.toFixed(1)+"×":"—";
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const num =v=>parseFloat((v+"").replace(/,/g,""))||0;
+function lv(v,g,w,inv=false){return !inv?(v>=g?"good":v>=w?"warn":"bad"):(v<=w?"good":v<=g?"warn":"bad");}
+
+// ── Atoms ─────────────────────────────────────────────────────
+function MoneyInput({value,onChange,label,sub,small,hint}){
+  const fmtL=n=>n>0?new Intl.NumberFormat("en-US").format(n):"";
+  return <div style={{display:"flex",flexDirection:"column",gap:2}}>
+    {label&&<label style={{fontSize:small?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
+    <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white}}>
+      <span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
+      <input type="text" value={fmtL(value)} placeholder="0"
+        onChange={e=>onChange(parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
+        style={{flex:1,padding:"6px 10px",fontSize:small?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
+    </div>
+    {(sub||hint)&&<span style={{fontSize:10,color:hint?"#0F6E56":"#A0AEC0"}}>{sub||hint}</span>}
+  </div>;
+}
+function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder}){
+  return <div style={{display:"flex",flexDirection:"column",gap:2}}>
+    {label&&<label style={{fontSize:xs?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
+    <div style={{display:"flex",alignItems:"center",border:"1px solid "+(disabled?"#e8e8e8":C.border),borderRadius:7,overflow:"hidden",background:disabled?"#F4F4F4":C.white}}>
+      {prefix&&<span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>{prefix}</span>}
+      <input type="number" value={value===0||value===null||value===undefined?"":value} min={min} max={max} step={step} disabled={!!disabled} placeholder={placeholder||"0"}
+        onChange={e=>{const v=e.target.value;onChange(v===""?0:num(v));}}
+        style={{flex:1,padding:"6px 8px",fontSize:xs?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
+      {suffix&&<span style={{padding:"6px 8px 6px 4px",fontSize:11,color:C.slate,flexShrink:0}}>{suffix}</span>}
+    </div>
+    {sub&&<span style={{fontSize:10,color:"#A0AEC0"}}>{sub}</span>}
+  </div>;
+}
+function Tog({checked,onChange,label,sub}){
+  return <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>
+    <div onClick={()=>onChange(!checked)} style={{width:32,height:18,borderRadius:9,background:checked?C.navy:C.border,transition:"background 0.2s",position:"relative",flexShrink:0}}>
+      <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:checked?16:2,transition:"left 0.2s"}}/>
+    </div>
+    <div><div style={{fontSize:11,fontWeight:600,color:C.text}}>{label}</div>
+    {sub&&<div style={{fontSize:10,color:C.slate}}>{sub}</div>}</div>
+  </label>;
+}
+function Pill({text,lvl}){
+  const m={good:["#DFF2EC","#14705A"],warn:["#FDF3E3","#8C5A0A"],bad:["#FCEAEC","#9B2335"],n:["#F7F8FA","#4A5568"]};
+  const[bg,fg]=m[lvl]||m.n;
+  return <span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:bg,color:fg,fontWeight:700,whiteSpace:"nowrap"}}>{text}</span>;
+}
+function Bar({val,max,good,warn,inv=false}){
+  const pct=clamp((val/(max||1))*100,0,100);
+  const col=!inv?(val>=good?C.teal:val>=warn?C.gold:C.red):(val<=warn?C.teal:val<=good?C.gold:C.red);
+  return <div style={{height:4,background:"#E2E8F0",borderRadius:3,overflow:"hidden",marginTop:4}}>
+    <div style={{width:pct+"%",height:"100%",background:col,transition:"width 0.4s"}}/>
+  </div>;
+}
+function Info({lines}){
+  const[s,setS]=useState(false);
+  return <span style={{position:"relative",display:"inline-block",marginLeft:4}}>
+    <span onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} style={{cursor:"help",color:"#A0AEC0",fontSize:12,fontWeight:700,userSelect:"none"}}>ⓘ</span>
+    {s&&<div style={{position:"absolute",bottom:"130%",left:"50%",transform:"translateX(-50%)",background:"#1A202C",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:999,boxShadow:"0 4px 16px rgba(0,0,0,0.3)",whiteSpace:"nowrap",pointerEvents:"none",minWidth:200}}>
+      {lines.map((l,i)=><div key={i} style={{lineHeight:1.6,color:l.startsWith("=")?"#68D391":l.startsWith("·")?"#A0AEC0":"#fff",fontWeight:l.startsWith("=")?"700":"400"}}>{l}</div>)}
+      <div style={{position:"absolute",bottom:-5,left:"50%",transform:"translateX(-50%)",width:10,height:10,background:"#1A202C",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
+    </div>}
+  </span>;
+}
+function SmBtn({active,onClick,label}){
+  return <button onClick={onClick} style={{padding:"2px 8px",borderRadius:5,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,border:"1px solid "+(active?C.navy:C.border),background:active?C.navy:C.white,color:active?"#fff":C.slate}}>{label}</button>;
+}
+function Card({title,icon,children,right}){
+  return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+    <div style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:"1px solid "+C.border}}>
+      <span style={{fontSize:14}}>{icon}</span>
+      <span style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>{title}</span>
+      {right&&<div style={{marginLeft:"auto"}}>{right}</div>}
+    </div>
+    <div style={{padding:"12px 13px",background:C.white}}>{children}</div>
+  </div>;
+}
+function SecLabel({text,right}){
+  return <div style={{display:"flex",justifyContent:"space-between",fontSize:10,fontWeight:700,color:C.navy,letterSpacing:"0.07em",textTransform:"uppercase",borderBottom:"1px solid "+C.border,paddingBottom:4,marginBottom:8}}>
+    <span>{text}</span>{right&&<span style={{fontWeight:400,color:C.slate,textTransform:"none",fontSize:11}}>{right}</span>}
+  </div>;
+}
+function PLRow({label,value,neg,pos,bold,hl,indent,note}){
+  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px 5px "+(indent?"20px":"8px"),background:hl?"#EEF2FF":"transparent",borderBottom:"1px solid #F7FAFC",fontWeight:bold?600:400,fontSize:12}}>
+    <span style={{color:bold?C.text:C.slate}}>{label}{note&&<span style={{fontSize:10,color:"#A0AEC0",marginLeft:5}}>{note}</span>}</span>
+    <span style={{color:neg?C.red:pos?"#2563EB":C.text,fontVariantNumeric:"tabular-nums"}}>{value}</span>
+  </div>;
+}
+function MBox({label,value,sub,lvl,bar,bMax,bGood,bWarn,bInv,tip}){
+  const col={good:C.teal,warn:C.amber,bad:C.red}[lvl]||C.slate;
+  return <div style={{background:C.white,border:"1px solid "+C.border,borderRadius:10,padding:"10px 12px"}}>
+    <div style={{fontSize:10,color:C.slate,fontWeight:700,letterSpacing:"0.04em",marginBottom:3,display:"flex",alignItems:"center"}}>{label}{tip&&<Info lines={tip}/>}</div>
+    <div style={{fontSize:17,fontWeight:700,color:col,lineHeight:1.1}}>{value}</div>
+    {sub&&<div style={{fontSize:10,color:"#A0AEC0",marginTop:2}}>{sub}</div>}
+    {bar!==undefined&&<Bar val={bar} max={bMax} good={bGood} warn={bWarn} inv={bInv}/>}
+  </div>;
+}
+// ── Closing costs ─────────────────────────────────────────────
+const DCC={mode:"quick",quickPct:3,origPct:0.5,pointsPct:0,appraisal:800,creditReport:30,underwriting:750,attyFee:1200,titleSearch:275,lenderTitle:900,ownerTitle:1200,recordingFees:75,firstYearInsurance:1500,prepaidDays:15,taxEscrowMonths:3,insEscrowMonths:2,inspection:550,termite:100,survey:600,enviro:0,customItems:[]};
+function calcCC(cc,price,loan,annTax,annIns,rate){
+  if(!cc||cc.mode==="quick")return(price||0)*((cc?.quickPct||3)/100);
+  const r=rate||7.25,l=loan||0,p=price||0;
+  return l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0)+Math.ceil(l/500)*1.5+Math.round(p/1000)+10+(cc.recordingFees||0)+(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0)+(cc.firstYearInsurance||0)+(cc.prepaidDays||0)*(l*r/100/365)+((annTax||0)/12)*(cc.taxEscrowMonths||0)+((annIns||0)/12)*(cc.insEscrowMonths||0)+(cc.inspection||0)+(cc.termite||0)+(cc.survey||0)+(cc.enviro||0)+(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0);
+}
+function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate}){
+  const sf=(k,v)=>setCC(p=>({...p,[k]:v}));
+  const l=loan||0,p=price||0,r=rate||7.25,aT=annTax||0,aI=annIns||0;
+  const intangible=Math.ceil(l/500)*1.5,transfer=Math.round(p/1000),prepInt=(cc.prepaidDays||0)*(l*r/100/365);
+  const taxEsc=(aT/12)*(cc.taxEscrowMonths||0),insEsc=(aI/12)*(cc.insEscrowMonths||0);
+  const lT=l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0);
+  const gaT=intangible+transfer+10,titleT=(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0)+(cc.recordingFees||0);
+  const prepT=(cc.firstYearInsurance||0)+prepInt+taxEsc+insEsc,ddT=(cc.inspection||0)+(cc.termite||0)+(cc.survey||0)+(cc.enviro||0);
+  const custT=(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0),grand=lT+gaT+titleT+prepT+ddT+custT;
+  const total=cc.mode==="quick"?p*(cc.quickPct||3)/100:grand;
+  const addI=()=>setCC(p=>({...p,customItems:[...(p.customItems||[]),{name:"",amt:0}]}));
+  const remI=i=>setCC(p=>({...p,customItems:p.customItems.filter((_,j)=>j!==i)}));
+  const setI=(i,k,v)=>setCC(p=>{const a=[...p.customItems];a[i]={...a[i],[k]:v};return{...p,customItems:a};});
+  return <Card title="Closing costs" icon="📝">
+    <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
+      {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
+      <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.navy}}>{fmtD(total)}</strong></span>
+    </div>
+    {cc.mode==="quick"&&<div>
+      <Field label="Closing cost %" suffix="%" value={cc.quickPct||3} onChange={x=>sf("quickPct",x)} min={1} max={8} step={0.1} sub={fmtD(p*(cc.quickPct||3)/100)+" estimated"}/>
+      <div style={{marginTop:9,background:C.bg,borderRadius:8,padding:"9px 12px",border:"1px solid "+C.border,fontSize:11}}>
+        <div style={{fontWeight:700,color:C.navy,marginBottom:4}}>Atlanta buyer ranges</div>
+        {[["Cash, no inspection","1.5–2%"],["Standard (financed)","2.5–3.5%"],["With inspection + survey","3–4%"],["Investment / multifamily","3–4.5%"]].map(([l2,r2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",color:C.slate,marginBottom:2}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{r2}</span></div>)}
+      </div>
+    </div>}
+    {cc.mode==="detailed"&&<div>
+      <SecLabel text="Lender fees" right={"= "+fmtD(lT)}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        <Field label="Origination fee" suffix="% of loan" value={cc.origPct||0} onChange={x=>sf("origPct",x)} min={0} max={3} step={0.125} sub={fmtD(l*(cc.origPct||0)/100)} xs/>
+        <Field label="Discount points" suffix="% of loan" value={cc.pointsPct||0} onChange={x=>sf("pointsPct",x)} min={0} max={4} step={0.125} sub={fmtD(l*(cc.pointsPct||0)/100)} xs/>
+        <Field label="Appraisal" prefix="$" value={cc.appraisal||0} onChange={x=>sf("appraisal",x)} min={0} step={50} sub="$600–1,200" xs/>
+        <Field label="Underwriting" prefix="$" value={cc.underwriting||0} onChange={x=>sf("underwriting",x)} min={0} step={50} sub="$500–1,500" xs/>
+      </div>
+      <SecLabel text="Georgia taxes (auto)" right={"= "+fmtD(gaT)}/>
+      <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:12}}>
+        {[["GA Intangible Tax",intangible,"$1.50/$500 of loan"],["GA Transfer Tax",transfer,"$1/$1,000 price"],["GA Mortgage Fee",10,"Flat $10"]].map(([l2,v2,n2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",background:"#EEF4FF",padding:"5px 9px",borderRadius:7,border:"1px solid #BFDBFE",fontSize:11}}><span style={{color:"#1D4ED8",fontWeight:600}}>{l2} <span style={{fontSize:9,background:"#BFDBFE",borderRadius:3,padding:"1px 4px"}}>AUTO</span> · <span style={{color:"#93C5FD",fontWeight:400}}>{n2}</span></span><span style={{color:"#1E40AF",fontWeight:700}}>{fmtD(v2)}</span></div>)}
+        <Field label="Recording fees" prefix="$" value={cc.recordingFees||0} onChange={x=>sf("recordingFees",x)} min={0} step={5} sub="~$75–100" xs/>
+      </div>
+      <SecLabel text="Title & attorney" right={"= "+fmtD(titleT)}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        <Field label="Closing attorney" prefix="$" value={cc.attyFee||0} onChange={x=>sf("attyFee",x)} min={0} step={50} sub="Required in GA" xs/>
+        <Field label="Title search" prefix="$" value={cc.titleSearch||0} onChange={x=>sf("titleSearch",x)} min={0} step={25} xs/>
+        <Field label="Lender's title ins." prefix="$" value={cc.lenderTitle||0} onChange={x=>sf("lenderTitle",x)} min={0} step={50} xs/>
+        <Field label="Owner's title ins." prefix="$" value={cc.ownerTitle||0} onChange={x=>sf("ownerTitle",x)} min={0} step={50} xs/>
+      </div>
+      <SecLabel text="Prepaids & escrow" right={"= "+fmtD(prepT)}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        <MoneyInput label="First-year insurance" value={cc.firstYearInsurance||0} onChange={x=>sf("firstYearInsurance",x)} small/>
+        <Field label="Prepaid interest" suffix="days" value={cc.prepaidDays||0} onChange={x=>sf("prepaidDays",x)} min={0} max={31} sub={fmtD(prepInt)+" auto"} xs/>
+        <Field label="Tax escrow" suffix="mo" value={cc.taxEscrowMonths||0} onChange={x=>sf("taxEscrowMonths",x)} min={0} max={6} sub={fmtD(taxEsc)+" auto"} xs/>
+        <Field label="Insurance escrow" suffix="mo" value={cc.insEscrowMonths||0} onChange={x=>sf("insEscrowMonths",x)} min={0} max={6} sub={fmtD(insEsc)+" auto"} xs/>
+      </div>
+      <SecLabel text="Inspection & DD" right={"= "+fmtD(ddT)}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        <Field label="Property inspection" prefix="$" value={cc.inspection||0} onChange={x=>sf("inspection",x)} min={0} step={50} sub="$400–700" xs/>
+        <Field label="Pest / termite" prefix="$" value={cc.termite||0} onChange={x=>sf("termite",x)} min={0} step={25} xs/>
+        <Field label="Survey" prefix="$" value={cc.survey||0} onChange={x=>sf("survey",x)} min={0} step={50} xs/>
+        <Field label="Environmental" prefix="$" value={cc.enviro||0} onChange={x=>sf("enviro",x)} min={0} step={100} xs/>
+      </div>
+      {(cc.customItems||[]).length>0&&<SecLabel text="Other"/>}
+      {(cc.customItems||[]).map((item,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"1fr 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Description</label>}<input value={item.name||""} onChange={e=>setI(i,"name",e.target.value)} placeholder="e.g. HOA fee" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
+        <Field label={i===0?"Amount":undefined} prefix="$" value={item.amt||0} onChange={x=>setI(i,"amt",x)} min={0} step={10} xs/>
+        <button onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+      </div>)}
+      <button onClick={addI} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add item</button>
+      <div style={{background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderRadius:9,padding:"10px 14px",color:"#fff",marginTop:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:11,opacity:0.7}}><span>Total closing costs</span><span>{p>0?(grand/p*100).toFixed(2):0}% of price</span></div>
+        <div style={{fontSize:20,fontWeight:700,color:C.gold,marginBottom:7}}>{fmtD(grand)}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+          {[["Lender",lT],["GA taxes",gaT],["Title/atty",titleT],["Prepaids",prepT]].map(([l2,v2])=><div key={l2} style={{background:"rgba(255,255,255,0.08)",borderRadius:6,padding:"4px 7px"}}><div style={{fontSize:9,opacity:0.65}}>{l2}</div><div style={{fontSize:11,fontWeight:700,color:C.gold}}>{fmtD(v2)}</div></div>)}
+        </div>
+      </div>
+    </div>}
+  </Card>;
+}
+// ── Expenses ──────────────────────────────────────────────────
+const CLASS_PRESETS={
+  new:{ratio:35,maintenance:75,capex:150,insurance:1200,label:"New build",hint:"<2yr, minimal issues"},
+  B:{ratio:45,maintenance:250,capex:400,insurance:1300,label:"B-class",hint:"10–25yr"},
+  C:{ratio:52,maintenance:350,capex:500,insurance:1800,label:"C-class",hint:"Old stock"},
+  fixer:{ratio:55,maintenance:450,capex:600,insurance:2000,label:"Fixer-upper",hint:"Needs rehab"},
+};
+const DEX={mode:"quick",ratio:45,vacancyPct:5.5,taxes:7800,taxMode:"fixed",taxPct:1.2,insurance:4600,mgmtPct:8,maintenance:250,maintMode:"fixed",capex:400,capexMode:"fixed",utilities:160,landscaping:100,accounting:800,misc:500,customExpenses:[],propertyClass:"B"};
+
+function calcExp(ex,units,egi,price){
+  if(!ex||ex.mode==="quick")return{totExp:egi*((ex?.ratio||45)/100),items:null};
+  const u=units||1,p=price||0;
+  const taxAmt=ex.taxMode==="pct"?Math.round(p*(ex.taxPct||1.2)/100):(ex.taxes||0);
+  const maintPU=ex.maintMode==="pct"?Math.round(p*(ex.maintPct||1)/100/u/12):(ex.maintenance||0);
+  const capexPU=ex.capexMode==="pct"?Math.round(p*(ex.capexPct||0.5)/100/u/12):(ex.capex||0);
+  const items={taxes:taxAmt,insurance:ex.insurance||0,mgmt:Math.round(egi*(ex.mgmtPct||0)/100),maint:maintPU*u*12,capex:capexPU*u*12,util:(ex.utilities||0)*12,landscape:(ex.landscaping||0)*12,acctg:ex.accounting||0,misc:ex.misc||0,custom:(ex.customExpenses||[]).reduce((s,e)=>s+(e.period==="monthly"?e.amt*12:e.amt),0)};
+  return{totExp:Object.values(items).reduce((s,x)=>s+x,0),items};
+}
+function Expenses({ex,setEx,units,egi,price}){
+  const sf=(k,v)=>setEx(p=>({...p,[k]:v}));
+  const u=units||1;
+  const{totExp}=calcExp(ex,units,egi,price);
+  const applyClass=cls=>{const p=CLASS_PRESETS[cls];if(!p)return;if(ex.mode==="quick"){setEx(prev=>({...prev,ratio:p.ratio,propertyClass:cls}));}else{setEx(prev=>({...prev,...p,propertyClass:cls,insurance:p.insurance*(units||1),taxes:Math.round((price||0)*1.2/100)}));}};
+  const addCE=()=>setEx(p=>({...p,customExpenses:[...(p.customExpenses||[]),{name:"",amt:0,period:"annual"}]}));
+  const remCE=i=>setEx(p=>({...p,customExpenses:p.customExpenses.filter((_,j)=>j!==i)}));
+  const setCE=(i,k,v)=>setEx(p=>{const a=[...p.customExpenses];a[i]={...a[i],[k]:v};return{...p,customExpenses:a};});
+  return <Card title="Vacancy & Expenses" icon="💸">
+    {/* Property class preset */}
+    <div style={{marginBottom:12}}>
+      <div style={{fontSize:10,fontWeight:700,color:C.slate,marginBottom:5}}>Property class preset</div>
+      <div style={{display:"flex",gap:5}}>
+        {Object.entries(CLASS_PRESETS).map(([cls,p])=><button key={cls} onClick={()=>applyClass(cls)} style={{flex:1,padding:"5px 4px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(ex.propertyClass===cls?C.navy:C.border),background:ex.propertyClass===cls?C.navy:C.white,color:ex.propertyClass===cls?"#fff":C.slate}}>
+          <div style={{fontSize:10,fontWeight:700}}>{p.label}</div>
+          <div style={{fontSize:9,opacity:0.7}}>{p.hint}</div>
+        </button>)}
+      </div>
+      <div style={{fontSize:9,color:"#A0AEC0",marginTop:4}}>{ex.mode==="quick"?"Quick mode: preset updates ratio only · switch to Itemized to see full preset":"Itemized mode: preset sets all expense fields"}</div>
+    </div>
+    <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
+      {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=ex.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
+      <span style={{marginLeft:"auto",fontSize:11,color:C.slate}}>Total: <strong style={{color:C.navy}}>{fmtD(totExp)}/yr</strong></span>
+    </div>
+    <div style={{marginBottom:ex.mode==="quick"?10:12}}>
+      <Field label="Vacancy rate" suffix="%" value={ex.vacancyPct||0} onChange={x=>sf("vacancyPct",x)} min={0} max={30} step={0.5} sub="ATL avg ~5.9%"/>
+    </div>
+    {ex.mode==="quick"&&<div>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+        <label style={{fontSize:11,fontWeight:600,color:C.slate}}>Expense ratio (% of EGI/yr)</label>
+        <span style={{fontSize:14,fontWeight:700,color:C.navy}}>{ex.ratio||45}% = {fmtD(egi*(ex.ratio||45)/100)}/yr</span>
+      </div>
+      <input type="range" min={30} max={60} step={1} value={ex.ratio||45} onChange={e=>sf("ratio",parseInt(e.target.value))} style={{width:"100%",accentColor:C.navy,cursor:"pointer"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.slate,marginTop:2}}><span>30% new/stable</span><span>45% typical ATL</span><span>60% old/C-class</span></div>
+      <div style={{marginTop:8,padding:"7px 10px",background:C.goldL,borderRadius:7,border:"1px solid #EDCF8A",fontSize:10,color:C.amber}}>Covers all costs: taxes, insurance, management, repairs, CapEx, utilities. Switch to Itemized for full control.</div>
+    </div>}
+    {ex.mode==="detailed"&&<div>
+      <SecLabel text="Fixed annual costs"/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+        <div style={{display:"flex",flexDirection:"column",gap:3}}>
+          <div style={{display:"flex",alignItems:"center",gap:5}}><label style={{fontSize:10,color:C.slate,fontWeight:600}}>Property taxes</label><SmBtn active={ex.taxMode==="fixed"} onClick={()=>sf("taxMode","fixed")} label="$"/><SmBtn active={ex.taxMode==="pct"} onClick={()=>sf("taxMode","pct")} label="% price"/></div>
+          {ex.taxMode==="fixed"?<MoneyInput value={ex.taxes||0} onChange={x=>sf("taxes",x)} sub={"Auto est: "+fmtD(Math.round((price||0)*1.2/100))} small/>:<Field suffix="% of price" value={ex.taxPct||1.2} onChange={x=>sf("taxPct",x)} min={0} max={5} step={0.05} sub={fmtD(Math.round((price||0)*(ex.taxPct||1.2)/100))+"/yr"} xs/>}
+        </div>
+        <MoneyInput label="Annual insurance" value={ex.insurance||0} onChange={x=>sf("insurance",x)} sub="ATL rising ~35%" small/>
+      </div>
+      <SecLabel text="Variable costs"/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+        <Field label="Management fee" suffix="%" value={ex.mgmtPct||0} onChange={x=>sf("mgmtPct",x)} min={0} max={15} step={0.5} sub="8% even if self-managing" xs/>
+        <div style={{display:"flex",flexDirection:"column",gap:3}}>
+          <div style={{display:"flex",alignItems:"center",gap:5}}><label style={{fontSize:10,color:C.slate,fontWeight:600}}>Maintenance</label><SmBtn active={ex.maintMode==="fixed"} onClick={()=>sf("maintMode","fixed")} label="$/unit/mo"/><SmBtn active={ex.maintMode==="pct"} onClick={()=>sf("maintMode","pct")} label="% value/yr"/></div>
+          {ex.maintMode==="fixed"?<Field suffix="/unit/mo" prefix="$" value={ex.maintenance||0} onChange={x=>sf("maintenance",x)} min={0} step={25} sub={fmtD((ex.maintenance||0)*u*12)+"/yr"} xs/>:<Field suffix="% of price/yr" value={ex.maintPct||1} onChange={x=>sf("maintPct",x)} min={0} max={5} step={0.1} sub={fmtD(Math.round((price||0)*(ex.maintPct||1)/100))+"/yr"} xs/>}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:3}}>
+          <div style={{display:"flex",alignItems:"center",gap:5}}><label style={{fontSize:10,color:C.slate,fontWeight:600}}>CapEx reserve</label><SmBtn active={ex.capexMode==="fixed"} onClick={()=>sf("capexMode","fixed")} label="$/unit/mo"/><SmBtn active={ex.capexMode==="pct"} onClick={()=>sf("capexMode","pct")} label="% value/yr"/></div>
+          {ex.capexMode==="fixed"?<Field suffix="/unit/mo" prefix="$" value={ex.capex||0} onChange={x=>sf("capex",x)} min={0} step={25} sub={fmtD((ex.capex||0)*u*12)+"/yr"} xs/>:<Field suffix="% of price/yr" value={ex.capexPct||0.5} onChange={x=>sf("capexPct",x)} min={0} max={3} step={0.1} sub={fmtD(Math.round((price||0)*(ex.capexPct||0.5)/100))+"/yr"} xs/>}
+        </div>
+        <Field label="Utilities /mo" prefix="$" value={ex.utilities||0} onChange={x=>sf("utilities",x)} min={0} step={10} sub={fmtD((ex.utilities||0)*12)+"/yr"} xs/>
+        <Field label="Landscaping /mo" prefix="$" value={ex.landscaping||0} onChange={x=>sf("landscaping",x)} min={0} step={10} sub={fmtD((ex.landscaping||0)*12)+"/yr"} xs/>
+        <Field label="Accounting /yr" prefix="$" value={ex.accounting||0} onChange={x=>sf("accounting",x)} min={0} step={100} xs/>
+        <div style={{gridColumn:"1/-1"}}><Field label="Misc. /yr" prefix="$" value={ex.misc||0} onChange={x=>sf("misc",x)} min={0} step={100} sub="ads, supplies, HOA" xs/></div>
+      </div>
+      {(ex.customExpenses||[]).length>0&&<SecLabel text="Custom"/>}
+      {(ex.customExpenses||[]).map((e,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"1fr 90px 80px 26px",gap:6,marginBottom:6,alignItems:"end"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Name</label>}<input value={e.name||""} onChange={ev=>setCE(i,"name",ev.target.value)} placeholder="e.g. pest control" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
+        <Field label={i===0?"Amount":undefined} prefix="$" value={e.amt||0} onChange={x=>setCE(i,"amt",x)} min={0} step={10} xs/>
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Period</label>}<select value={e.period||"annual"} onChange={ev=>setCE(i,"period",ev.target.value)} style={{padding:"6px 7px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text}}><option value="annual">Annual</option><option value="monthly">Monthly</option></select></div>
+        <button onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+      </div>)}
+      <button onClick={addCE} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add expense</button>
+    </div>}
+  </Card>;
+}
+// ── Compute functions ─────────────────────────────────────────
+function computeBase(state){
+  const{units,financing,closing,expenses,projection,repairs}=state;
+  const gpi=units.reduce((s,u)=>s+u.rent,0)*12;
+  const vacAmt=gpi*((expenses.vacancyPct||0)/100);
+  const egi=gpi-vacAmt;
+  const price=state.price||0;
+  const{totExp,items:expItems}=calcExp(expenses,units.length,egi,price);
+  const noi=egi-totExp;
+  const down=price*(financing.downPct||25)/100;
+  const loan=price-down;
+  const mr=(financing.rate||7.25)/100/12;
+  const n=(financing.loanYears||30)*12;
+  const pmt=mr===0?loan/n:loan*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1);
+  const annPmt=pmt*12;
+  const ccTotal=calcCC(closing,price,loan,expenses.taxes||0,expenses.insurance||0,financing.rate||7.25);
+  const repairCost=repairs.include&&!repairs.unknown?(repairs.amount||0):0;
+  const cashIn=down+ccTotal+repairCost;
+  const cf=noi-annPmt;
+  const capRate=price>0?(noi/price)*100:0;
+  const coc=cashIn>0?(cf/cashIn)*100:0;
+  const dscr=annPmt>0?noi/annPmt:0;
+  const beOcc=gpi>0?((totExp+annPmt)/gpi)*100:0;
+  const grm=gpi>0?price/gpi:0;
+  const monRent=units.reduce((s,u)=>s+u.rent,0);
+  const pct1=price>0?(monRent/price)*100:0;
+  const adjThresh=price>800000?0.65:price>500000?0.75:price>300000?0.85:1.0;
+  const expRatio=egi>0?(totExp/egi)*100:0;
+  const numU=Math.max(units.length,1);
+  const beRent=numU>0&&(1-(expenses.vacancyPct||0)/100)>0?(totExp+annPmt)/(numU*12*(1-(expenses.vacancyPct||0)/100)):0;
+  // Value-add
+  const vaEnabled=projection.vaEnabled;
+  const vaMonthlyRent=projection.vaMarketRentPerUnit||(monRent/numU);
+  const vaGPI=(vaMonthlyRent*numU)*12,vaEGI=vaGPI*(1-(expenses.vacancyPct||0)/100);
+  const{totExp:vaExp}=calcExp(expenses,numU,vaEGI,price);
+  const vaNOI=vaEGI-vaExp,vaCF=vaNOI-annPmt;
+  const vaCapRate=price>0?(vaNOI/price)*100:0,vaCoc=cashIn>0?(vaCF/cashIn)*100:0;
+  // Partnership
+  const myPct=(state.partnership?.myPct||100)/100;
+  const myCF=cf*myPct,myCoc=cashIn>0?(myCF/cashIn)*100:0;
+  return{gpi,vacAmt,egi,totExp,expItems,noi,down,loan,pmt,annPmt,ccTotal,repairCost,cashIn,cf,capRate,coc,dscr,beOcc,grm,pct1,adjThresh,expRatio,beRent,monRent,numU,vaEnabled,vaCF,vaCapRate,vaCoc,myCF,myCoc,myPct};
+}
+
+function computeYearly(state,R){
+  const{financing,expenses,projection}=state;
+  const years=projection.holdYears||5;
+  const rentGrowth=(projection.rentGrowthPct||0)/100;
+  const vacPct=(expenses.vacancyPct||0)/100;
+  const vaEnabled=projection.vaEnabled,vaYear=projection.vaYear||2;
+  const vaMonthlyRent=projection.vaMarketRentPerUnit||(R.monRent/R.numU);
+  const refiEnabled=projection.refiEnabled,refiYear=projection.refiYear||3;
+  const appPct=(projection.appreciationPct||0)/100,price=state.price||0;
+  let balance=R.loan,mr=(financing.rate||7.25)/100/12,pmt=R.pmt;
+  const origN=(financing.loanYears||30)*12;let monthsElapsed=0,cumCF=0;
+  const yearly=[];
+  for(let y=1;y<=years;y++){
+    let mRent=R.monRent*Math.pow(1+rentGrowth,y-1);
+    if(vaEnabled&&y>=vaYear)mRent=Math.max(mRent,vaMonthlyRent*R.numU);
+    const gpiY=mRent*12,egiY=gpiY*(1-vacPct);
+    const expY=expenses.mode==="quick"?egiY*((expenses.ratio||45)/100):R.totExp*Math.pow(1.02,y-1);
+    const noiY=egiY-expY;
+    if(refiEnabled&&y===refiYear&&balance>0){
+      const nr=(projection.refiRate||6.5)/100/12,rem=Math.max(1,origN-monthsElapsed);
+      pmt=balance*nr*Math.pow(1+nr,rem)/(Math.pow(1+nr,rem)-1);mr=nr;
+    }
+    const annDebt=pmt*12;
+    for(let m=0;m<12;m++){const i=balance*mr;balance-=(pmt-i);}
+    monthsElapsed+=12;
+    const cfY=noiY-annDebt,propVal=price*Math.pow(1+appPct,y);
+    cumCF+=cfY;
+    yearly.push({year:y,monthlyRent:Math.round(mRent/R.numU),gpi:Math.round(gpiY),noi:Math.round(noiY),debtService:Math.round(annDebt),cf:Math.round(cfY),propVal:Math.round(propVal),balance:Math.round(Math.max(0,balance)),equity:Math.round(propVal-Math.max(0,balance)),cumCF:Math.round(cumCF)});
+  }
+  const last=yearly[yearly.length-1]||{};
+  const sellProc=(last.propVal||0)*0.94-last.balance;
+  const flows=[-R.cashIn,...yearly.map((y,i)=>i<years-1?y.cf:y.cf+sellProc)];
+  let irr=0.1;
+  for(let i=0;i<200;i++){let npv=0,d=0;flows.forEach((f,j)=>{npv+=f/Math.pow(1+irr,j);d-=j*f/Math.pow(1+irr,j+1);});if(Math.abs(d)<1e-10)break;irr-=npv/d;if(irr<-0.99){irr=-0.99;break;}}
+  const totCF=yearly.reduce((s,y)=>s+y.cf,0),deprBen=(price*0.85/27.5)*0.28*years;
+  const appGain=(last.propVal||0)-price,equityBuild=R.loan-(last.balance||0);
+  const totRet=appGain+equityBuild+totCF+deprBen;
+  return{yearly,irr:irr*100,totCF,deprBen,appGain,equityBuild,totRet,exitVal:last.propVal||0};
+}
+
+function computeSensitivity(state,R){
+  const pVars=[-0.10,-0.05,0,+0.05,+0.10];
+  const rVars=[-1.0,-0.5,0,+0.5,+1.0];
+  return{
+    priceRate:pVars.map(pv=>{const np=Math.round((state.price||0)*(1+pv));return{label:pv===0?"Current":(pv>0?"+":"")+Math.round(pv*100)+"%",price:np,cells:rVars.map(rv=>{const nr=Math.max(1,(state.financing.rate||7.25)+rv);const ns={...state,price:np,financing:{...state.financing,rate:nr}};const rb=computeBase(ns);return{label:rv===0?"Current":(rv>0?"+":"")+rv.toFixed(1)+"%",cf:rb.cf,capRate:rb.capRate};})};})
+    ,rentCells:[-300,-200,-100,0,100,200,300].map(d=>{const nu=state.units.map(u=>({...u,rent:Math.max(0,u.rent+d)}));const rb=computeBase({...state,units:nu});return{delta:d,cf:rb.cf,capRate:rb.capRate};})
+  };
+}
+
+function calcDealScore(R,Y){
+  const ms=[lv(R.capRate,7,4.5),lv(R.coc,8,4),lv(R.dscr,1.25,1.0),lv(R.cf/R.numU/12,200,0),lv(R.beOcc,70,85,true),lv(Y?.irr||0,15,10)];
+  const pts=ms.reduce((s,m)=>s+(m==="good"?2:m==="warn"?1:0),0);
+  const pct=pts/(ms.length*2);
+  const grade=pct>=0.75?"A":pct>=0.5?"B":pct>=0.25?"C":"D";
+  const colors={A:C.teal,B:"#185FA5",C:C.amber,D:C.red};
+  const labels={A:"Great deal",B:"Good deal",C:"Weak deal",D:"Risky deal"};
+  const descs={A:"All key metrics in the green zone.",B:"Most metrics solid — some room to improve.",C:"Several red flags. Need a clear exit strategy.",D:"Critical issues. Renegotiate price or walk away."};
+  return{grade,pct,color:colors[grade],label:labels[grade],desc:descs[grade],metrics:ms};
+}
+
+function calcKillers(R,S){
+  const k=[];
+  if(R.dscr<1.0)k.push(["critical","DSCR "+R.dscr.toFixed(2)+" < 1.0 — NOI does not cover mortgage. Lender will likely decline."]);
+  if(R.beOcc>95)k.push(["critical","Break-even "+R.beOcc.toFixed(0)+"% — almost no vacancy buffer. One empty unit = losses."]);
+  if(R.dscr>=1.0&&R.dscr<1.15)k.push(["warn","DSCR "+R.dscr.toFixed(2)+" — below most lender minimums (1.20–1.25). Financing may be difficult."]);
+  if(R.cf/R.numU/12<-500)k.push(["warn","CF "+fmtD(R.cf/R.numU/12)+"/unit/mo — significant negative. Requires substantial cash reserves."]);
+  if(R.pct1<R.adjThresh*0.55)k.push(["warn","1% rule "+fmtP(R.pct1)+" — very low rent-to-price ratio for this market."]);
+  if(R.beRent>R.monRent/R.numU*1.25)k.push(["info","Break-even rent "+fmtD(R.beRent)+"/unit — "+Math.round((R.beRent/(R.monRent/R.numU)-1)*100)+"% above current rent."]);
+  return k;
+}
+
+function whatNeedsToBeTrue(state,R,targetCFmonthly){
+  const{units,financing,expenses}=state;
+  const numU=Math.max(units.length,1);
+  const vac=(expenses.vacancyPct||0)/100,ratio=(expenses.ratio||45)/100;
+  const mr=(financing.rate||7.25)/100/12,n=(financing.loanYears||30)*12;
+  const pmtF=mr>0?mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1):1/n;
+  const loanF=1-(financing.downPct||25)/100;
+  const targetAnn=targetCFmonthly*12;
+  const neededRentPU=(targetAnn+R.annPmt)/(numU*12*(1-vac)*(1-ratio));
+  const neededPrice=R.noi>targetAnn?Math.round((R.noi-targetAnn)/(12*loanF*pmtF)):null;
+  let lo=1,hi=20;
+  for(let i=0;i<60;i++){const mid=(lo+hi)/2;const mm=mid/100/12;const mp=mm===0?R.loan/n:R.loan*mm*Math.pow(1+mm,n)/(Math.pow(1+mm,n)-1);if(R.noi-mp*12>targetAnn)lo=mid;else hi=mid;}
+  return{neededRentPU:Math.round(neededRentPU),neededPrice,neededRate:Math.round(lo*100)/100};
+}
+
+function calcLoanOptions(price,downPct,currentRate,loanYears){
+  const loan=price*(1-(downPct||25)/100),n30=(loanYears||30)*12,n15=15*12;
+  const pmt=(l,r,n)=>{const mr=r/100/12;return mr===0?l/n:l*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1);};
+  return[
+    {name:"30yr fixed",rate:currentRate,monthly:pmt(loan,currentRate,n30),totalInt:pmt(loan,currentRate,n30)*n30-loan,note:"Current option"},
+    {name:"15yr fixed",rate:Math.max(1,currentRate-0.5),monthly:pmt(loan,Math.max(1,currentRate-0.5),n15),totalInt:pmt(loan,Math.max(1,currentRate-0.5),n15)*n15-loan,note:"Less interest, higher payment"},
+    {name:"5/1 ARM",rate:Math.max(1,currentRate-0.75),monthly:pmt(loan,Math.max(1,currentRate-0.75),n30),totalInt:null,note:"Rate fixed 5 years"},
+    {name:"DSCR loan",rate:currentRate+0.5,monthly:pmt(loan,currentRate+0.5,n30),totalInt:null,note:"No income verification"},
+    {name:"Interest only",rate:Math.max(1,currentRate-0.25),monthly:loan*(Math.max(1,currentRate-0.25))/100/12,totalInt:null,note:"10yr IO period — interest only"},
+  ];
+}
+// ── CalcTrace ─────────────────────────────────────────────────
+function CalcTrace({R,S}){
+  const[open,setOpen]=useState(false);
+  const numU=S.units.length||1;
+  const rows=[
+    {l:"Gross potential income",v:fmtD(R.gpi)+"/yr",f:"= "+fmtD(R.monRent)+"/mo × 12 = "+fmtD(R.gpi)+"/yr",c:"#2563EB",b:true},
+    {l:"(−) Vacancy ("+S.expenses.vacancyPct+"%)",v:"−"+fmtD(R.vacAmt)+"/yr",f:"= GPI × "+S.expenses.vacancyPct+"%",c:C.red},
+    {l:"= Effective gross income",v:fmtD(Math.round(R.egi))+"/yr",f:"= GPI − vacancy",c:"#2563EB",b:true},
+    {l:"(−) Total expenses",v:"−"+fmtD(R.totExp)+"/yr",f:S.expenses.mode==="quick"?S.expenses.ratio+"% of EGI":"sum of itemized expenses",c:C.red},
+    {l:"= Net operating income (NOI)",v:fmtD(Math.round(R.noi))+"/yr",f:"= EGI − expenses",c:C.teal,b:true},
+    {l:"(−) Debt service",v:"−"+fmtD(Math.round(R.annPmt))+"/yr",f:fmtD(R.pmt)+"/mo × 12",c:C.red},
+    {l:"= Annual cashflow",v:fmtD(R.cf)+"/yr",f:"= NOI − debt service",c:R.cf>=0?C.teal:C.red,b:true},
+    {l:"= Monthly cashflow",v:fmtD(R.cf/12)+"/mo",f:"= annual ÷ 12",c:R.cf>=0?C.teal:C.red,b:true},
+    {l:"= Per unit cashflow",v:fmtD(R.cf/numU/12)+"/unit/mo",f:"= monthly ÷ "+numU+" units",c:R.cf>=0?C.teal:C.red},
+  ];
+  return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginTop:8}}>
+    <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",background:open?"#EEF2FF":C.bg,border:"none",cursor:"pointer",fontFamily:"inherit",borderBottom:open?"1px solid "+C.border:"none"}}>
+      <span style={{fontSize:12,fontWeight:700,color:C.navy}}>🧮 How cashflow is calculated — step by step</span>
+      <span style={{fontSize:14,color:C.slate,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s"}}>▾</span>
+    </button>
+    {open&&<div style={{padding:"10px 13px",background:C.white}}>
+      {rows.map((row,i)=><div key={i} style={{marginBottom:8,borderLeft:"3px solid "+(row.b?row.c:"#E2E8F0"),paddingLeft:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+          <span style={{fontSize:12,fontWeight:row.b?600:400,color:row.b?row.c:C.slate}}>{row.l}</span>
+          <span style={{fontSize:13,fontWeight:700,color:row.c,marginLeft:8,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{row.v}</span>
+        </div>
+        <div style={{fontSize:10,color:"#A0AEC0",marginTop:1}}>{row.f}</div>
+      </div>)}
+      <div style={{padding:"7px 9px",background:C.goldL,borderRadius:7,fontSize:10,color:C.amber,border:"1px solid #EDCF8A",marginTop:6}}>
+        Cap rate: {fmtD(R.noi)} ÷ ${fmt(S.price)} = <strong>{fmtP(R.capRate)}</strong> &nbsp;·&nbsp; CoC: {fmtD(R.cf)} ÷ {fmtD(R.cashIn)} = <strong>{fmtP(R.coc)}</strong> &nbsp;·&nbsp; DSCR: {fmtD(R.noi)} ÷ {fmtD(R.annPmt)} = <strong>{R.dscr.toFixed(2)}</strong> &nbsp;·&nbsp; Break-even rent: <strong>{fmtD(R.beRent)}/unit/mo</strong>
+      </div>
+    </div>}
+  </div>;
+}
+
+// ── Result Tabs ───────────────────────────────────────────────
+function OverviewTab({R,Y,S}){
+  const score=calcDealScore(R,Y);
+  const killers=calcKillers(R,S);
+  const pct1Pass=R.pct1>=R.adjThresh;
+  const adjLbl=S.price>800000?"≥0.65% HCOL":S.price>500000?"≥0.75%":S.price>300000?"≥0.85%":"≥1.0%";
+  const partnerEnabled=S.partnership?.enabled;
+  return <div>
+    {/* Deal score */}
+    <div style={{display:"flex",gap:10,marginBottom:11}}>
+      <div style={{background:score.color,borderRadius:11,padding:"12px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:80}}>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.75)",marginBottom:2}}>Deal score</div>
+        <div style={{fontSize:42,fontWeight:700,color:"#fff",lineHeight:1}}>{score.grade}</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",marginTop:2}}>{Math.round(score.pct*100)}%</div>
+      </div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:15,fontWeight:700,color:score.color,marginBottom:4}}>{score.label}</div>
+        <div style={{fontSize:12,color:C.slate,marginBottom:8}}>{score.desc}</div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {["Cap rate","CoC","DSCR","CF/unit","Break-even","IRR"].map((l,i)=><span key={l} style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:score.metrics[i]==="good"?"#DFF2EC":score.metrics[i]==="warn"?"#FDF3E3":"#FCEAEC",color:score.metrics[i]==="good"?C.teal:score.metrics[i]==="warn"?C.amber:C.red,fontWeight:600}}>{l}</span>)}
+        </div>
+      </div>
+    </div>
+    {/* Deal killers */}
+    {killers.length>0&&<div style={{marginBottom:11}}>
+      {killers.map(([lvl,msg],i)=>{
+        const cfg={critical:["#FCEAEC",C.red,"⛔"],warn:["#FDF3E3",C.amber,"⚠"],info:["#E6F1FB","#185FA5","ℹ"]};
+        const[bg,col,ic]=cfg[lvl]||cfg.info;
+        return <div key={i} style={{display:"flex",gap:8,padding:"7px 10px",background:bg,border:"1px solid "+col+"44",borderRadius:8,marginBottom:5,fontSize:11,color:col}}>
+          <span style={{flexShrink:0}}>{ic}</span><span>{msg}</span>
+        </div>;
+      })}
+    </div>}
+    {/* Verdict banner */}
+    <div style={{borderRadius:11,padding:"12px 15px",marginBottom:11,background:score.color,color:"#fff"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:7}}>
+        {[["Monthly CF",fmtD(R.cf/12)+"/mo"],["Per unit",fmtD(R.cf/R.numU/12)+"/unit/mo"],["Annual CF",fmtD(R.cf)+"/yr"],["Cash needed",fmtD(R.cashIn)]].map(([l2,val])=><div key={l2} style={{background:"rgba(255,255,255,0.15)",borderRadius:7,padding:"6px 9px"}}>
+          <div style={{fontSize:9,opacity:0.75}}>{l2}</div><div style={{fontSize:12,fontWeight:700}}>{val}</div>
+        </div>)}
+      </div>
+    </div>
+    {/* Partnership split */}
+    {partnerEnabled&&<div style={{padding:"9px 11px",background:"#EEF4FF",border:"1px solid #BFDBFE",borderRadius:10,marginBottom:11}}>
+      <div style={{fontSize:10,fontWeight:700,color:"#185FA5",marginBottom:5}}>MY SHARE ({S.partnership.myPct}%)</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+        {[["My CF/mo",fmtD(R.myCF/12)+"/mo"],["My CoC",fmtP(R.myCoc)],["Invested",fmtD(R.cashIn*(S.partnership.myPct/100))]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:"#185FA5"}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:"#185FA5"}}>{v2}</div></div>)}
+      </div>
+    </div>}
+    {/* Cash required */}
+    <div style={{padding:"9px 11px",background:C.white,border:"1px solid "+C.border,borderRadius:10,marginBottom:11}}>
+      <div style={{fontSize:10,fontWeight:700,color:C.navy,marginBottom:6}}>CASH REQUIRED AT CLOSE</div>
+      {[["Down payment",fmtD(R.down)],["Closing costs",fmtD(R.ccTotal)],...(S.repairs.include&&!S.repairs.unknown&&S.repairs.amount>0?[["Repairs",fmtD(S.repairs.amount)]]:[])]
+        .map(([l2,v2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #F7FAFC",fontSize:12,color:C.slate}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{v2}</span></div>)}
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontWeight:700,color:C.navy,fontSize:13}}><span>Total</span><span>{fmtD(R.cashIn)}</span></div>
+    </div>
+    {/* Key metrics */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+      <MBox label="Cap rate" value={fmtP(R.capRate)} sub="≥5% (A) · ≥7% (B)" lvl={lv(R.capRate,7,4.5)} bar={R.capRate} bMax={12} bGood={7} bWarn={4.5} tip={["Cap rate = NOI ÷ Price","= "+fmtD(R.noi)+" ÷ $"+fmt(S.price),"= "+fmtP(R.capRate)]}/>
+      <MBox label="Cash-on-cash" value={fmtP(R.coc)} sub="Good ≥8%" lvl={lv(R.coc,8,4)} bar={R.coc} bMax={20} bGood={8} bWarn={4} tip={["CoC = Annual CF ÷ Cash in","= "+fmtD(R.cf)+" ÷ "+fmtD(R.cashIn),"= "+fmtP(R.coc)]}/>
+      <MBox label="DSCR" value={R.dscr.toFixed(2)} sub="Lenders need ≥1.25" lvl={lv(R.dscr,1.25,1.0)} bar={R.dscr} bMax={2.5} bGood={1.25} bWarn={1.0} tip={["DSCR = NOI ÷ Debt service","= "+fmtD(R.noi)+" ÷ "+fmtD(R.annPmt),"= "+R.dscr.toFixed(2)]}/>
+      <MBox label="Break-even occ." value={fmtP(R.beOcc)} sub="Lower = safer" lvl={lv(R.beOcc,70,85,true)} bar={R.beOcc} bMax={110} bGood={70} bWarn={85} bInv tip={["Break-even = (Exp+Debt) ÷ GPI","= "+fmtP(R.beOcc),"·","<70% = comfortable buffer"]}/>
+    </div>
+    {/* Break-even rent */}
+    <div style={{padding:"9px 11px",background:R.beRent<=R.monRent/R.numU?C.tealL:C.redL,border:"1px solid "+(R.beRent<=R.monRent/R.numU?"#9FE1CB":"#F7C1C1"),borderRadius:10,marginBottom:11}}>
+      <div style={{fontSize:10,fontWeight:700,color:R.beRent<=R.monRent/R.numU?C.teal:C.red,marginBottom:3}}>Break-even rent / unit</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+        <div><div style={{fontSize:18,fontWeight:700,color:R.beRent<=R.monRent/R.numU?C.teal:C.red}}>{fmtD(R.beRent)}/unit/mo</div>
+        <div style={{fontSize:10,color:C.slate,marginTop:2}}>min rent to cover all costs + mortgage</div></div>
+        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.slate}}>Current rent</div><div style={{fontSize:15,fontWeight:700,color:C.text}}>{fmtD(R.monRent/R.numU)}/unit</div>
+        <div style={{fontSize:10,color:R.beRent<=R.monRent/R.numU?C.teal:C.red}}>{R.beRent<=R.monRent/R.numU?"+"+fmtD(R.monRent/R.numU-R.beRent)+" buffer":"−"+fmtD(R.beRent-R.monRent/R.numU)+" shortfall"}</div></div>
+      </div>
+    </div>
+    {/* Quick checks (no GRM) */}
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden"}}>
+      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Quick checks</div>
+      <div style={{padding:"6px 13px"}}>
+        {[{l:"1% rule ("+adjLbl+")",v:fmtP(R.pct1),pill:pct1Pass?"Passes":R.pct1>=R.adjThresh*0.85?"Close":"Below",lvl:pct1Pass?"good":R.pct1>=R.adjThresh*0.85?"warn":"bad",note:"Monthly rent ÷ price"}].map(m=><div key={m.l} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",gap:6}}>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.l}</div><div style={{fontSize:10,color:C.slate}}>{m.note}</div></div>
+          <div style={{fontSize:13,fontWeight:700,color:C.text,margin:"0 8px",flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{m.v}</div>
+          <Pill text={m.pill} lvl={m.lvl}/>
+        </div>)}
+      </div>
+    </div>
+    {R.vaEnabled&&<div style={{padding:"9px 11px",background:C.goldL,border:"1px solid #EDCF8A",borderRadius:10,marginTop:8}}>
+      <div style={{fontSize:10,fontWeight:700,color:C.amber,marginBottom:5}}>VALUE-ADD AT STABILIZATION</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+        {[["Cap rate",fmtP(R.vaCapRate)],["Cash-on-cash",fmtP(R.vaCoc)],["Monthly CF",fmtD(R.vaCF/12)+"/mo"]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:C.amber}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:C.amber}}>{v2}</div></div>)}
+      </div>
+    </div>}
+  </div>;
+}
+
+function IncomeTab({R,S}){
+  return <div>
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:8}}>
+      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>P&L statement (annual)</div>
+      <div style={{paddingBottom:4}}>
+        <PLRow label="Gross potential income" value={fmtD(R.gpi)+"/yr"} pos note={R.numU+" units × "+fmtD(R.monRent/R.numU)+" avg"}/>
+        <PLRow label={"(−) Vacancy ("+S.expenses.vacancyPct+"%)"}  value={"−"+fmtD(R.vacAmt)+"/yr"} neg indent/>
+        <PLRow label="= Effective gross income (EGI)" value={fmtD(Math.round(R.egi))+"/yr"} bold hl/>
+        {S.expenses.mode==="quick"?<PLRow label={"(−) Expenses ("+S.expenses.ratio+"% of EGI)"}  value={"−"+fmtD(Math.round(R.totExp))+"/yr"} neg indent/>
+          :R.expItems&&Object.entries({Taxes:R.expItems.taxes,Insurance:R.expItems.insurance,Management:R.expItems.mgmt,Maintenance:R.expItems.maint,"CapEx":R.expItems.capex,Utilities:R.expItems.util,Landscaping:R.expItems.landscape,Accounting:R.expItems.acctg,Misc:R.expItems.misc,Custom:R.expItems.custom}).filter(([,v2])=>v2>0).map(([l2,v2])=><PLRow key={l2} label={"(−) "+l2} value={"−"+fmtD(v2)+"/yr"} neg indent/>)}
+        <PLRow label="= Total expenses" value={"−"+fmtD(Math.round(R.totExp))+"/yr"} neg bold/>
+        <PLRow label="= Net operating income (NOI)" value={fmtD(Math.round(R.noi))+"/yr"} bold hl pos/>
+        <PLRow label={"(−) Debt service ("+S.financing.loanYears+"yr @ "+S.financing.rate+"%)"}  value={"−"+fmtD(Math.round(R.annPmt))+"/yr"} neg indent note={fmtD(R.pmt)+"/mo × 12"}/>
+        <PLRow label="= Annual cashflow" value={fmtD(R.cf)+"/yr"} bold hl neg={R.cf<0} pos={R.cf>=0}/>
+        <div style={{padding:"5px 8px",background:C.bg,fontSize:11,color:C.slate,display:"flex",gap:12,flexWrap:"wrap"}}>
+          <span>Monthly: <strong style={{color:R.cf>=0?C.teal:C.red}}>{fmtD(R.cf/12)}/mo</strong></span>
+          <span>Per unit: <strong style={{color:R.cf>=0?C.teal:C.red}}>{fmtD(R.cf/R.numU/12)}/mo</strong></span>
+          <span>Exp ratio: <strong>{fmtP(R.expRatio)}/yr</strong></span>
+        </div>
+      </div>
+    </div>
+    <CalcTrace R={R} S={S}/>
+  </div>;
+}
+
+function ProjectionTab({R,Y,S}){
+  const hold=S.projection.holdYears||5;
+  return <div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+      <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:10,padding:"10px 12px",color:"#fff"}}>
+        <div style={{fontSize:9,opacity:0.65,marginBottom:2}}>Total return ({hold}yr)</div>
+        <div style={{fontSize:18,fontWeight:700,color:Y.totRet>=0?C.gold:"#F87171"}}>{fmtD(Y.totRet)}</div>
+        <div style={{fontSize:10,opacity:0.55}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
+      </div>
+      <div style={{background:Y.irr>=15?C.teal:Y.irr>=10?C.amber:C.red,borderRadius:10,padding:"10px 12px",color:"#fff"}}>
+        <div style={{fontSize:9,opacity:0.65,marginBottom:2}}>Est. IRR</div>
+        <div style={{fontSize:18,fontWeight:700}}>{fmtP(Y.irr)}</div>
+        <div style={{fontSize:10,opacity:0.7}}>{Y.irr>=15?"Excellent":Y.irr>=10?"Good":"Below target"}</div>
+      </div>
+    </div>
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Year-by-year</div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead><tr style={{background:C.bg}}>{["Yr","Rent/unit","NOI/yr","CF/yr","CF/mo","Equity","Value"].map(h=><th key={h} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"right",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+          <tbody>{Y.yearly.map((row,i)=><tr key={row.year} style={{background:i%2===0?C.white:C.bg}}>
+            <td style={{padding:"5px 8px",fontWeight:600,color:C.navy,textAlign:"right"}}>{row.year}</td>
+            <td style={{padding:"5px 8px",textAlign:"right"}}>{fmtD(row.monthlyRent)}</td>
+            <td style={{padding:"5px 8px",textAlign:"right"}}>{fmtD(row.noi)}</td>
+            <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600,color:row.cf>=0?C.teal:C.red}}>{fmtD(row.cf)}</td>
+            <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600,color:row.cf>=0?C.teal:C.red}}>{fmtD(row.cf/12)}</td>
+            <td style={{padding:"5px 8px",textAlign:"right",color:C.teal}}>{fmtD(row.equity)}</td>
+            <td style={{padding:"5px 8px",textAlign:"right"}}>{fmtD(row.propVal)}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden"}}>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Return components</div>
+      <div style={{padding:"8px 12px"}}>
+        {[["Appreciation",fmtD(Y.appGain),C.teal],["Principal paydown",fmtD(Y.equityBuild),C.teal],["Net cashflow",fmtD(Y.totCF),Y.totCF>=0?C.teal:C.red],["Depreciation benefit (est.)",fmtD(Y.deprBen),C.teal]].map(([l2,v2,col])=><div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #F7FAFC",fontSize:12}}><span style={{color:C.slate}}>{l2}</span><span style={{fontWeight:700,color:col,fontVariantNumeric:"tabular-nums"}}>{v2}</span></div>)}
+        <div style={{fontSize:9,color:"#A0AEC0",marginTop:7}}>Exit: {fmtD(Y.exitVal)} · {S.projection.appreciationPct}%/yr · ~6% selling costs · consult CPA</div>
+      </div>
+    </div>
+  </div>;
+}
+// ── Analysis tab (sensitivity + what needs to be true + loans + comps) ──
+function AnalysisTab({SEN,R,S,Y}){
+  const[targetCF,setTargetCF]=useState(0);
+  const wnt=useMemo(()=>whatNeedsToBeTrue(S,R,targetCF),[S,R,targetCF]);
+  const loans=useMemo(()=>calcLoanOptions(S.price,S.financing.downPct,S.financing.rate,S.financing.loanYears),[S.price,S.financing.downPct,S.financing.rate,S.financing.loanYears]);
+  const cfColor=v=>v>0?C.teal:v>-500?C.amber:C.red;
+  const cfBg=v=>v>0?"#DFF2EC":v>-500?"#FDF3E3":"#FCEAEC";
+  const rVars=[-1.0,-0.5,0,+0.5,+1.0];
+
+  return <div>
+    {/* What needs to be true */}
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+      <div style={{padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",fontSize:11,fontWeight:700,color:"#fff",borderBottom:"1px solid "+C.border}}>🎯 What needs to be true</div>
+      <div style={{padding:"12px 13px",background:C.white}}>
+        <div style={{fontSize:11,color:C.slate,marginBottom:10}}>Enter your target monthly CF — see what needs to change to hit it</div>
+        <div style={{display:"flex",gap:9,alignItems:"end",marginBottom:12}}>
+          <div style={{flex:1}}><Field label="Target CF/mo" prefix="$" value={targetCF} onChange={setTargetCF} min={-5000} max={10000} step={50} sub="0 = break-even, positive = cash flow"/></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9}}>
+          {[
+            {icon:"🏠",label:"Needed rent/unit",val:fmtD(wnt.neededRentPU)+"/mo",curr:fmtD(R.monRent/R.numU)+"/mo current",delta:wnt.neededRentPU-(R.monRent/R.numU),good:wnt.neededRentPU<=R.monRent/R.numU},
+            {icon:"💰",label:"Max purchase price",val:wnt.neededPrice?fmtD(wnt.neededPrice):"Not possible",curr:fmtD(S.price)+" current",delta:wnt.neededPrice?wnt.neededPrice-S.price:null,good:wnt.neededPrice>=S.price},
+            {icon:"📉",label:"Needed rate",val:wnt.neededRate+"%",curr:S.financing.rate+"% current",delta:wnt.neededRate-S.financing.rate,good:wnt.neededRate>=S.financing.rate},
+          ].map(item=><div key={item.label} style={{padding:"9px 10px",background:item.good?C.tealL:C.redL,borderRadius:9,border:"1px solid "+(item.good?"#9FE1CB":"#F7C1C1")}}>
+            <div style={{fontSize:13,marginBottom:3}}>{item.icon}</div>
+            <div style={{fontSize:10,color:C.slate,marginBottom:2}}>{item.label}</div>
+            <div style={{fontSize:14,fontWeight:700,color:item.good?C.teal:C.red}}>{item.val}</div>
+            <div style={{fontSize:10,color:C.slate,marginTop:2}}>{item.curr}</div>
+            {item.delta!==null&&<div style={{fontSize:10,fontWeight:600,color:item.good?C.teal:C.red,marginTop:2}}>{item.delta>=0?"+":""}{item.label.includes("Rate")?(item.delta.toFixed(2)+"%"):(item.label.includes("rent")?fmtD(item.delta):fmtD(item.delta))} vs current</div>}
+          </div>)}
+        </div>
+      </div>
+    </div>
+
+    {/* Sensitivity table */}
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Monthly CF — price vs rate</div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead><tr style={{background:C.bg}}>
+            <th style={{padding:"5px 10px",fontWeight:600,color:C.slate,textAlign:"left",borderBottom:"1px solid "+C.border}}>Price</th>
+            {rVars.map(r=><th key={r} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"center",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{r===0?"Current":(r>0?"+":"")+r.toFixed(1)+"%"}</th>)}
+          </tr></thead>
+          <tbody>{SEN.priceRate.map((row,ri)=><tr key={ri}>
+            <td style={{padding:"5px 10px",fontWeight:600,color:row.label==="Current"?C.navy:C.text,background:row.label==="Current"?"#F0F4FF":C.white,whiteSpace:"nowrap"}}>
+              {row.label==="Current"?"Current":row.label} {row.label!=="Current"&&<span style={{fontSize:9,color:C.slate}}>({fmtD(row.price)})</span>}
+            </td>
+            {row.cells.map((cell,ci)=><td key={ci} style={{padding:"5px 8px",textAlign:"center",background:row.label==="Current"&&cell.label==="Current"?"#E8F4FF":cfBg(cell.cf),fontWeight:row.label==="Current"&&cell.label==="Current"?700:500,color:cfColor(cell.cf),fontVariantNumeric:"tabular-nums"}}>{fmtD(cell.cf/12)}/mo</td>)}
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* Rent sensitivity */}
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>CF sensitivity — rent/unit</div>
+      <div style={{padding:"8px 12px",display:"flex",gap:6,flexWrap:"wrap"}}>
+        {SEN.rentCells.map(cell=><div key={cell.delta} style={{flex:1,minWidth:80,padding:"8px",background:cfBg(cell.cf),borderRadius:8,textAlign:"center",border:"1px solid "+(cell.delta===0?"#93C5FD":"transparent")}}>
+          <div style={{fontSize:10,color:C.slate,marginBottom:2}}>{cell.delta===0?"Current":(cell.delta>0?"+":"")+fmtD(cell.delta)+"/unit"}</div>
+          <div style={{fontSize:13,fontWeight:700,color:cfColor(cell.cf),fontVariantNumeric:"tabular-nums"}}>{fmtD(cell.cf/12)}/mo</div>
+          <div style={{fontSize:10,color:C.slate,marginTop:1}}>{fmtP(cell.capRate)} cap</div>
+        </div>)}
+      </div>
+    </div>
+
+    {/* Loan comparison */}
+    <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Loan type comparison</div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead><tr style={{background:C.bg}}>{["Type","Rate","Payment/mo","CF/mo","Notes"].map(h=><th key={h} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"right",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+          <tbody>{loans.map((loan,i)=>{
+            const loanCF=R.noi-loan.monthly*12;
+            const isCurrent=i===0;
+            return <tr key={loan.name} style={{background:isCurrent?"#F0F4FF":i%2===0?C.white:C.bg}}>
+              <td style={{padding:"5px 8px",fontWeight:isCurrent?600:400,color:isCurrent?C.navy:C.text,textAlign:"right",whiteSpace:"nowrap"}}>{loan.name}{isCurrent&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:"#BFDBFE",color:"#1D4ED8",borderRadius:4}}>current</span>}</td>
+              <td style={{padding:"5px 8px",textAlign:"right"}}>{loan.rate.toFixed(3)}%</td>
+              <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600}}>{fmtD(loan.monthly)}/mo</td>
+              <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600,color:loanCF>=0?C.teal:C.red}}>{fmtD(loanCF/12)}/mo</td>
+              <td style={{padding:"5px 8px",textAlign:"right",color:C.slate,fontSize:10}}>{loan.note}</td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>;
+}
+// ── Scenario manager (with localStorage) ──────────────────────
+function ScenarioManager({currentState,onLoad}){
+  const[scenarios,setScenarios]=useState(()=>{try{return JSON.parse(localStorage.getItem("re_scenarios")||"[]");}catch{return [];}});
+  const[name,setName]=useState("");
+  const[saving,setSaving]=useState(false);
+  const save=()=>{
+    const n=name.trim()||"Deal "+new Date().toLocaleDateString("en-US");
+    const snap={...currentState,_name:n,_ts:Date.now()};
+    const updated=[...scenarios.filter(s=>s._name!==n),snap].slice(-8);
+    setScenarios(updated);
+    try{localStorage.setItem("re_scenarios",JSON.stringify(updated));}catch{}
+    setName("");setSaving(false);
+  };
+  const remove=n=>{const u=scenarios.filter(s=>s._name!==n);setScenarios(u);try{localStorage.setItem("re_scenarios",JSON.stringify(u));}catch{}};
+  return <div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:scenarios.length>0?8:0}}>
+      {scenarios.map(s=><div key={s._name} style={{display:"flex",alignItems:"center",gap:4,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"4px 8px"}}>
+        <button onClick={()=>onLoad(s)} style={{fontSize:11,fontWeight:600,color:C.navy,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0}}>{s._name}</button>
+        <button onClick={()=>remove(s._name)} style={{fontSize:10,color:C.red,background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:2}}>✕</button>
+      </div>)}
+      {!saving&&<button onClick={()=>setSaving(true)} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"1px solid "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>💾 Save</button>}
+    </div>
+    {saving&&<div style={{display:"flex",gap:6,alignItems:"center",marginTop:4}}>
+      <input value={name} onChange={e=>setName(e.target.value)} placeholder="Scenario name…"
+        onKeyDown={e=>e.key==="Enter"&&save()}
+        style={{padding:"5px 9px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none",flex:1}}/>
+      <button onClick={save} style={{padding:"5px 12px",borderRadius:7,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>Save</button>
+      <button onClick={()=>setSaving(false)} style={{padding:"5px 10px",borderRadius:7,background:C.white,color:C.slate,border:"1px solid "+C.border,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕</button>
+    </div>}
+  </div>;
+}
+
+// ── Comparables ───────────────────────────────────────────────
+let _cid=100;function cuid(){return ++_cid;}
+function ComparablesCard({comps,setComps,currentR}){
+  const add=()=>setComps(p=>[...p,{id:cuid(),label:"Comp "+(p.length+1),price:550000,rent:5600,capRate:5.5}]);
+  const rem=i=>setComps(p=>p.filter((_,j)=>j!==i));
+  const setC=(i,k,v)=>setComps(p=>{const a=[...p];a[i]={...a[i],[k]:v};return a;});
+  if(comps.length===0)return <Card title="Comparable properties" icon="📊">
+    <div style={{fontSize:12,color:C.slate,marginBottom:10}}>Add nearby comparable sales to benchmark this deal against the market.</div>
+    <button onClick={add} style={{fontSize:12,padding:"7px 16px",borderRadius:8,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add comparable</button>
+  </Card>;
+  const avgCapRate=comps.reduce((s,c)=>s+c.capRate,0)/comps.length;
+  const avgPPU=comps.reduce((s,c)=>s+(c.price/(c.rent*12/12)),0)/comps.length;
+  return <Card title={"Comparables ("+comps.length+")"} icon="📊">
+    <div style={{display:"flex",gap:12,marginBottom:10,padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border,fontSize:11}}>
+      <div><div style={{color:C.slate}}>Avg cap rate comps</div><div style={{fontWeight:700,color:C.text}}>{fmtP(avgCapRate)}</div></div>
+      <div><div style={{color:C.slate}}>This deal</div><div style={{fontWeight:700,color:currentR.capRate>=avgCapRate?C.teal:C.red}}>{fmtP(currentR.capRate)} {currentR.capRate>=avgCapRate?"✓ above avg":"↓ below avg"}</div></div>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {comps.map((c,i)=><div key={c.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
+          <input value={c.label} onChange={e=>setC(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.navy,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:80}}/>
+          <button onClick={()=>rem(i)} style={{fontSize:10,color:C.red,background:C.redL,border:"none",borderRadius:5,cursor:"pointer",padding:"2px 6px"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
+          <MoneyInput label="Price" value={c.price} onChange={x=>setC(i,"price",x)} small/>
+          <MoneyInput label="Total rent/mo" value={c.rent} onChange={x=>setC(i,"rent",x)} small/>
+          <Field label="Cap rate" suffix="%" value={c.capRate} onChange={x=>setC(i,"capRate",x)} min={0} max={20} step={0.1} xs/>
+        </div>
+        <div style={{marginTop:5,fontSize:10,color:C.slate}}>GRM: {fmtX(c.price/(c.rent*12))} · 1% rule: {fmtP(c.rent/c.price*100)}</div>
+      </div>)}
+    </div>
+    <button onClick={add} style={{marginTop:8,fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add comp</button>
+  </Card>;
+}
+// ── Init state & examples ──────────────────────────────────────
+const INIT={
+  address:"",notes:"",
+  price:620000,
+  units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
+  financing:{downPct:25,rate:7.25,loanYears:30},
+  closing:{...DCC},expenses:{...DEX},
+  projection:{appreciationPct:4.5,holdYears:5,rentGrowthPct:3,vaEnabled:false,vaMarketRentPerUnit:1750,vaYear:2,refiEnabled:false,refiYear:3,refiRate:6.5},
+  repairs:{include:false,unknown:false,amount:0},
+  partnership:{enabled:false,myPct:60},
+  comparables:[],
+};
+const EXAMPLES=[
+  {id:"en",label:"English Ave",sub:"SW ATL·D",tag:"Disaster",col:C.red,address:"English Ave, Atlanta, GA",price:240000,units:[{id:1,label:"U1",rent:700,beds:1,bath:1,sqft:600},{id:2,label:"U2",rent:700,beds:1,bath:1,sqft:600},{id:3,label:"U3",rent:700,beds:1,bath:1,sqft:600},{id:4,label:"U4",rent:700,beds:1,bath:1,sqft:600}],financing:{downPct:25,rate:8,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:52,vacancyPct:14,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"cp",label:"College Park",sub:"South ATL·C",tag:"Bad",col:C.red,address:"College Park, GA",price:420000,units:[{id:1,label:"U1",rent:1050,beds:2,bath:1,sqft:850},{id:2,label:"U2",rent:1050,beds:2,bath:1,sqft:850},{id:3,label:"U3",rent:1050,beds:2,bath:1,sqft:850},{id:4,label:"U4",rent:1050,beds:2,bath:1,sqft:850}],financing:{downPct:25,rate:7.5,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:48,vacancyPct:9,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2.5},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"cl",label:"Clarkston",sub:"DeKalb·B",tag:"Mixed",col:C.amber,address:"Clarkston, GA",price:560000,units:[{id:1,label:"U1",rent:1500,beds:2,bath:1,sqft:950},{id:2,label:"U2",rent:1500,beds:2,bath:1,sqft:950},{id:3,label:"U3",rent:1300,beds:1,bath:1,sqft:700},{id:4,label:"U4",rent:1300,beds:1,bath:1,sqft:700}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:45,vacancyPct:6,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:3.5},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"sm",label:"Smyrna",sub:"Cobb·B+",tag:"Good",col:C.teal,address:"Smyrna, GA",price:680000,units:[{id:1,label:"U1",rent:1900,beds:3,bath:2,sqft:1200},{id:2,label:"U2",rent:1900,beds:3,bath:2,sqft:1200},{id:3,label:"U3",rent:1600,beds:2,bath:1,sqft:900},{id:4,label:"U4",rent:1600,beds:2,bath:1,sqft:900}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"detailed",vacancyPct:5,taxes:8400,insurance:5000,mgmtPct:8,maintenance:200,capex:400,utilities:150,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:4},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"kw",label:"Kirkwood",sub:"Intown·Value-add",tag:"🔥 Home run",col:C.teal,address:"Kirkwood, Atlanta, GA",price:620000,units:[{id:1,label:"U1",rent:1350,beds:2,bath:1,sqft:950},{id:2,label:"U2",rent:1350,beds:2,bath:1,sqft:950},{id:3,label:"U3",rent:1100,beds:1,bath:1,sqft:650},{id:4,label:"U4",rent:1100,beds:1,bath:1,sqft:650}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3.5},expenses:{...DEX,mode:"detailed",vacancyPct:5,taxes:7800,insurance:4600,mgmtPct:8,maintenance:250,capex:400,utilities:160,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:4.5,vaEnabled:true,vaMarketRentPerUnit:1700,vaYear:2},repairs:{include:true,unknown:false,amount:35000},partnership:{...INIT.partnership},comparables:[]},
+];
+let _uid=10;function uid(){return ++_uid;}
+// ── App ────────────────────────────────────────────────────────
+export default function App(){
+  const[state,setState]=useState(()=>{try{const s=localStorage.getItem("re_autosave");if(s)return{...INIT,...JSON.parse(s)};}catch{}return INIT;});
+  const[showEx,setShowEx]=useState(false);
+  const[showUD,setShowUD]=useState(false);
+  const[selEx,setSelEx]=useState(null);
+  const[tab,setTab]=useState("overview");
+  const[isPrinting,setIsPrinting]=useState(false);
+  const S=state;
+  const set=(k,v)=>setState(p=>({...p,[k]:v}));
+  const setFin=(k,v)=>setState(p=>({...p,financing:{...p.financing,[k]:v}}));
+  const setProj=(k,v)=>setState(p=>({...p,projection:{...p.projection,[k]:v}}));
+  const setRep=(k,v)=>setState(p=>({...p,repairs:{...p.repairs,[k]:v}}));
+  const setPart=(k,v)=>setState(p=>({...p,partnership:{...p.partnership,[k]:v}}));
+  const setCC=useCallback(fn=>setState(p=>({...p,closing:fn(p.closing||{...DCC})})),[]);
+  const setEx=useCallback(fn=>setState(p=>({...p,expenses:fn(p.expenses||{...DEX})})),[]);
+  const setUnit=(i,k,v)=>setState(p=>{const u=[...p.units];u[i]={...u[i],[k]:v};return{...p,units:u};});
+  const addUnit=()=>setState(p=>({...p,units:[...p.units,{id:uid(),label:"Unit "+(p.units.length+1),rent:1400,beds:1,bath:1,sqft:700}]}));
+  const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
+  const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
+  const loadEx=ex=>{setSelEx(ex.id);setState({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}});};
+
+  // Auto-save to localStorage
+  useEffect(()=>{try{localStorage.setItem("re_autosave",JSON.stringify(state));}catch{};},[state]);
+
+  const R=useMemo(()=>computeBase(state),[state]);
+  const Y=useMemo(()=>computeYearly(state,R),[state,R]);
+  const SEN=useMemo(()=>computeSensitivity(state,R),[state,R]);
+
+  const totalRent=S.units.reduce((s,u)=>s+u.rent,0);
+  const numU=S.units.length;
+  const score=useMemo(()=>calcDealScore(R,Y),[R,Y]);
+
+  const TABS=[["overview","Overview"],["income","Income"],["projection","Projection"],["analysis","Analysis"]];
+
+  const handlePrint=()=>{setIsPrinting(true);setTimeout(()=>{window.print();setTimeout(()=>setIsPrinting(false),300);},150);};
+
+  return(
+    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:860,margin:"0 auto",padding:"0.5rem 0"}}>
+      <style>{`
+        @media print{.no-print{display:none!important}.layout{display:block!important}.sticky-col{position:static!important;margin-top:20px}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+        @media (max-width:680px){.layout{grid-template-columns:1fr!important}.sticky-col{position:static!important}.mobile-bar{display:flex!important}}
+      `}</style>
+
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:13,padding:"14px 18px",marginBottom:11,overflow:"hidden",position:"relative"}} className="no-print">
+        <div style={{position:"absolute",right:-10,top:-10,width:70,height:70,border:"2px solid rgba(200,146,42,0.2)",borderRadius:"50%",pointerEvents:"none"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+          <div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",color:C.gold,marginBottom:3,textTransform:"uppercase"}}>Atlanta · Georgia · Multifamily</div>
+            <div style={{fontSize:18,fontWeight:700,color:"#fff"}}>Investment Property Analyzer</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Smart defaults · override anything · hover ⓘ for formulas · auto-save</div>
+          </div>
+          <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
+            <ScenarioManager currentState={S} onLoad={s=>{setState({...INIT,...s});setSelEx(null);}}/>
+            <button onClick={handlePrint} style={{fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>🖨 Print / PDF</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Presets */}
+      <div style={{marginBottom:11}} className="no-print">
+        <button onClick={()=>setShowEx(!showEx)} style={{fontSize:11,fontWeight:700,color:C.slate,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"0 0 6px",display:"flex",alignItems:"center",gap:5}}>
+          <span>Load Atlanta example deal</span><span style={{transition:"transform 0.2s",display:"inline-block",transform:showEx?"rotate(180deg)":"none"}}>▾</span>
+        </button>
+        {showEx&&<div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
+          {EXAMPLES.map(ex=>{const on=selEx===ex.id;return <button key={ex.id} onClick={()=>loadEx(ex)} style={{padding:"7px 5px",borderRadius:9,border:"1.5px solid "+(on?ex.col:C.border),background:on?ex.col:C.white,cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all 0.15s"}}>
+            <div style={{fontSize:10,fontWeight:700,color:on?"#fff":C.text}}>{ex.label}</div>
+            <div style={{fontSize:9,color:on?"rgba(255,255,255,0.7)":C.slate,lineHeight:1.3}}>{ex.sub}</div>
+            <div style={{marginTop:3,fontSize:9,fontWeight:700,color:on?"rgba(255,255,255,0.85)":ex.col}}>{ex.tag}</div>
+          </button>;})}
+        </div>}
+      </div>
+
+      <div className="layout" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11,alignItems:"start"}}>
+        {/* LEFT: Inputs */}
+        <div>
+          {/* Address + Notes */}
+          <Card title="Property details" icon="📍">
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Address / MLS #</label>
+                <input value={S.address||""} onChange={e=>set("address",e.target.value)} placeholder="123 Maple St, Atlanta, GA 30308"
+                  style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Notes / assumptions</label>
+                <textarea value={S.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Seller motivated, rents below market, new roof 2022..."
+                  rows={2} style={{padding:"7px 10px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none",resize:"vertical",lineHeight:1.5}}/>
+              </div>
+            </div>
+          </Card>
+
+          {/* Units */}
+          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️">
+            <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
+            <div style={{marginBottom:9}}><Tog checked={showUD} onChange={setShowUD} label="Show unit details (beds / bath / sq ft)"/></div>
+            <div style={{marginBottom:9,padding:"6px 9px",background:"#E6F1FB",borderRadius:7,border:"1px solid #B5D4F4",fontSize:10,color:"#185FA5"}}>📍 ATL 2026: avg rent $1,638/mo · B-class 2BR: $1,400–1,700 · vacancy ~5.9% · rent growth 4.1% forecast</div>
+            <div style={{display:"flex",flexDirection:"column",gap:7}}>
+              {S.units.map((u,i)=><div key={u.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showUD?8:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.navy,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:58}}/>
+                    <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white}}>
+                      <span style={{padding:"5px 6px 5px 8px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border}}>$</span>
+                      <input type="text" value={u.rent>0?new Intl.NumberFormat("en-US").format(u.rent):""} placeholder="0"
+                        onChange={e=>setUnit(i,"rent",parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
+                        style={{width:75,padding:"5px 8px",fontSize:13,fontWeight:600,border:"none",background:"transparent",color:C.navy,outline:"none"}}/>
+                      <span style={{padding:"5px 7px 5px 2px",fontSize:10,color:C.slate}}>/mo</span>
+                    </div>
+                  </div>
+                  {numU>1&&<button onClick={()=>remUnit(i)} style={{padding:"3px 7px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:11,color:C.red,fontFamily:"inherit"}}>✕</button>}
+                </div>
+                {showUD&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                  <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
+                  <Field label="Baths" value={u.bath||0} onChange={x=>setUnit(i,"bath",x)} min={0} max={6} step={0.5} xs/>
+                  <Field label="Sq ft" value={u.sqft||0} onChange={x=>setUnit(i,"sqft",x)} min={0} step={50} xs/>
+                </div>}
+              </div>)}
+            </div>
+            <button onClick={addUnit} style={{marginTop:8,width:"100%",padding:"7px",borderRadius:8,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",fontSize:12,fontWeight:600,color:C.slate,fontFamily:"inherit"}}>+ Add unit</button>
+            <div style={{marginTop:9,padding:"6px 9px",background:C.bg,borderRadius:7,border:"1px solid "+C.border,fontSize:12,display:"flex",justifyContent:"space-between"}}>
+              <span style={{color:C.slate}}>Total monthly</span>
+              <span style={{fontWeight:700,color:C.navy}}>{fmtD(totalRent)}/mo · {fmtD(totalRent*12)}/yr</span>
+            </div>
+          </Card>
+
+          {/* Financing */}
+          <Card title="Financing" icon="🏦">
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+              <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)}/>
+              <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125}/>
+              <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={x=>setFin("loanYears",x)} min={1} max={40}/>
+              <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
+                <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Monthly payment</div>
+                <div style={{fontSize:14,fontWeight:700,color:C.navy}}>{fmtD(R.pmt)}/mo</div>
+                <div style={{fontSize:10,color:"#A0AEC0"}}>Loan: {fmtD(R.loan)}</div>
+              </div>
+            </div>
+            {/* Partnership */}
+            <div style={{marginTop:11,paddingTop:11,borderTop:"1px solid "+C.border}}>
+              <Tog checked={S.partnership?.enabled||false} onChange={x=>setPart("enabled",x)} label="Partnership purchase" sub="Calculate my share of returns"/>
+              {S.partnership?.enabled&&<div style={{marginTop:9}}>
+                <Field label="My equity share" suffix="%" value={S.partnership.myPct||60} onChange={x=>setPart("myPct",x)} min={1} max={99} step={1} sub={"Partner: "+(100-(S.partnership.myPct||60))+"%"}/>
+              </div>}
+            </div>
+          </Card>
+
+          <ClosingCosts cc={S.closing} setCC={setCC} price={S.price} loan={R.loan} annTax={S.expenses.taxes||0} annIns={S.expenses.insurance||0} rate={S.financing.rate}/>
+          <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price}/>
+
+          {/* Repairs */}
+          <Card title="Repairs & Rehab" icon="🔧">
+            <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
+            {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"1fr auto",gap:9,alignItems:"end"}}>
+              <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <label style={{fontSize:10,color:C.slate,fontWeight:600}}>Unknown?</label>
+                <button onClick={()=>setRep("unknown",!S.repairs.unknown)} style={{padding:"6px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1px solid "+(S.repairs.unknown?C.amber:C.border),background:S.repairs.unknown?C.amberL:C.white,color:S.repairs.unknown?C.amber:C.slate}}>? TBD</button>
+              </div>
+            </div>}
+            {S.repairs.include&&S.repairs.unknown&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>⚠ Get inspection quotes. Budget 5–15% of price for older buildings.</div>}
+          </Card>
+
+          {/* Projection */}
+          <Card title="Projection & Growth" icon="📈">
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+              <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
+              <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
+              <Field label="Rent growth/yr" suffix="%" value={S.projection.rentGrowthPct||0} onChange={x=>setProj("rentGrowthPct",x)} min={0} max={10} step={0.25} sub="Applied to all units each year"/>
+              <div style={{padding:"7px 10px",background:C.tealL,borderRadius:8,border:"1px solid #9FE1CB",fontSize:11}}>
+                <div style={{color:C.teal,fontWeight:700,marginBottom:2}}>Rent in year {S.projection.holdYears}</div>
+                <div style={{fontWeight:700,color:C.teal,fontSize:14}}>{fmtD(Math.round((totalRent/numU)*Math.pow(1+(S.projection.rentGrowthPct||0)/100,(S.projection.holdYears||5)-1)))}/unit/mo</div>
+              </div>
+            </div>
+            <SecLabel text="Value-add scenario"/>
+            <div style={{marginBottom:12}}>
+              <div style={{marginBottom:8}}><Tog checked={S.projection.vaEnabled||false} onChange={x=>setProj("vaEnabled",x)} label="Below-market rents — value-add potential" sub="Show metrics at stabilized market rents"/></div>
+              {S.projection.vaEnabled&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+                <Field label="Market rent / unit" prefix="$" value={S.projection.vaMarketRentPerUnit||1700} onChange={x=>setProj("vaMarketRentPerUnit",x)} min={0} step={25} sub={"current: "+fmtD(totalRent/numU)+"/unit"}/>
+                <Field label="Stabilized by year" value={S.projection.vaYear||2} onChange={x=>setProj("vaYear",x)} min={1} max={10}/>
+              </div>}
+            </div>
+            <SecLabel text="Refinance scenario"/>
+            <div>
+              <div style={{marginBottom:8}}><Tog checked={S.projection.refiEnabled||false} onChange={x=>setProj("refiEnabled",x)} label="Model a refinance in projection" sub="New rate applies from refi year onward"/></div>
+              {S.projection.refiEnabled&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+                <Field label="Refi year" value={S.projection.refiYear||3} onChange={x=>setProj("refiYear",x)} min={1} max={S.projection.holdYears||5}/>
+                <Field label="New rate" suffix="%" value={S.projection.refiRate||6.5} onChange={x=>setProj("refiRate",x)} min={1} max={15} step={0.125}/>
+              </div>}
+            </div>
+          </Card>
+
+          <ComparablesCard comps={S.comparables||[]} setComps={setComps} currentR={R}/>
+        </div>
+
+        {/* RIGHT: Results */}
+        <div className="sticky-col" style={{position:"sticky",top:8}}>
+          {/* Tab bar */}
+          {!isPrinting&&<div className="no-print" style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
+            {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.navy:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
+          </div>}
+          {isPrinting?(
+            <div>
+              <OverviewTab R={R} Y={Y} S={S}/>
+              <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><IncomeTab R={R} S={S}/></div>
+              <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><ProjectionTab R={R} Y={Y} S={S}/></div>
+            </div>
+          ):(
+            <div>
+              <div style={{display:tab==="overview"?"block":"none"}}><OverviewTab R={R} Y={Y} S={S}/></div>
+              <div style={{display:tab==="income"?"block":"none"}}><IncomeTab R={R} S={S}/></div>
+              <div style={{display:tab==="projection"?"block":"none"}}><ProjectionTab R={R} Y={Y} S={S}/></div>
+              <div style={{display:tab==="analysis"?"block":"none"}}><AnalysisTab SEN={SEN} R={R} S={S} Y={Y}/></div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile floating bar */}
+      <div className="mobile-bar" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around"}}>
+        {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
+          <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{v2}</div>
+        </div>)}
+      </div>
+
+      <div style={{marginTop:10,fontSize:9,color:"#A0AEC0",borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
+        Educational only · Not financial/legal/tax advice · Atlanta data: Yardi Matrix, Marcus &amp; Millichap, CoStar, GA DOR 2025–26
+      </div>
+    </div>
+  );
+}
