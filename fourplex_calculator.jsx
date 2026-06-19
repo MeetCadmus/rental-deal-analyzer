@@ -990,7 +990,7 @@ function relTime(ts){
   if(d<365)return Math.floor(d/30)+"mo ago";return Math.floor(d/365)+"y ago";
 }
 
-function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRename,onDelete,onDuplicate}){
+function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRename,onDelete,onDuplicate,onExportAll,onImportAll}){
   const[q,setQ]=useState("");
   const[editId,setEditId]=useState(null);
   const[editVal,setEditVal]=useState("");
@@ -1036,6 +1036,13 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
             </div>
           </div>;
         })}
+      </div>
+      <div style={{flexShrink:0,borderTop:"1px solid "+C.border,background:C.white,padding:"10px 12px"}}>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onExportAll} style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>⬇ Export all ({deals.length})</button>
+          <button onClick={onImportAll} style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>⬆ Import all</button>
+        </div>
+        <div style={{fontSize:9,color:C.muted,marginTop:6,lineHeight:1.5}}>Backs up every deal to one JSON file (your deals live only in this browser). Import adds them to your library.</div>
       </div>
     </div>
   </div>;
@@ -1089,6 +1096,26 @@ export default function App(){
     const inp=document.createElement("input");inp.type="file";inp.accept=".csv,text/csv";
     inp.onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();
       rd.onload=()=>{try{addDeal(mergeImported(csvToState(rd.result)));setSelEx(null);}catch(err){alert("Could not import this CSV: "+err.message);}};
+      rd.readAsText(f);};
+    inp.click();
+  };
+  // Whole-portfolio backup (JSON) — export/import every deal at once
+  const exportAllDeals=()=>{
+    const stamp=new Date().toISOString().slice(0,10);
+    downloadFile("re-deals-backup-"+stamp+".json",JSON.stringify({app:"re-investment-analyzer",version:1,exportedAt:Date.now(),deals,activeId},null,2),"application/json");
+  };
+  const importAllDeals=()=>{
+    const inp=document.createElement("input");inp.type="file";inp.accept=".json,application/json";
+    inp.onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();
+      rd.onload=()=>{try{
+        const data=JSON.parse(rd.result);
+        const incoming=Array.isArray(data)?data:(data&&Array.isArray(data.deals)?data.deals:null);
+        if(!incoming||!incoming.length)throw new Error("no deals found in file");
+        const imported=incoming.map(d=>makeDeal(d,{label:d._label||d._name||"",ts:d._ts,created:d._created}));
+        setDeals(ds=>{const n=[...ds,...imported];persistDeals(n,imported[0]._id);return n;});
+        touchRef.current=false;setActiveId(imported[0]._id);setState(fullState(imported[0]));setSelEx(null);
+        alert("Imported "+imported.length+" deal"+(imported.length>1?"s":"")+" into your library.");
+      }catch(err){alert("Could not import deals: "+err.message);}};
       rd.readAsText(f);};
     inp.click();
   };
@@ -1150,7 +1177,8 @@ export default function App(){
       </div>
 
       <DealsDrawer open={dealsOpen} onClose={()=>setDealsOpen(false)} deals={deals} activeId={activeId} liveTitle={activeTitle}
-        onSelect={switchDeal} onNew={newDeal} onRename={renameDeal} onDelete={deleteDeal} onDuplicate={duplicateDeal}/>
+        onSelect={switchDeal} onNew={newDeal} onRename={renameDeal} onDelete={deleteDeal} onDuplicate={duplicateDeal}
+        onExportAll={exportAllDeals} onImportAll={importAllDeals}/>
 
       {/* Presets */}
       <div style={{marginBottom:11}} className="no-print">
