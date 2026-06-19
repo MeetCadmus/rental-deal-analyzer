@@ -120,10 +120,10 @@ function Bar({val,max,good,warn,inv=false}){
     <div style={{width:pct+"%",height:"100%",background:col,transition:"width 0.4s"}}/>
   </div>;
 }
-function Info({lines}){
+function Info({lines,tint}){
   const[s,setS]=useState(false);
   return <span style={{position:"relative",display:"inline-block",marginLeft:4}}>
-    <span onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} onClick={e=>{e.stopPropagation();setS(v=>!v);}} style={{cursor:"pointer",color:C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
+    <span onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} onClick={e=>{e.stopPropagation();setS(v=>!v);}} style={{cursor:"pointer",color:tint||C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
     {s&&<div style={{position:"absolute",bottom:"130%",left:"50%",transform:"translateX(-50%)",background:"#1A202C",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:999,boxShadow:"0 4px 16px rgba(0,0,0,0.3)",whiteSpace:"normal",pointerEvents:"none",width:"max-content",minWidth:180,maxWidth:"min(240px,78vw)"}}>
       {lines.map((l,i)=><div key={i} style={{lineHeight:1.6,color:l.startsWith("=")?"#68D391":l.startsWith("·")?C.muted:"#fff",fontWeight:l.startsWith("=")?"700":"400"}}>{l}</div>)}
       <div style={{position:"absolute",bottom:-5,left:"50%",transform:"translateX(-50%)",width:10,height:10,background:"#1A202C",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
@@ -756,12 +756,6 @@ function ProjTrace({R,Y,S}){
   const netSale=Math.round((Y.exitVal||0)*(1-sc/100)-(last.balance||0));
   const exitMethod=S.projection.exitCapEnabled?("final-year NOI ÷ "+(S.projection.exitCapRate||6)+"% exit cap"):((S.projection.appreciationPct||0)+"%/yr appreciation");
   const sections=[
-    {t:"📈 Cumulative cash position (the line chart above)",rows:[
-      {l:"Starts at",v:fmtD(-R.cashIn),f:"minus your cash invested at close — down payment + closing"+(R.repairCost?" + repairs":"")},
-      {l:"Each year adds",v:"that year's cash flow",f:"the line rises by CF/yr from the table below"},
-      {l:"Crosses $0 when",v:"rent has repaid your cash",f:"= the payback point (years to get your money back)",c:C.teal},
-      {l:"Final year also adds",v:fmtD(netSale),f:"net proceeds from selling (see IRR section)"},
-    ]},
     {t:"🏆 Total return ("+hold+"yr) — total dollars gained, four parts added up",rows:[
       {l:"Appreciation",v:fmtD(Y.appGain),f:"exit value "+fmtD(Y.exitVal)+" − price "+fmtD(S.price)+"  ("+exitMethod+")",c:Y.appGain>=0?C.teal:C.red},
       {l:"+ Principal paydown",v:fmtD(Y.equityBuild),f:"loan "+fmtD(R.loan)+" − balance still owed "+fmtD(last.balance),c:C.teal},
@@ -775,6 +769,12 @@ function ProjTrace({R,Y,S}){
       {l:"Years 1–"+Math.max(1,hold-1),v:"each year's cash flow",f:"straight from the year-by-year table"},
       {l:"Year "+hold,v:fmtD((last.cf||0)+netSale),f:"final-year CF "+fmtD(last.cf)+" + net sale "+fmtD(netSale),c:C.teal},
       {l:"Net sale proceeds",v:fmtD(netSale),f:"exit value "+fmtD(Y.exitVal)+" − "+sc+"% selling costs − loan payoff "+fmtD(last.balance)},
+    ]},
+    {t:"📈 Cumulative cash position (the line chart)",rows:[
+      {l:"Starts at",v:fmtD(-R.cashIn),f:"minus your cash invested at close — down payment + closing"+(R.repairCost?" + repairs":"")},
+      {l:"Each year adds",v:"that year's cash flow",f:"the line rises by CF/yr from the year-by-year table"},
+      {l:"Crosses $0 when",v:"rent has repaid your cash",f:"= the payback point (years to get your money back)",c:C.teal},
+      {l:"Final year also adds",v:fmtD(netSale),f:"net proceeds from selling (see IRR section)"},
     ]},
   ];
   return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
@@ -802,20 +802,24 @@ function ProjTrace({R,Y,S}){
 
 function ProjectionTab({R,Y,S}){
   const hold=S.projection.holdYears||5;
+  const last=Y.yearly[Y.yearly.length-1]||{};
+  const sc=(S.projection.sellingCostPct??6);
+  const netSale=Math.round((Y.exitVal||0)*(1-sc/100)-(last.balance||0));
+  const totRetTip=["Total return = sum of 4 parts:","· Appreciation "+fmtD(Y.appGain),"· Principal paydown "+fmtD(Y.equityBuild),"· Net cash flow "+fmtD(Y.totCF),"· Depreciation est. "+fmtD(Y.deprBen),"= "+fmtD(Y.totRet)+"  ("+fmtP(Y.totRet/(R.cashIn||1)*100)+" of cash in)","Full detail below ↓"];
+  const irrTip=["IRR = annual rate where all cash flows net to $0:","· Year 0: "+fmtD(-R.cashIn)+" (cash in)","· Years 1–"+Math.max(1,hold-1)+": each year's CF","· Year "+hold+": CF + net sale "+fmtD(netSale),"= "+fmtP(Y.irr)+" / yr","Full detail below ↓"];
   return <div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
       <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:10,padding:"10px 12px",color:"#fff"}}>
-        <div style={{fontSize:9,opacity:0.65,marginBottom:2}}>Total return ({hold}yr)</div>
+        <div style={{fontSize:9,opacity:0.65,marginBottom:2,display:"flex",alignItems:"center"}}>Total return ({hold}yr)<Info tint="rgba(255,255,255,0.8)" lines={totRetTip}/></div>
         <div style={{fontSize:18,fontWeight:700,color:Y.totRet>=0?C.gold:"#F87171"}}>{fmtD(Y.totRet)}</div>
         <div style={{fontSize:10,opacity:0.55}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
       </div>
       <div style={{background:Y.irr>=15?C.tealS:Y.irr>=10?C.amberS:C.redS,borderRadius:10,padding:"10px 12px",color:"#fff"}}>
-        <div style={{fontSize:9,opacity:0.65,marginBottom:2}}>Est. IRR</div>
+        <div style={{fontSize:9,opacity:0.65,marginBottom:2,display:"flex",alignItems:"center"}}>Est. IRR<Info tint="rgba(255,255,255,0.85)" lines={irrTip}/></div>
         <div style={{fontSize:18,fontWeight:700}}>{fmtP(Y.irr)}</div>
         <div style={{fontSize:10,opacity:0.7}}>{Y.irr>=15?"Excellent":Y.irr>=10?"Good":"Below target"}</div>
       </div>
     </div>
-    <ProjTrace R={R} Y={Y} S={S}/>
     <CashflowChart yearly={Y.yearly} cashIn={R.cashIn}/>
     <EquityChart yearly={Y.yearly} loan={R.loan}/>
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
@@ -842,6 +846,7 @@ function ProjectionTab({R,Y,S}){
         <div style={{fontSize:9,color:C.muted,marginTop:10}}>Exit: {fmtD(Y.exitVal)} · {S.projection.exitCapEnabled?(S.projection.exitCapRate+"% exit cap"):(S.projection.appreciationPct+"%/yr appreciation")} · {(S.projection.sellingCostPct??6)}% selling costs · consult CPA. Donut shows positive contributors only.</div>
       </div>
     </div>
+    <div style={{marginTop:11}}><ProjTrace R={R} Y={Y} S={S}/></div>
   </div>;
 }
 // ── Analysis tab (sensitivity + what needs to be true + loans + comps) ──
