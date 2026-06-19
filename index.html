@@ -11,6 +11,9 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Optional cloud sync (Supabase). Harmless if config.js leaves the keys blank. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
   <script>
     fetch('./fourplex_calculator.jsx')
       .then(function(r) { return r.text(); })
