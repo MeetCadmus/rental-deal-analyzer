@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 
 const C={navy:"var(--c-navy)",navyM:"var(--c-navyM)",gold:"var(--c-gold)",goldL:"var(--c-goldL)",teal:"var(--c-teal)",tealL:"var(--c-tealL)",red:"var(--c-red)",redL:"var(--c-redL)",amber:"var(--c-amber)",amberL:"var(--c-amberL)",slate:"var(--c-slate)",border:"var(--c-border)",bg:"var(--c-bg)",white:"var(--c-white)",text:"var(--c-text)",heading:"var(--c-heading)",rowline:"var(--c-rowline)",grid:"var(--c-grid)",hl:"var(--c-hl)",tealS:"var(--c-tealS)",redS:"var(--c-redS)",amberS:"var(--c-amberS)",blueS:"var(--c-blueS)",muted:"var(--c-muted)"};
 const THEME_CSS=`
@@ -846,46 +846,13 @@ function AnalysisTab({SEN,R,S,Y}){
     </div>
   </div>;
 }
-// ── Scenario manager (with localStorage) ──────────────────────
-function ScenarioManager({currentState,onLoad}){
-  const[scenarios,setScenarios]=useState(()=>{try{return JSON.parse(localStorage.getItem("re_scenarios")||"[]");}catch{return [];}});
-  const[name,setName]=useState("");
-  const[saving,setSaving]=useState(false);
-  const save=()=>{
-    const n=name.trim()||"Deal "+new Date().toLocaleDateString("en-US");
-    const snap={...currentState,_name:n,_ts:Date.now()};
-    const updated=[...scenarios.filter(s=>s._name!==n),snap].slice(-8);
-    setScenarios(updated);
-    try{localStorage.setItem("re_scenarios",JSON.stringify(updated));}catch{}
-    setName("");setSaving(false);
-  };
-  const remove=n=>{const u=scenarios.filter(s=>s._name!==n);setScenarios(u);try{localStorage.setItem("re_scenarios",JSON.stringify(u));}catch{}};
-  return <div>
-    <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:scenarios.length>0?8:0}}>
-      {scenarios.map(s=><div key={s._name} style={{display:"flex",alignItems:"center",gap:4,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"4px 8px"}}>
-        <button onClick={()=>onLoad(s)} style={{fontSize:11,fontWeight:600,color:C.heading,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0}}>{s._name}</button>
-        <button onClick={()=>remove(s._name)} style={{fontSize:10,color:C.red,background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:2}}>✕</button>
-      </div>)}
-      {!saving&&<button onClick={()=>setSaving(true)} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"1px solid "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>💾 Save</button>}
-    </div>
-    {saving&&<div style={{display:"flex",gap:6,alignItems:"center",marginTop:4}}>
-      <input value={name} onChange={e=>setName(e.target.value)} placeholder="Scenario name…"
-        onKeyDown={e=>e.key==="Enter"&&save()}
-        style={{padding:"5px 9px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none",flex:1}}/>
-      <button onClick={save} style={{padding:"5px 12px",borderRadius:7,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>Save</button>
-      <button onClick={()=>setSaving(false)} style={{padding:"5px 10px",borderRadius:7,background:C.white,color:C.slate,border:"1px solid "+C.border,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕</button>
-    </div>}
-  </div>;
-}
-
-// ── Scenario comparison (side-by-side) ────────────────────────
-function ScenarioCompare({currentState}){
+// ── Deal comparison (side-by-side) ────────────────────────────
+function ScenarioCompare({deals,activeId,currentState}){
   const[open,setOpen]=useState(false);
   const[sel,setSel]=useState([]);
-  const saved=()=>{try{return JSON.parse(localStorage.getItem("re_scenarios")||"[]");}catch{return [];}};
-  const list=open?saved():[];
-  const toggle=n=>setSel(s=>s.includes(n)?s.filter(x=>x!==n):[...s,n]);
-  const cols=[{name:"Current deal",st:currentState,cur:true},...list.filter(s=>sel.includes(s._name)).map(s=>({name:s._name,st:s}))];
+  const pool=(deals||[]).filter(d=>d._id!==activeId);
+  const toggle=id=>setSel(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const cols=[{name:"Current deal",st:currentState,cur:true},...pool.filter(d=>sel.includes(d._id)).map(d=>({name:dealTitle(d),st:fullState(d)}))];
   const computed=cols.map(c=>{const R=computeBase(c.st);const Y=computeYearly(c.st,R);return{...c,R,Y,score:calcDealScore(R,Y)};});
   const rows=[
     {l:"Purchase price",f:c=>fmtD(c.st.price)},
@@ -905,13 +872,13 @@ function ScenarioCompare({currentState}){
     {open&&<div className="no-print" onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.55)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"24px 12px",overflowY:"auto"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:14,maxWidth:900,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,0.3)",overflow:"hidden"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")"}}>
-          <span style={{fontSize:13,fontWeight:700,color:"#fff"}}>⚖ Compare scenarios</span>
+          <span style={{fontSize:13,fontWeight:700,color:"#fff"}}>⚖ Compare deals</span>
           <button onClick={()=>setOpen(false)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
         </div>
         <div style={{padding:"14px 16px"}}>
-          <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved scenarios to compare against your current deal{list.length===0?" — none saved yet. Use 💾 Save first.":":"}</div>
-          {list.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-            {list.map(s=>{const on=sel.includes(s._name);return <button key={s._name} onClick={()=>toggle(s._name)} style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{on?"✓ ":""}{s._name}</button>;})}
+          <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved deals to compare against your current deal{pool.length===0?" — no other deals saved yet. Add one with ＋ New deal.":":"}</div>
+          {pool.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            {pool.map(d=>{const on=sel.includes(d._id);return <button key={d._id} onClick={()=>toggle(d._id)} style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{on?"✓ ":""}{dealTitle(d)}</button>;})}
           </div>}
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
@@ -928,7 +895,7 @@ function ScenarioCompare({currentState}){
               </tr>)}</tbody>
             </table>
           </div>
-          {computed.length===1&&<div style={{fontSize:11,color:C.muted,marginTop:12,textAlign:"center"}}>Select one or more saved scenarios above to see them side-by-side.</div>}
+          {computed.length===1&&<div style={{fontSize:11,color:C.muted,marginTop:12,textAlign:"center"}}>Select one or more saved deals above to see them side-by-side.</div>}
         </div>
       </div>
     </div>}
@@ -989,9 +956,98 @@ const EXAMPLES=[
   {id:"kw",label:"Kirkwood",sub:"Intown · Value-add",tag:"🔥 Home run",col:C.teal,address:"Kirkwood, Atlanta, GA 30317",notes:"Off-market intown fourplex with below-market rents and light cosmetic needs. Bought right, it already cash-flows and clears every metric. Turn the units and push rents to market (≈$2,050) for forced appreciation and a true home run.",price:550000,units:[{id:1,label:"Unit 1",rent:1850,beds:2,bath:1,sqft:950},{id:2,label:"Unit 2",rent:1850,beds:2,bath:1,sqft:950},{id:3,label:"Unit 3",rent:1600,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1600,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:6.75,loanYears:30},closing:{...DCC,quickPct:3.5},expenses:{...DEX,mode:"quick",ratio:40,vacancyPct:5,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:5,rentGrowthPct:4,vaEnabled:true,vaMarketRentPerUnit:2050,vaYear:2},repairs:{include:true,unknown:false,amount:25000},partnership:{...INIT.partnership},comparables:[]},
 ];
 let _uid=10;function uid(){return ++_uid;}
+
+// ── Deal portfolio (many deals, auto-saved to localStorage) ───
+const DEALS_KEY="re_deals_v1";
+let _dseq=0;
+function newDealId(){return "d"+Date.now().toString(36)+(_dseq++).toString(36);}
+function fullState(d){d=d||{};return {...INIT,...d,
+  financing:{...INIT.financing,...(d.financing||{})},
+  closing:{...DCC,...(d.closing||{})},
+  expenses:{...DEX,...(d.expenses||{})},
+  projection:{...INIT.projection,...(d.projection||{})},
+  repairs:{...INIT.repairs,...(d.repairs||{})},
+  partnership:{...INIT.partnership,...(d.partnership||{})},
+  units:Array.isArray(d.units)&&d.units.length?d.units:INIT.units,
+  comparables:Array.isArray(d.comparables)?d.comparables:[]};}
+function makeDeal(data,meta){const ts=Date.now();meta=meta||{};const{_id,_name,_label,_ts,_created,...d}=fullState(data);return {...d,_id:newDealId(),_label:meta.label||_label||_name||"",_ts:meta.ts||ts,_created:meta.created||ts};}
+function dealTitle(d){return (d&&d._label&&d._label.trim())||(d&&d.address&&d.address.trim())||"Untitled deal";}
+function persistDeals(deals,activeId){try{localStorage.setItem(DEALS_KEY,JSON.stringify({deals,activeId}));}catch{}}
+function loadDealStore(){
+  try{const r=JSON.parse(localStorage.getItem(DEALS_KEY));if(r&&Array.isArray(r.deals)&&r.deals.length)return {deals:r.deals,activeId:r.deals.some(d=>d._id===r.activeId)?r.activeId:r.deals[r.deals.length-1]._id};}catch{}
+  const deals=[];
+  try{const sc=JSON.parse(localStorage.getItem("re_scenarios")||"[]");if(Array.isArray(sc))sc.forEach(s=>deals.push(makeDeal(s,{label:s._name,ts:s._ts,created:s._ts})));}catch{}
+  try{const a=JSON.parse(localStorage.getItem("re_autosave"));if(a&&typeof a==="object"&&Object.keys(a).length)deals.push(makeDeal(a,{}));}catch{}
+  if(!deals.length)deals.push(makeDeal(INIT,{}));
+  persistDeals(deals,deals[deals.length-1]._id);
+  return {deals,activeId:deals[deals.length-1]._id};
+}
+function relTime(ts){
+  if(!ts)return "";
+  const d=Math.floor((Date.now()-ts)/86400000);
+  if(d<=0)return "today";if(d===1)return "yesterday";
+  if(d<7)return d+" days ago";if(d<30)return Math.floor(d/7)+"w ago";
+  if(d<365)return Math.floor(d/30)+"mo ago";return Math.floor(d/365)+"y ago";
+}
+
+function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRename,onDelete,onDuplicate}){
+  const[q,setQ]=useState("");
+  const[editId,setEditId]=useState(null);
+  const[editVal,setEditVal]=useState("");
+  if(!open)return null;
+  const sorted=[...deals].sort((a,b)=>(b._ts||0)-(a._ts||0));
+  const ql=q.trim().toLowerCase();
+  const list=ql?sorted.filter(d=>dealTitle(d).toLowerCase().includes(ql)):sorted;
+  const startEdit=d=>{setEditId(d._id);setEditVal(d._label||d.address||"");};
+  const commitEdit=()=>{if(editId!=null)onRename(editId,editVal.trim());setEditId(null);};
+  const xbtn={fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit"};
+  return <div className="no-print" onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.5)",zIndex:1000,display:"flex",justifyContent:"flex-end"}}>
+    <div onClick={e=>e.stopPropagation()} style={{width:"min(440px,100%)",height:"100%",background:C.page,display:"flex",flexDirection:"column",boxShadow:"-8px 0 30px rgba(0,0,0,0.3)"}}>
+      <div style={{padding:"13px 16px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <span style={{fontSize:14,fontWeight:700,color:"#fff"}}>📁 My deals <span style={{opacity:0.55,fontWeight:400}}>({deals.length})</span></span>
+        <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
+      </div>
+      <div style={{padding:"10px 12px",display:"flex",gap:8,borderBottom:"1px solid "+C.border,background:C.white,flexShrink:0}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by address / name…" style={{flex:1,padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:8,background:C.bg,color:C.text,outline:"none"}}/>
+        <button onClick={onNew} style={{padding:"7px 13px",borderRadius:8,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>+ New</button>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"8px",WebkitOverflowScrolling:"touch"}}>
+        {list.length===0&&<div style={{textAlign:"center",color:C.muted,fontSize:12,padding:"28px 12px"}}>No deals match “{q}”.</div>}
+        {list.map(d=>{
+          const fs=fullState(d),R=computeBase(fs),Y=computeYearly(fs,R),sc=calcDealScore(R,Y);
+          const isA=d._id===activeId,editing=editId===d._id;
+          return <div key={d._id} onClick={()=>{if(!editing){onSelect(d._id);onClose();}}} style={{border:"1px solid "+(isA?C.navy:C.border),background:isA?C.hl:C.white,borderRadius:10,padding:"9px 11px",marginBottom:7,cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+              <div style={{flex:1,minWidth:0}}>
+                {editing
+                  ? <input autoFocus value={editVal} onClick={e=>e.stopPropagation()} onChange={e=>setEditVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEdit();if(e.key==="Escape")setEditId(null);}} onBlur={commitEdit} placeholder="Name this deal…" style={{width:"100%",padding:"3px 6px",fontSize:13,border:"1px solid "+C.navy,borderRadius:6,fontFamily:"inherit",color:C.text,background:C.white}}/>
+                  : <div style={{fontSize:13,fontWeight:700,color:C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isA?(liveTitle||dealTitle(d)):dealTitle(d)}</div>}
+                <div style={{fontSize:10,color:C.muted,marginTop:2}}>{fmtD(d.price)} · {(d.units||[]).length} units · {relTime(d._ts)}{isA?" · open now":""}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:9,background:sc.color,color:"#fff"}}>{sc.grade}</span>
+                <div style={{fontSize:11,fontWeight:700,color:R.cf>=0?C.teal:C.red,marginTop:3}}>{fmtD(R.cf/12)}/mo</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6,marginTop:8}} onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>startEdit(d)} style={xbtn}>✎ Rename</button>
+              <button onClick={()=>onDuplicate(d._id)} style={xbtn}>⧉ Duplicate</button>
+              <button onClick={()=>{if(typeof confirm==="undefined"||confirm("Delete “"+dealTitle(d)+"”? This can’t be undone."))onDelete(d._id);}} style={{...xbtn,color:C.red,borderColor:C.redL}}>🗑 Delete</button>
+            </div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </div>;
+}
 // ── App ────────────────────────────────────────────────────────
 export default function App(){
-  const[state,setState]=useState(()=>{try{const s=localStorage.getItem("re_autosave");if(s)return{...INIT,...JSON.parse(s)};}catch{}return INIT;});
+  const[boot]=useState(loadDealStore);
+  const[deals,setDeals]=useState(boot.deals);
+  const[activeId,setActiveId]=useState(boot.activeId);
+  const[state,setState]=useState(()=>fullState(boot.deals.find(d=>d._id===boot.activeId)||boot.deals[0]));
+  const touchRef=useRef(false);
+  const[dealsOpen,setDealsOpen]=useState(false);
   const[showEx,setShowEx]=useState(false);
   const[showUD,setShowUD]=useState(false);
   const[selEx,setSelEx]=useState(null);
@@ -1011,7 +1067,14 @@ export default function App(){
   const addUnit=()=>setState(p=>({...p,units:[...p.units,{id:uid(),label:"Unit "+(p.units.length+1),rent:1400,beds:1,bath:1,sqft:700}]}));
   const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
   const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
-  const loadEx=ex=>{setSelEx(ex.id);setState({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}});};
+  // ── Deal portfolio actions ──────────────────────────────────
+  const addDeal=(data,label)=>{touchRef.current=false;const d=makeDeal(data,label?{label}:{});setDeals(ds=>{const n=[...ds,d];persistDeals(n,d._id);return n;});setActiveId(d._id);setState(fullState(d));return d._id;};
+  const switchDeal=id=>{if(id===activeId)return;const d=deals.find(x=>x._id===id);if(!d)return;touchRef.current=false;setActiveId(id);setState(fullState(d));setSelEx(null);};
+  const newDeal=()=>{addDeal(INIT);setSelEx(null);setDealsOpen(false);};
+  const duplicateDeal=id=>{const src=deals.find(x=>x._id===id);if(src)addDeal(src,dealTitle(src)+" (copy)");};
+  const renameDeal=(id,label)=>setDeals(ds=>{const n=ds.map(d=>d._id===id?{...d,_label:label}:d);persistDeals(n,activeId);return n;});
+  const deleteDeal=id=>setDeals(ds=>{let n=ds.filter(d=>d._id!==id);if(!n.length)n=[makeDeal(INIT,{})];let act=activeId;if(id===activeId){act=n[n.length-1]._id;touchRef.current=false;setActiveId(act);setState(fullState(n.find(d=>d._id===act)));setSelEx(null);}persistDeals(n,act);return n;});
+  const loadEx=ex=>{addDeal({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}},ex.label);setSelEx(ex.id);};
   const mergeImported=p=>({...INIT,...p,
     financing:{...INIT.financing,...(p.financing||{})},
     closing:{...DCC,...(p.closing||{})},
@@ -1025,13 +1088,16 @@ export default function App(){
   const importCSV=()=>{
     const inp=document.createElement("input");inp.type="file";inp.accept=".csv,text/csv";
     inp.onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();
-      rd.onload=()=>{try{setState(mergeImported(csvToState(rd.result)));setSelEx(null);}catch(err){alert("Could not import this CSV: "+err.message);}};
+      rd.onload=()=>{try{addDeal(mergeImported(csvToState(rd.result)));setSelEx(null);}catch(err){alert("Could not import this CSV: "+err.message);}};
       rd.readAsText(f);};
     inp.click();
   };
 
-  // Auto-save to localStorage
-  useEffect(()=>{try{localStorage.setItem("re_autosave",JSON.stringify(state));}catch{};},[state]);
+  // Auto-save: sync the working state into its deal (touch "edited" time only on real edits)
+  useEffect(()=>{
+    setDeals(ds=>{const n=ds.map(d=>d._id!==activeId?d:{...d,...state,_id:d._id,_label:d._label,_created:d._created,_ts:touchRef.current?Date.now():d._ts});persistDeals(n,activeId);return n;});
+    touchRef.current=true;
+  },[state]);
 
   const R=useMemo(()=>computeBase(state),[state]);
   const Y=useMemo(()=>computeYearly(state,R),[state,R]);
@@ -1044,6 +1110,9 @@ export default function App(){
   const TABS=[["overview","Overview"],["income","Income"],["projection","Projection"],["analysis","Analysis"]];
 
   const handlePrint=()=>{setIsPrinting(true);const prev=dark;try{document.documentElement.setAttribute("data-theme","light");}catch{}setTimeout(()=>{window.print();setTimeout(()=>{setIsPrinting(false);try{document.documentElement.setAttribute("data-theme",prev?"dark":"light");}catch{}},300);},150);};
+
+  const activeDeal=deals.find(d=>d._id===activeId)||deals[0];
+  const activeTitle=(activeDeal&&activeDeal._label&&activeDeal._label.trim())||(S.address&&S.address.trim())||"Untitled deal";
 
   return(
     <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:860,margin:"0 auto",padding:"0.5rem 0"}}>
@@ -1064,20 +1133,24 @@ export default function App(){
           <div>
             <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",color:C.gold,marginBottom:3,textTransform:"uppercase"}}>Atlanta · Georgia · Multifamily</div>
             <div style={{fontSize:18,fontWeight:700,color:"#fff"}}>Investment Property Analyzer</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Smart defaults · override anything · hover ⓘ for formulas · auto-save</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Unlimited deals · every change auto-saves · switch & compare anytime</div>
           </div>
-          <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
-            <ScenarioManager currentState={S} onLoad={s=>{setState({...INIT,...s});setSelEx(null);}}/>
-            <ScenarioCompare currentState={S}/>
+          <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
             {(() => {const hb={fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"};return <>
+              <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:"rgba(200,146,42,0.22)",border:"1px solid "+C.gold,fontWeight:700,maxWidth:210,overflow:"hidden",textOverflow:"ellipsis"}}>📁 {activeTitle} <span style={{opacity:0.7,fontWeight:400}}>({deals.length})</span></button>
+              <button onClick={newDeal} style={hb} title="Start a new blank deal">＋ New deal</button>
+              <ScenarioCompare deals={deals} activeId={activeId} currentState={S}/>
               <button onClick={()=>setDark(d=>!d)} style={hb} title="Toggle dark mode">{dark?"☀ Light":"🌙 Dark"}</button>
               <button onClick={exportCSV} style={hb} title="Download this deal as a CSV (opens in Excel)">⬇ Export CSV</button>
-              <button onClick={importCSV} style={hb} title="Load a deal from a previously exported CSV">⬆ Import CSV</button>
+              <button onClick={importCSV} style={hb} title="Import a deal from CSV as a new deal">⬆ Import CSV</button>
               <button onClick={handlePrint} style={hb}>🖨 Print / PDF</button>
             </>;})()}
           </div>
         </div>
       </div>
+
+      <DealsDrawer open={dealsOpen} onClose={()=>setDealsOpen(false)} deals={deals} activeId={activeId} liveTitle={activeTitle}
+        onSelect={switchDeal} onNew={newDeal} onRename={renameDeal} onDelete={deleteDeal} onDuplicate={duplicateDeal}/>
 
       {/* Presets */}
       <div style={{marginBottom:11}} className="no-print">
