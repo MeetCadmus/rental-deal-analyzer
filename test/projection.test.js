@@ -77,6 +77,26 @@ test("computeYearly: cumulative cashflow is the running sum of annual CF", () =>
   close(Y.yearly[Y.yearly.length - 1].cumCF, Y.totCF, 3, "last cumCF ≈ total CF");
 });
 
+test("computeYearly: exit-cap valuation prices the sale off final-year NOI", () => {
+  const st = deal({ projection: { holdYears: 5, appreciationPct: 4, rentGrowthPct: 0, exitCapEnabled: true, exitCapRate: 6 } });
+  const Y = M.computeYearly(st, M.computeBase(st));
+  const last = Y.yearly[4];
+  close(last.propVal, last.noi / 0.06, 20, "exit value = final NOI / exit cap");
+  close(Y.exitVal, last.propVal, 1e-9, "exitVal tracks the cap-based value");
+});
+
+test("computeYearly: a lower exit cap raises both exit value and IRR", () => {
+  const mk = (cap) => { const st = deal({ projection: { holdYears: 5, rentGrowthPct: 0, exitCapEnabled: true, exitCapRate: cap } }); return M.computeYearly(st, M.computeBase(st)); };
+  const hi = mk(8), lo = mk(5);
+  assert.ok(lo.exitVal > hi.exitVal, "lower cap -> higher exit value");
+  assert.ok(lo.irr > hi.irr, "lower cap -> higher IRR");
+});
+
+test("computeYearly: higher selling costs reduce IRR", () => {
+  const mk = (sc) => { const st = deal({ projection: { holdYears: 5, appreciationPct: 4, rentGrowthPct: 0, sellingCostPct: sc } }); return M.computeYearly(st, M.computeBase(st)); };
+  assert.ok(mk(2).irr > mk(10).irr, "higher selling cost -> lower IRR");
+});
+
 test("computeYearly: refinance changes the payment from the refi year onward", () => {
   const base = deal({ projection: { holdYears: 6, appreciationPct: 3, rentGrowthPct: 0 } });
   const refi = deal({ projection: { holdYears: 6, appreciationPct: 3, rentGrowthPct: 0, refiEnabled: true, refiYear: 3, refiRate: 4.5 } });

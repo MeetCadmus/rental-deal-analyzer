@@ -85,12 +85,13 @@ function MoneyInput({value,onChange,label,sub,small,hint}){
     {(sub||hint)&&<span style={{fontSize:10,color:hint?"#0F6E56":C.muted}}>{sub||hint}</span>}
   </div>;
 }
-function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder}){
+function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder,showZero}){
+  const display=(value===null||value===undefined||(value===0&&!showZero))?"":value;
   return <div style={{display:"flex",flexDirection:"column",gap:2}}>
     {label&&<label style={{fontSize:xs?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
     <div style={{display:"flex",alignItems:"center",border:"1px solid "+(disabled?"#e8e8e8":C.border),borderRadius:7,overflow:"hidden",background:disabled?"#F4F4F4":C.white}}>
       {prefix&&<span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>{prefix}</span>}
-      <input type="number" value={value===0||value===null||value===undefined?"":value} min={min} max={max} step={step} disabled={!!disabled} placeholder={placeholder||"0"}
+      <input type="number" value={display} min={min} max={max} step={step} disabled={!!disabled} placeholder={placeholder||"0"}
         onChange={e=>{const v=e.target.value;onChange(v===""?0:num(v));}}
         style={{flex:1,padding:"6px 8px",fontSize:xs?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
       {suffix&&<span style={{padding:"6px 8px 6px 4px",fontSize:11,color:C.slate,flexShrink:0}}>{suffix}</span>}
@@ -166,12 +167,12 @@ function MBox({label,value,sub,lvl,bar,bMax,bGood,bWarn,bInv,tip}){
 const DCC={mode:"quick",quickPct:3,origPct:0.5,pointsPct:0,appraisal:800,creditReport:30,underwriting:750,attyFee:1200,titleSearch:275,lenderTitle:900,ownerTitle:1200,recordingFees:75,firstYearInsurance:1500,prepaidDays:15,taxEscrowMonths:3,insEscrowMonths:2,inspection:550,termite:100,survey:600,enviro:0,customItems:[]};
 function calcCC(cc,price,loan,annTax,annIns,rate){
   if(!cc||cc.mode==="quick")return(price||0)*((cc?.quickPct||3)/100);
-  const r=rate||7.25,l=loan||0,p=price||0;
+  const r=rate??7.25,l=loan||0,p=price||0;
   return l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0)+Math.ceil(l/500)*1.5+Math.round(p/1000)+10+(cc.recordingFees||0)+(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0)+(cc.firstYearInsurance||0)+(cc.prepaidDays||0)*(l*r/100/365)+((annTax||0)/12)*(cc.taxEscrowMonths||0)+((annIns||0)/12)*(cc.insEscrowMonths||0)+(cc.inspection||0)+(cc.termite||0)+(cc.survey||0)+(cc.enviro||0)+(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0);
 }
 function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate}){
   const sf=(k,v)=>setCC(p=>({...p,[k]:v}));
-  const l=loan||0,p=price||0,r=rate||7.25,aT=annTax||0,aI=annIns||0;
+  const l=loan||0,p=price||0,r=rate??7.25,aT=annTax||0,aI=annIns||0;
   const intangible=Math.ceil(l/500)*1.5,transfer=Math.round(p/1000),prepInt=(cc.prepaidDays||0)*(l*r/100/365);
   const taxEsc=(aT/12)*(cc.taxEscrowMonths||0),insEsc=(aI/12)*(cc.insEscrowMonths||0);
   const lT=l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0);
@@ -344,13 +345,13 @@ function computeBase(state){
   const price=state.price||0;
   const{totExp,items:expItems}=calcExp(expenses,units.length,egi,price);
   const noi=egi-totExp;
-  const down=price*(financing.downPct||25)/100;
+  const down=price*(financing.downPct??25)/100;
   const loan=price-down;
-  const mr=(financing.rate||7.25)/100/12;
+  const mr=(financing.rate??7.25)/100/12;
   const n=(financing.loanYears||30)*12;
   const pmt=mr===0?loan/n:loan*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1);
   const annPmt=pmt*12;
-  const ccTotal=calcCC(closing,price,loan,expenses.taxes||0,expenses.insurance||0,financing.rate||7.25);
+  const ccTotal=calcCC(closing,price,loan,expenses.taxes||0,expenses.insurance||0,financing.rate??7.25);
   const repairCost=repairs.include&&!repairs.unknown?(repairs.amount||0):0;
   const cashIn=down+ccTotal+repairCost;
   const cf=noi-annPmt;
@@ -387,7 +388,8 @@ function computeYearly(state,R){
   const vaMonthlyRent=projection.vaMarketRentPerUnit||(R.monRent/R.numU);
   const refiEnabled=projection.refiEnabled,refiYear=projection.refiYear||3;
   const appPct=(projection.appreciationPct||0)/100,price=state.price||0;
-  let balance=R.loan,mr=(financing.rate||7.25)/100/12,pmt=R.pmt;
+  const exitCapEnabled=projection.exitCapEnabled,exitCap=(projection.exitCapRate||6)/100;
+  let balance=R.loan,mr=(financing.rate??7.25)/100/12,pmt=R.pmt;
   const origN=(financing.loanYears||30)*12;let monthsElapsed=0,cumCF=0;
   const yearly=[];
   for(let y=1;y<=years;y++){
@@ -403,12 +405,13 @@ function computeYearly(state,R){
     const annDebt=pmt*12;
     for(let m=0;m<12;m++){const i=balance*mr;balance-=(pmt-i);}
     monthsElapsed+=12;
-    const cfY=noiY-annDebt,propVal=price*Math.pow(1+appPct,y);
+    const cfY=noiY-annDebt,propVal=exitCapEnabled&&exitCap>0?Math.max(0,noiY/exitCap):price*Math.pow(1+appPct,y);
     cumCF+=cfY;
     yearly.push({year:y,monthlyRent:Math.round(mRent/R.numU),gpi:Math.round(gpiY),noi:Math.round(noiY),debtService:Math.round(annDebt),cf:Math.round(cfY),propVal:Math.round(propVal),balance:Math.round(Math.max(0,balance)),equity:Math.round(propVal-Math.max(0,balance)),cumCF:Math.round(cumCF)});
   }
   const last=yearly[yearly.length-1]||{};
-  const sellProc=(last.propVal||0)*0.94-last.balance;
+  const sellCostPct=(projection.sellingCostPct??6)/100;
+  const sellProc=(last.propVal||0)*(1-sellCostPct)-last.balance;
   const flows=[-R.cashIn,...yearly.map((y,i)=>i<years-1?y.cf:y.cf+sellProc)];
   let irr=0.1;
   for(let i=0;i<200;i++){let npv=0,d=0;flows.forEach((f,j)=>{npv+=f/Math.pow(1+irr,j);d-=j*f/Math.pow(1+irr,j+1);});if(Math.abs(d)<1e-10)break;irr-=npv/d;if(irr<-0.99){irr=-0.99;break;}}
@@ -422,7 +425,7 @@ function computeSensitivity(state,R){
   const pVars=[-0.10,-0.05,0,+0.05,+0.10];
   const rVars=[-1.0,-0.5,0,+0.5,+1.0];
   return{
-    priceRate:pVars.map(pv=>{const np=Math.round((state.price||0)*(1+pv));return{label:pv===0?"Current":(pv>0?"+":"")+Math.round(pv*100)+"%",price:np,cells:rVars.map(rv=>{const nr=Math.max(1,(state.financing.rate||7.25)+rv);const ns={...state,price:np,financing:{...state.financing,rate:nr}};const rb=computeBase(ns);return{label:rv===0?"Current":(rv>0?"+":"")+rv.toFixed(1)+"%",cf:rb.cf,capRate:rb.capRate};})};})
+    priceRate:pVars.map(pv=>{const np=Math.round((state.price||0)*(1+pv));return{label:pv===0?"Current":(pv>0?"+":"")+Math.round(pv*100)+"%",price:np,cells:rVars.map(rv=>{const nr=Math.max(1,(state.financing.rate??7.25)+rv);const ns={...state,price:np,financing:{...state.financing,rate:nr}};const rb=computeBase(ns);return{label:rv===0?"Current":(rv>0?"+":"")+rv.toFixed(1)+"%",cf:rb.cf,capRate:rb.capRate};})};})
     ,rentCells:[-300,-200,-100,0,100,200,300].map(d=>{const nu=state.units.map(u=>({...u,rent:Math.max(0,u.rent+d)}));const rb=computeBase({...state,units:nu});return{delta:d,cf:rb.cf,capRate:rb.capRate};})
   };
 }
@@ -453,9 +456,9 @@ function whatNeedsToBeTrue(state,R,targetCFmonthly){
   const{units,financing,expenses}=state;
   const numU=Math.max(units.length,1);
   const vac=(expenses.vacancyPct||0)/100,ratio=(expenses.ratio||45)/100;
-  const mr=(financing.rate||7.25)/100/12,n=(financing.loanYears||30)*12;
+  const mr=(financing.rate??7.25)/100/12,n=(financing.loanYears||30)*12;
   const pmtF=mr>0?mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1):1/n;
-  const loanF=1-(financing.downPct||25)/100;
+  const loanF=1-(financing.downPct??25)/100;
   const targetAnn=targetCFmonthly*12;
   const neededRentPU=(targetAnn+R.annPmt)/(numU*12*(1-vac)*(1-ratio));
   const neededPrice=R.noi>targetAnn?Math.round((R.noi-targetAnn)/(12*loanF*pmtF)):null;
@@ -465,7 +468,7 @@ function whatNeedsToBeTrue(state,R,targetCFmonthly){
 }
 
 function calcLoanOptions(price,downPct,currentRate,loanYears){
-  const loan=price*(1-(downPct||25)/100),n30=(loanYears||30)*12,n15=15*12;
+  const loan=price*(1-(downPct??25)/100),n30=(loanYears||30)*12,n15=15*12;
   const pmt=(l,r,n)=>{const mr=r/100/12;return mr===0?l/n:l*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1);};
   return[
     {name:"30yr fixed",rate:currentRate,monthly:pmt(loan,currentRate,n30),totalInt:pmt(loan,currentRate,n30)*n30-loan,note:"Current option"},
@@ -643,6 +646,7 @@ function ChartBox({title,children,note}){
 }
 // Cumulative cash position (starts at −cash in) → shows years-to-payback
 function CashflowChart({yearly,cashIn}){
+  const[hi,setHi]=useState(null);
   const W=540,H=170,pad={l:52,r:18,t:12,b:24};
   const pts=[{x:0,y:-cashIn},...yearly.map(r=>({x:r.year,y:-cashIn+r.cumCF}))];
   const ys=pts.map(p=>p.y),minY=Math.min(0,...ys),maxY=Math.max(0,...ys),spanY=(maxY-minY)||1;
@@ -659,18 +663,27 @@ function CashflowChart({yearly,cashIn}){
   const yrs=yearly.length,step=yrs<=10?1:yrs<=20?2:5;
   const showAt=i=>i===0||i===pts.length-1||(pts[i].x%step===0);
   return <ChartBox title="Cumulative cash position" note={payback?`Crosses break-even at ~year ${payback} (cumulative cash flow recovers your ${fmtD(cashIn)} invested).`:"Does not recover initial investment from cash flow alone within the hold period — most of the return is at sale."}>
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}} onMouseLeave={()=>setHi(null)}>
       {ticks.map((v,i)=><g key={i}><line x1={pad.l} y1={py(v)} x2={W-pad.r} y2={py(v)} strokeWidth="1" style={{stroke:"var(--c-grid)"}}/><text x={pad.l-6} y={py(v)+3} textAnchor="end" style={{fontSize:9,fill:C.slate}}>{fmtD(v)}</text></g>)}
       <line x1={pad.l} y1={zeroY} x2={W-pad.r} y2={zeroY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3 3"/>
       <path d={area} style={{fill:C.teal,opacity:0.10}}/>
       <path d={line} fill="none" strokeWidth="2.5" strokeLinejoin="round" style={{stroke:C.teal}}/>
       {pts.map((p,i)=>showAt(i)?<circle key={i} cx={px(i)} cy={py(p.y)} r="3" style={{fill:p.y>=0?C.teal:C.red}}/>:null)}
       {pts.map((p,i)=>showAt(i)?<text key={i} x={px(i)} y={H-8} textAnchor="middle" style={{fontSize:9,fill:C.slate}}>{p.x===0?"Now":"Y"+p.x}</text>:null)}
+      {pts.map((p,i)=>{const w=(W-pad.l-pad.r)/Math.max(1,pts.length-1);return <rect key={"h"+i} x={px(i)-w/2} y={pad.t} width={w} height={H-pad.t-pad.b} fill="transparent" style={{cursor:"crosshair"}} onMouseEnter={()=>setHi(i)} onMouseMove={()=>setHi(i)} onClick={()=>setHi(i)}/>;})}
+      {hi!=null&&(()=>{const p=pts[hi],tx=Math.min(Math.max(px(hi)-48,2),W-98);return <g pointerEvents="none">
+        <line x1={px(hi)} y1={pad.t} x2={px(hi)} y2={H-pad.b} strokeWidth="1" strokeDasharray="3 3" style={{stroke:C.slate}} opacity="0.5"/>
+        <circle cx={px(hi)} cy={py(p.y)} r="4.5" strokeWidth="1.5" style={{fill:p.y>=0?C.teal:C.red,stroke:"#fff"}}/>
+        <rect x={tx} y={6} width="96" height="32" rx="6" opacity="0.96" style={{fill:C.navy}}/>
+        <text x={tx+8} y={19} style={{fontSize:9,fill:"#fff",opacity:0.7}}>{p.x===0?"Today (cash in)":"Year "+p.x}</text>
+        <text x={tx+8} y={32} style={{fontSize:11,fontWeight:700,fill:"#fff"}}>{fmtD(p.y)}</text>
+      </g>;})()}
     </svg>
   </ChartBox>;
 }
 // Equity vs loan balance, stacked per year
 function EquityChart({yearly,loan}){
+  const[hi,setHi]=useState(null);
   const W=540,H=180,pad={l:52,r:14,t:12,b:24};
   const maxV=Math.max(...yearly.map(r=>r.propVal),loan)||1;
   const n=yearly.length,gap=n>20?2:n>12?3:n>6?6:10;
@@ -681,13 +694,20 @@ function EquityChart({yearly,loan}){
   const step=n<=10?1:n<=20?2:5;
   const showLbl=(r,i)=>i===n-1||r.year%step===0;
   return <ChartBox title="Equity vs. loan balance" note="Each bar = property value, split into your equity (gold) and remaining loan balance (navy). Equity grows from appreciation + principal paydown.">
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}} onMouseLeave={()=>setHi(null)}>
       {ticks.map((v,i)=><g key={i}><line x1={pad.l} y1={py(v)} x2={W-pad.r} y2={py(v)} strokeWidth="1" style={{stroke:"var(--c-grid)"}}/><text x={pad.l-6} y={py(v)+3} textAnchor="end" style={{fontSize:9,fill:C.slate}}>{fmtD(v)}</text></g>)}
       {yearly.map((r,i)=>{const eqTop=py(r.propVal),balTop=py(r.balance),base=py(0);return <g key={i}>
-        <rect x={x(i)} y={balTop} width={bw} height={Math.max(0,base-balTop)} rx={rx} style={{fill:C.navy}}/>
-        <rect x={x(i)} y={eqTop} width={bw} height={Math.max(0,balTop-eqTop)} rx={rx} style={{fill:C.gold}}/>
+        <rect x={x(i)} y={balTop} width={bw} height={Math.max(0,base-balTop)} rx={rx} style={{fill:C.navy,opacity:hi==null||hi===i?1:0.5}}/>
+        <rect x={x(i)} y={eqTop} width={bw} height={Math.max(0,balTop-eqTop)} rx={rx} style={{fill:C.gold,opacity:hi==null||hi===i?1:0.5}}/>
         {showLbl(r,i)&&<text x={x(i)+bw/2} y={H-8} textAnchor="middle" style={{fontSize:9,fill:C.slate}}>{"Y"+r.year}</text>}
       </g>;})}
+      {yearly.map((r,i)=><rect key={"h"+i} x={x(i)-gap/2} y={pad.t} width={bw+gap} height={H-pad.t-pad.b} fill="transparent" style={{cursor:"pointer"}} onMouseEnter={()=>setHi(i)} onMouseMove={()=>setHi(i)} onClick={()=>setHi(i)}/>)}
+      {hi!=null&&(()=>{const r=yearly[hi],tx=Math.min(Math.max(x(hi)+bw/2-60,2),W-122);return <g pointerEvents="none">
+        <rect x={tx} y={6} width="120" height="50" rx="6" opacity="0.96" style={{fill:C.navy}}/>
+        <text x={tx+8} y={19} style={{fontSize:9,fill:"#fff",opacity:0.7}}>Year {r.year} · value {fmtD(r.propVal)}</text>
+        <text x={tx+8} y={33} style={{fontSize:10,fontWeight:700,fill:C.gold}}>Equity {fmtD(r.equity)}</text>
+        <text x={tx+8} y={47} style={{fontSize:10,fontWeight:700,fill:"#9CC0F2"}}>Loan {fmtD(r.balance)}</text>
+      </g>;})()}
     </svg>
     <div style={{display:"flex",gap:14,marginTop:8,fontSize:10,color:C.slate}}>
       <span><span style={{display:"inline-block",width:9,height:9,background:C.gold,borderRadius:2,marginRight:4}}/>Equity</span>
@@ -754,7 +774,7 @@ function ProjectionTab({R,Y,S}){
       <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>Return components</div>
       <div style={{padding:"12px"}}>
         <ReturnDonut segs={[{label:"Appreciation",value:Y.appGain,color:C.teal},{label:"Principal paydown",value:Y.equityBuild,color:C.heading},{label:"Net cashflow",value:Y.totCF,color:C.gold},{label:"Depreciation benefit (est.)",value:Y.deprBen,color:"#185FA5"}]}/>
-        <div style={{fontSize:9,color:C.muted,marginTop:10}}>Exit: {fmtD(Y.exitVal)} · {S.projection.appreciationPct}%/yr · ~6% selling costs · consult CPA. Donut shows positive contributors only.</div>
+        <div style={{fontSize:9,color:C.muted,marginTop:10}}>Exit: {fmtD(Y.exitVal)} · {S.projection.exitCapEnabled?(S.projection.exitCapRate+"% exit cap"):(S.projection.appreciationPct+"%/yr appreciation")} · {(S.projection.sellingCostPct??6)}% selling costs · consult CPA. Donut shows positive contributors only.</div>
       </div>
     </div>
   </div>;
@@ -850,23 +870,29 @@ function AnalysisTab({SEN,R,S,Y}){
 function ScenarioCompare({deals,activeId,currentState}){
   const[open,setOpen]=useState(false);
   const[sel,setSel]=useState([]);
+  const[sortBy,setSortBy]=useState("irr");
   const pool=(deals||[]).filter(d=>d._id!==activeId);
   const toggle=id=>setSel(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
   const cols=[{name:"Current deal",st:currentState,cur:true},...pool.filter(d=>sel.includes(d._id)).map(d=>({name:dealTitle(d),st:fullState(d)}))];
   const computed=cols.map(c=>{const R=computeBase(c.st);const Y=computeYearly(c.st,R);return{...c,R,Y,score:calcDealScore(R,Y)};});
   const rows=[
-    {l:"Purchase price",f:c=>fmtD(c.st.price)},
-    {l:"Monthly CF",f:c=>fmtD(c.R.cf/12)+"/mo",col:c=>c.R.cf>=0?C.teal:C.red},
-    {l:"CF / unit / mo",f:c=>fmtD(c.R.cf/c.R.numU/12),col:c=>c.R.cf>=0?C.teal:C.red},
-    {l:"Cap rate",f:c=>fmtP(c.R.capRate),lvl:c=>lv(c.R.capRate,7,4.5)},
-    {l:"Cash-on-cash",f:c=>fmtP(c.R.coc),lvl:c=>lv(c.R.coc,8,4)},
-    {l:"DSCR",f:c=>c.R.dscr.toFixed(2),lvl:c=>lv(c.R.dscr,1.25,1.0)},
-    {l:"Break-even occ.",f:c=>fmtP(c.R.beOcc),lvl:c=>lv(c.R.beOcc,70,85,true)},
-    {l:"Est. IRR",f:c=>fmtP(c.Y.irr),lvl:c=>lv(c.Y.irr,15,10)},
-    {l:"Cash needed",f:c=>fmtD(c.R.cashIn)},
-    {l:"Total return",f:c=>fmtD(c.Y.totRet)},
+    {l:"Purchase price",f:c=>fmtD(c.st.price),v:c=>c.st.price},
+    {l:"Monthly CF",f:c=>fmtD(c.R.cf/12)+"/mo",col:c=>c.R.cf>=0?C.teal:C.red,v:c=>c.R.cf,best:"max"},
+    {l:"CF / unit / mo",f:c=>fmtD(c.R.cf/c.R.numU/12),col:c=>c.R.cf>=0?C.teal:C.red,v:c=>c.R.cf/c.R.numU/12,best:"max"},
+    {l:"Cap rate",f:c=>fmtP(c.R.capRate),lvl:c=>lv(c.R.capRate,7,4.5),v:c=>c.R.capRate,best:"max"},
+    {l:"Cash-on-cash",f:c=>fmtP(c.R.coc),lvl:c=>lv(c.R.coc,8,4),v:c=>c.R.coc,best:"max"},
+    {l:"DSCR",f:c=>c.R.dscr.toFixed(2),lvl:c=>lv(c.R.dscr,1.25,1.0),v:c=>c.R.dscr,best:"max"},
+    {l:"Break-even occ.",f:c=>fmtP(c.R.beOcc),lvl:c=>lv(c.R.beOcc,70,85,true),v:c=>c.R.beOcc,best:"min"},
+    {l:"Est. IRR",f:c=>fmtP(c.Y.irr),lvl:c=>lv(c.Y.irr,15,10),v:c=>c.Y.irr,best:"max"},
+    {l:"Cash needed",f:c=>fmtD(c.R.cashIn),v:c=>c.R.cashIn,best:"min"},
+    {l:"Total return",f:c=>fmtD(c.Y.totRet),v:c=>c.Y.totRet,best:"max"},
   ];
   const lvlCol={good:C.teal,warn:C.amber,bad:C.red};
+  const SORTS={irr:["IRR",c=>c.Y.irr],grade:["Grade",c=>c.score.pct],cf:["Cash flow",c=>c.R.cf],cap:["Cap rate",c=>c.R.capRate],coc:["Cash-on-cash",c=>c.R.coc],dscr:["DSCR",c=>c.R.dscr],totRet:["Total return",c=>c.Y.totRet]};
+  const sortV=(SORTS[sortBy]||SORTS.irr)[1];
+  // keep the current deal pinned first; rank the rest best -> worst by the chosen metric
+  const ordered=[...computed.filter(c=>c.cur),...computed.filter(c=>!c.cur).sort((a,b)=>sortV(b)-sortV(a))];
+  const bestIdx=row=>{if(!row.best||ordered.length<2)return -1;let bi=0;for(let i=1;i<ordered.length;i++){const better=row.best==="max"?row.v(ordered[i])>row.v(ordered[bi]):row.v(ordered[i])<row.v(ordered[bi]);if(better)bi=i;}return bi;};
   return <>
     <button onClick={()=>setOpen(true)} style={{fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>⚖ Compare</button>
     {open&&<div className="no-print" onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.55)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"24px 12px",overflowY:"auto"}}>
@@ -877,22 +903,29 @@ function ScenarioCompare({deals,activeId,currentState}){
         </div>
         <div style={{padding:"14px 16px"}}>
           <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved deals to compare against your current deal{pool.length===0?" — no other deals saved yet. Add one with ＋ New deal.":":"}</div>
-          {pool.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+          {pool.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
             {pool.map(d=>{const on=sel.includes(d._id);return <button key={d._id} onClick={()=>toggle(d._id)} style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{on?"✓ ":""}{dealTitle(d)}</button>;})}
+          </div>}
+          {ordered.length>1&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <span style={{fontSize:11,color:C.slate}}>Rank by</span>
+            <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"4px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,background:C.white}}>
+              {Object.keys(SORTS).map(k=><option key={k} value={k}>{SORTS[k][0]}</option>)}
+            </select>
+            <span style={{fontSize:10,color:C.muted}}>best → worst · ★ = best in row</span>
           </div>}
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr>
                 <th style={{padding:"7px 10px",textAlign:"left",borderBottom:"2px solid "+C.border,position:"sticky",left:0,background:C.white}}></th>
-                {computed.map((c,i)=><th key={i} style={{padding:"7px 10px",textAlign:"right",borderBottom:"2px solid "+C.border,minWidth:120}}>
-                  <div style={{fontSize:11,fontWeight:700,color:c.cur?C.navy:C.text,whiteSpace:"nowrap"}}>{c.name}{c.cur&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:"#BFDBFE",color:"#1D4ED8",borderRadius:4}}>current</span>}</div>
+                {ordered.map((c,i)=><th key={i} style={{padding:"7px 10px",textAlign:"right",borderBottom:"2px solid "+C.border,minWidth:120}}>
+                  <div style={{fontSize:11,fontWeight:700,color:c.cur?C.heading:C.text,whiteSpace:"nowrap"}}>{c.name}{c.cur&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:C.hl,color:C.heading,borderRadius:4}}>current</span>}</div>
                   <div style={{marginTop:3}}><span style={{fontSize:11,fontWeight:700,padding:"1px 8px",borderRadius:10,background:c.score.color,color:"#fff"}}>{c.score.grade} · {c.score.label}</span></div>
                 </th>)}
               </tr></thead>
-              <tbody>{rows.map((row,ri)=><tr key={ri} style={{background:ri%2?C.bg:C.white}}>
+              <tbody>{rows.map((row,ri)=>{const bi=bestIdx(row);return <tr key={ri} style={{background:ri%2?C.bg:C.white}}>
                 <td style={{padding:"6px 10px",color:C.slate,fontWeight:600,whiteSpace:"nowrap",position:"sticky",left:0,background:ri%2?C.bg:C.white}}>{row.l}</td>
-                {computed.map((c,i)=>{const col=row.lvl?lvlCol[row.lvl(c)]:row.col?row.col(c):C.text;return <td key={i} style={{padding:"6px 10px",textAlign:"right",fontWeight:600,color:col,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{row.f(c)}</td>;})}
-              </tr>)}</tbody>
+                {ordered.map((c,i)=>{const col=row.lvl?lvlCol[row.lvl(c)]:row.col?row.col(c):C.text;const win=i===bi;return <td key={i} style={{padding:"6px 10px",textAlign:"right",fontWeight:win?800:600,color:col,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",background:win?C.tealL:"transparent"}}>{win?"★ ":""}{row.f(c)}</td>;})}
+              </tr>;})}</tbody>
             </table>
           </div>
           {computed.length===1&&<div style={{fontSize:11,color:C.muted,marginTop:12,textAlign:"center"}}>Select one or more saved deals above to see them side-by-side.</div>}
@@ -943,7 +976,7 @@ const INIT={
   units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
   financing:{downPct:25,rate:7.25,loanYears:30},
   closing:{...DCC},expenses:{...DEX},
-  projection:{appreciationPct:4.5,holdYears:5,rentGrowthPct:3,vaEnabled:false,vaMarketRentPerUnit:1750,vaYear:2,refiEnabled:false,refiYear:3,refiRate:6.5},
+  projection:{appreciationPct:4.5,holdYears:5,rentGrowthPct:3,sellingCostPct:6,exitCapEnabled:false,exitCapRate:6,vaEnabled:false,vaMarketRentPerUnit:1750,vaYear:2,refiEnabled:false,refiYear:3,refiRate:6.5},
   repairs:{include:false,unknown:false,amount:0},
   partnership:{enabled:false,myPct:60},
   comparables:[],
@@ -1032,7 +1065,7 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
             <div style={{display:"flex",gap:6,marginTop:8}} onClick={e=>e.stopPropagation()}>
               <button onClick={()=>startEdit(d)} style={xbtn}>✎ Rename</button>
               <button onClick={()=>onDuplicate(d._id)} style={xbtn}>⧉ Duplicate</button>
-              <button onClick={()=>{if(typeof confirm==="undefined"||confirm("Delete “"+dealTitle(d)+"”? This can’t be undone."))onDelete(d._id);}} style={{...xbtn,color:C.red,borderColor:C.redL}}>🗑 Delete</button>
+              <button onClick={()=>onDelete(d._id)} style={{...xbtn,color:C.red,borderColor:C.redL}}>🗑 Delete</button>
             </div>
           </div>;
         })}
@@ -1055,6 +1088,8 @@ export default function App(){
   const[state,setState]=useState(()=>fullState(boot.deals.find(d=>d._id===boot.activeId)||boot.deals[0]));
   const touchRef=useRef(false);
   const[dealsOpen,setDealsOpen]=useState(false);
+  const[undo,setUndo]=useState(null);
+  const undoTimer=useRef(null);
   const[showEx,setShowEx]=useState(false);
   const[showUD,setShowUD]=useState(false);
   const[selEx,setSelEx]=useState(null);
@@ -1080,7 +1115,22 @@ export default function App(){
   const newDeal=()=>{addDeal(INIT);setSelEx(null);setDealsOpen(false);};
   const duplicateDeal=id=>{const src=deals.find(x=>x._id===id);if(src)addDeal(src,dealTitle(src)+" (copy)");};
   const renameDeal=(id,label)=>setDeals(ds=>{const n=ds.map(d=>d._id===id?{...d,_label:label}:d);persistDeals(n,activeId);return n;});
-  const deleteDeal=id=>setDeals(ds=>{let n=ds.filter(d=>d._id!==id);if(!n.length)n=[makeDeal(INIT,{})];let act=activeId;if(id===activeId){act=n[n.length-1]._id;touchRef.current=false;setActiveId(act);setState(fullState(n.find(d=>d._id===act)));setSelEx(null);}persistDeals(n,act);return n;});
+  const deleteDeal=id=>{
+    const idx=deals.findIndex(d=>d._id===id);if(idx<0)return;
+    const removed=deals[idx];
+    setDeals(ds=>{let n=ds.filter(d=>d._id!==id);let act=activeId;
+      if(id===activeId){if(!n.length){const blank=makeDeal(INIT,{});n=[blank];}act=(n[Math.max(0,idx-1)]||n[n.length-1])._id;touchRef.current=false;setActiveId(act);setState(fullState(n.find(d=>d._id===act)));setSelEx(null);}
+      persistDeals(n,act);return n;});
+    setUndo({deal:removed,idx});
+    if(undoTimer.current)clearTimeout(undoTimer.current);
+    undoTimer.current=setTimeout(()=>setUndo(null),7000);
+  };
+  const undoDelete=()=>{
+    if(!undo)return;const d=undo.deal;
+    setDeals(ds=>{const n=[...ds];n.splice(Math.min(undo.idx,n.length),0,d);persistDeals(n,d._id);return n;});
+    touchRef.current=false;setActiveId(d._id);setState(fullState(d));setUndo(null);
+    if(undoTimer.current)clearTimeout(undoTimer.current);
+  };
   const loadEx=ex=>{touchRef.current=false;setState(fullState({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}}));setSelEx(ex.id);};
   const mergeImported=p=>({...INIT,...p,
     financing:{...INIT.financing,...(p.financing||{})},
@@ -1253,8 +1303,8 @@ export default function App(){
           {/* Financing */}
           <Card title="Financing" icon="🏦">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-              <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)}/>
-              <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125}/>
+              <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
+              <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
               <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={x=>setFin("loanYears",x)} min={1} max={40}/>
               <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
                 <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Monthly payment</div>
@@ -1297,6 +1347,21 @@ export default function App(){
                 <div style={{color:C.teal,fontWeight:700,marginBottom:2}}>Rent in year {S.projection.holdYears}</div>
                 <div style={{fontWeight:700,color:C.teal,fontSize:14}}>{fmtD(Math.round((totalRent/numU)*Math.pow(1+(S.projection.rentGrowthPct||0)/100,(S.projection.holdYears||5)-1)))}/unit/mo</div>
               </div>
+            </div>
+            <SecLabel text="Exit assumptions"/>
+            <div style={{marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:9}}>
+                <Field label="Selling costs" suffix="%" value={S.projection.sellingCostPct} onChange={x=>setProj("sellingCostPct",x)} min={0} max={12} step={0.5} sub="agent + closing at sale" showZero/>
+                <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
+                  <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Net sale proceeds (yr {S.projection.holdYears})</div>
+                  <div style={{fontSize:14,fontWeight:700,color:C.heading}}>{fmtD(Y.exitVal*(1-(S.projection.sellingCostPct??6)/100)-(Y.yearly[Y.yearly.length-1]||{}).balance)}</div>
+                </div>
+              </div>
+              <div style={{marginBottom:8}}><Tog checked={S.projection.exitCapEnabled||false} onChange={x=>setProj("exitCapEnabled",x)} label="Value the exit on a cap rate" sub="Sale price = final-year NOI ÷ exit cap (instead of appreciation %)"/></div>
+              {S.projection.exitCapEnabled&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+                <Field label="Exit cap rate" suffix="%" value={S.projection.exitCapRate} onChange={x=>setProj("exitCapRate",x)} min={1} max={15} step={0.1} sub={"vs entry cap "+fmtP(R.capRate)}/>
+                <div style={{padding:"7px 10px",background:C.goldL,borderRadius:8,border:"1px solid #EDCF8A",fontSize:10,color:C.amber}}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
+              </div>}
             </div>
             <SecLabel text="Value-add scenario"/>
             <div style={{marginBottom:12}}>
@@ -1344,6 +1409,11 @@ export default function App(){
       </div>
 
       {/* Mobile floating bar */}
+      {undo&&<div className="no-print" style={{position:"fixed",left:"50%",bottom:70,transform:"translateX(-50%)",zIndex:1100,background:C.navy,color:"#fff",padding:"10px 16px",borderRadius:10,display:"flex",gap:16,alignItems:"center",boxShadow:"0 6px 24px rgba(0,0,0,0.35)",maxWidth:"92vw"}}>
+        <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Deleted “{dealTitle(undo.deal)}”</span>
+        <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩ Undo</button>
+      </div>}
+
       <div className="mobile-bar" onClick={()=>{try{document.getElementById("results-panel").scrollIntoView({behavior:"smooth",block:"start"});}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
         {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
           <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
