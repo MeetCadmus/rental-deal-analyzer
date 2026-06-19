@@ -1,5 +1,7 @@
 # Rental Deal Analyzer
 
+[![CI](https://github.com/MeetCadmus/rental-deal-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/MeetCadmus/rental-deal-analyzer/actions/workflows/ci.yml)
+
 A fast, single-file React app for analyzing small multifamily / rental investment deals.
 Built around an Atlanta market default set, but the math is general — paste a property's
 numbers and get cash flow, returns, projections, and a deal grade in real time.
