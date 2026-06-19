@@ -955,8 +955,8 @@ function ComparablesCard({comps,setComps,currentR}){
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {comps.map((c,i)=><div key={c.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-          <input value={c.label} onChange={e=>setC(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:80}}/>
-          <button onClick={()=>rem(i)} style={{fontSize:10,color:C.red,background:C.redL,border:"none",borderRadius:5,cursor:"pointer",padding:"2px 6px"}}>✕</button>
+          <input value={c.label} onChange={e=>setC(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"1 1 auto",minWidth:0,maxWidth:160}}/>
+          <button onClick={()=>rem(i)} style={{fontSize:11,color:C.red,background:C.redL,border:"none",borderRadius:5,cursor:"pointer",padding:"3px 8px",flexShrink:0,marginLeft:8}}>✕</button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
           <MoneyInput label="Price" value={c.price} onChange={x=>setC(i,"price",x)} small/>
@@ -1278,18 +1278,16 @@ export default function App(){
             <div style={{marginBottom:9,padding:"6px 9px",background:"#E6F1FB",borderRadius:7,border:"1px solid #B5D4F4",fontSize:10,color:"#185FA5"}}>📍 ATL 2026: avg rent $1,638/mo · B-class 2BR: $1,400–1,700 · vacancy ~5.9% · rent growth 4.1% forecast</div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
               {S.units.map((u,i)=><div key={u.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showUD?8:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:58}}/>
-                    <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white}}>
-                      <span style={{padding:"5px 6px 5px 8px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border}}>$</span>
-                      <input type="text" value={u.rent>0?new Intl.NumberFormat("en-US").format(u.rent):""} placeholder="0"
-                        onChange={e=>setUnit(i,"rent",parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
-                        style={{width:75,padding:"5px 8px",fontSize:13,fontWeight:600,border:"none",background:"transparent",color:C.heading,outline:"none"}}/>
-                      <span style={{padding:"5px 7px 5px 2px",fontSize:10,color:C.slate}}>/mo</span>
-                    </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showUD?8:0}}>
+                  <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"0 1 72px",minWidth:0}}/>
+                  <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white,flex:"1 1 auto",minWidth:0}}>
+                    <span style={{padding:"6px 6px 6px 9px",fontSize:12,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
+                    <input type="text" inputMode="numeric" value={u.rent>0?new Intl.NumberFormat("en-US").format(u.rent):""} placeholder="0"
+                      onChange={e=>setUnit(i,"rent",parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
+                      style={{flex:1,minWidth:0,padding:"6px 8px",fontSize:14,fontWeight:600,border:"none",background:"transparent",color:C.heading,outline:"none"}}/>
+                    <span style={{padding:"6px 8px 6px 2px",fontSize:11,color:C.slate,flexShrink:0}}>/mo</span>
                   </div>
-                  {numU>1&&<button onClick={()=>remUnit(i)} style={{padding:"3px 7px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:11,color:C.red,fontFamily:"inherit"}}>✕</button>}
+                  {numU>1&&<button onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
                 </div>
                 {showUD&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                   <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
