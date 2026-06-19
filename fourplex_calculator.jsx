@@ -269,20 +269,31 @@ function Expenses({ex,setEx,units,egi,price}){
   const u=units||1;
   const{totExp}=calcExp(ex,units,egi,price);
   const applyClass=cls=>{const p=CLASS_PRESETS[cls];if(!p)return;if(ex.mode==="quick"){setEx(prev=>({...prev,ratio:p.ratio,propertyClass:cls}));}else{setEx(prev=>({...prev,...p,propertyClass:cls,insurance:p.insurance*(units||1),taxes:Math.round((price||0)*1.2/100)}));}};
+  // A class is "active" only while the current values still match it — drag the
+  // ratio (quick) or edit a field (itemized) and it falls back to "Custom".
+  const activeCls=(()=>{for(const[cls,p]of Object.entries(CLASS_PRESETS)){
+    if(ex.mode==="quick"){if((ex.ratio||45)===p.ratio)return cls;}
+    else if((ex.maintenance||0)===p.maintenance&&(ex.capex||0)===p.capex&&(ex.insurance||0)===p.insurance*u)return cls;
+  }return null;})();
   const addCE=()=>setEx(p=>({...p,customExpenses:[...(p.customExpenses||[]),{name:"",amt:0,period:"annual"}]}));
   const remCE=i=>setEx(p=>({...p,customExpenses:p.customExpenses.filter((_,j)=>j!==i)}));
   const setCE=(i,k,v)=>setEx(p=>{const a=[...p.customExpenses];a[i]={...a[i],[k]:v};return{...p,customExpenses:a};});
   return <Card title="Vacancy & Expenses" icon="💸">
-    {/* Property class preset */}
+    {/* Property class preset (a starting point — clears to "Custom" once edited) */}
     <div style={{marginBottom:12}}>
-      <div style={{fontSize:10,fontWeight:700,color:C.slate,marginBottom:5}}>Property class preset</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+        <span style={{fontSize:10,fontWeight:700,color:C.slate}}>Start from a property class</span>
+        <span style={{fontSize:10,fontWeight:700,padding:"1px 8px",borderRadius:10,background:activeCls?C.tealL:C.bg,color:activeCls?C.teal:C.muted,border:"1px solid "+C.border}}>{activeCls?CLASS_PRESETS[activeCls].label:"Custom"}</span>
+      </div>
       <div style={{display:"flex",gap:5}}>
-        {Object.entries(CLASS_PRESETS).map(([cls,p])=><button key={cls} onClick={()=>applyClass(cls)} style={{flex:1,padding:"5px 4px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(ex.propertyClass===cls?C.navy:C.border),background:ex.propertyClass===cls?C.navy:C.white,color:ex.propertyClass===cls?"#fff":C.slate}}>
+        {Object.entries(CLASS_PRESETS).map(([cls,p])=>{const on=activeCls===cls;return <button key={cls} onClick={()=>applyClass(cls)} style={{flex:1,padding:"5px 4px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>
           <div style={{fontSize:10,fontWeight:700}}>{p.label}</div>
           <div style={{fontSize:9,opacity:0.7}}>{p.hint}</div>
-        </button>)}
+        </button>;})}
       </div>
-      <div style={{fontSize:9,color:C.muted,marginTop:4}}>{ex.mode==="quick"?"Quick mode: preset updates ratio only · switch to Itemized to see full preset":"Itemized mode: preset sets all expense fields"}</div>
+      <div style={{fontSize:9,color:C.muted,marginTop:4}}>{activeCls
+        ?(ex.mode==="quick"?"Sets the expense ratio. Drag the ratio below to customize.":"Filled all expense fields. Edit any to customize.")
+        :"Custom values — tap a class to prefill "+(ex.mode==="quick"?"its typical ratio.":"typical expense fields.")}</div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
       {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=ex.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
