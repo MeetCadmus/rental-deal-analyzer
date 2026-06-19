@@ -1,0 +1,12 @@
+{
+  "name": "re-investment-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Atlanta multifamily investment analyzer — single-file React app + math test suite",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "@babel/standalone": "^7.24.0"
+  }
+}
