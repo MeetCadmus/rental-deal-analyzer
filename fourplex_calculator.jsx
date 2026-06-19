@@ -1034,8 +1034,8 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
   const startEdit=d=>{setEditId(d._id);setEditVal(d._label||d.address||"");};
   const commitEdit=()=>{if(editId!=null)onRename(editId,editVal.trim());setEditId(null);};
   const xbtn={fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit"};
-  return <div className="no-print" onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.5)",zIndex:1000,display:"flex",justifyContent:"flex-end"}}>
-    <div onClick={e=>e.stopPropagation()} style={{width:"min(440px,100%)",height:"100%",background:C.page,display:"flex",flexDirection:"column",boxShadow:"-8px 0 30px rgba(0,0,0,0.3)"}}>
+  return <div className="no-print" onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:1000,display:"flex",justifyContent:"flex-end"}}>
+    <div onClick={e=>e.stopPropagation()} style={{width:"min(440px,100%)",height:"100%",background:C.bg,borderLeft:"1px solid "+C.border,display:"flex",flexDirection:"column",boxShadow:"-12px 0 40px rgba(0,0,0,0.55)"}}>
       <div style={{padding:"13px 16px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
         <span style={{fontSize:14,fontWeight:700,color:"#fff"}}>📁 My deals <span style={{opacity:0.55,fontWeight:400}}>({deals.length})</span></span>
         <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
