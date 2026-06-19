@@ -37,17 +37,17 @@ test("computeBase: financing (down, loan, payment) matches the standard amortiza
   close(R.annPmt, R.pmt * 12, 1e-9, "annual debt service");
 });
 
-test("computeBase: a rate/down of 0 is treated as 'unset' and falls back to defaults", () => {
-  // The app uses (rate || 7.25) and (downPct || 25), so a literal 0 means "use default".
-  // This test documents & locks that behaviour (change it deliberately, not by accident).
-  const mk = (fin) => M.computeBase(M.fullState({
+test("computeBase: an explicit 0% rate / 0% down is honored (not silently replaced by defaults)", () => {
+  // Uses ?? not || so a literal 0 means 0 (100% financing / 0% interest), while
+  // a missing field still falls back to the 25% / 7.25% defaults.
+  const R = M.computeBase(M.fullState({
     price: 600000, units: [{ id: 1, rent: 3000 }],
-    financing: fin, expenses: { mode: "quick", ratio: 40, vacancyPct: 0 },
+    financing: { downPct: 0, rate: 0, loanYears: 30 },
+    expenses: { mode: "quick", ratio: 40, vacancyPct: 0 },
   }));
-  const zero = mk({ downPct: 0, rate: 0, loanYears: 30 });
-  const def = mk({ downPct: 25, rate: 7.25, loanYears: 30 });
-  close(zero.pmt, def.pmt, 1e-6, "rate 0 -> 7.25% default");
-  close(zero.down, def.down, 1e-6, "downPct 0 -> 25% default");
+  close(R.down, 0, 1e-9, "0% down honored");
+  close(R.loan, 600000, 1e-9, "100% financed");
+  close(R.pmt, 600000 / 360, 1e-9, "0% rate amortizes linearly (loan / months)");
 });
 
 test("computeBase: return ratios (cap, CoC, DSCR, GRM, 1%, break-even occ & rent)", () => {
