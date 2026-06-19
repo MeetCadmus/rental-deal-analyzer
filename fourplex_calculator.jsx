@@ -1076,6 +1076,19 @@ function fullState(d){d=d||{};return {...INIT,...d,
 function makeDeal(data,meta){const ts=Date.now();meta=meta||{};const{_id,_name,_label,_ts,_created,...d}=fullState(data);return {...d,_id:newDealId(),_label:meta.label||_label||_name||"",_ts:meta.ts||ts,_created:meta.created||ts};}
 function dealTitle(d){return (d&&d._label&&d._label.trim())||(d&&d.address&&d.address.trim())||"Untitled deal";}
 function persistDeals(deals,activeId){try{localStorage.setItem(DEALS_KEY,JSON.stringify({deals,activeId}));}catch{}}
+// Merge two deal libraries (local + cloud) for cross-device sync: union by _id,
+// newest edit (_ts) wins per deal. Keeps a sensible activeId. Pure & testable.
+function mergeDealStores(localStore,cloudStore){
+  localStore=localStore||{};cloudStore=cloudStore||{};
+  const byId=new Map();
+  const add=d=>{if(!d||!d._id)return;const ex=byId.get(d._id);if(!ex||(d._ts||0)>(ex._ts||0))byId.set(d._id,d);};
+  (localStore.deals||[]).forEach(add);
+  (cloudStore.deals||[]).forEach(add);
+  const deals=[...byId.values()].sort((a,b)=>(a._created||0)-(b._created||0));
+  const has=id=>deals.some(d=>d._id===id);
+  const activeId=has(localStore.activeId)?localStore.activeId:has(cloudStore.activeId)?cloudStore.activeId:(deals.length?deals[deals.length-1]._id:null);
+  return {deals,activeId};
+}
 function loadDealStore(){
   try{const r=JSON.parse(localStorage.getItem(DEALS_KEY));if(r&&Array.isArray(r.deals)&&r.deals.length)return {deals:r.deals,activeId:r.deals.some(d=>d._id===r.activeId)?r.activeId:r.deals[r.deals.length-1]._id};}catch{}
   const deals=[];
@@ -1167,6 +1180,31 @@ export default function App(){
   const[isPrinting,setIsPrinting]=useState(false);
   const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
+
+  // ── Cloud sync (Supabase) — dormant unless config.js + the CDN client exist ──
+  const cloudCfg=(typeof window!=="undefined"&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY&&window.supabase)?{url:window.SUPABASE_URL,key:window.SUPABASE_ANON_KEY}:null;
+  const supa=useRef(null);
+  const[user,setUser]=useState(null);
+  const[sync,setSync]=useState("idle"); // idle | syncing | synced | error
+  const pushTimer=useRef(null);
+  const applyStore=st=>{touchRef.current=false;setDeals(st.deals);setActiveId(st.activeId);persistDeals(st.deals,st.activeId);const a=st.deals.find(d=>d._id===st.activeId)||st.deals[0];if(a)setState(fullState(a));setSelEx(null);};
+  const pushCloud=(uid,deals2,activeId2)=>{const c=supa.current;if(!c||!uid)return;setSync("syncing");c.from("user_data").upsert({user_id:uid,data:{deals:deals2,activeId:activeId2},updated_at:new Date().toISOString()}).then(({error})=>setSync(error?"error":"synced"));};
+  const pullMergePush=async u=>{const c=supa.current;if(!c||!u)return;setSync("syncing");
+    try{const{data,error}=await c.from("user_data").select("data").eq("user_id",u.id).maybeSingle();if(error)throw error;
+      const cloud=(data&&data.data)||{deals:[],activeId:null};
+      const merged=mergeDealStores({deals,activeId},cloud);
+      applyStore(merged);pushCloud(u.id,merged.deals,merged.activeId);
+    }catch(e){setSync("error");}};
+  useEffect(()=>{if(!cloudCfg)return;let unsub;try{const c=window.supabase.createClient(cloudCfg.url,cloudCfg.key);supa.current=c;
+    c.auth.getSession().then(({data})=>{const u=data&&data.session&&data.session.user;if(u){setUser(u);pullMergePush(u);}});
+    const sub=c.auth.onAuthStateChange((_e,session)=>{const u=session&&session.user;setUser(u||null);if(u)pullMergePush(u);else setSync("idle");});
+    unsub=sub&&sub.data&&sub.data.subscription;}catch(e){}
+    return ()=>{try{unsub&&unsub.unsubscribe();}catch(e){}};
+  },[]);
+  // debounced push whenever the library changes while signed in
+  useEffect(()=>{if(!cloudCfg||!user)return;if(pushTimer.current)clearTimeout(pushTimer.current);pushTimer.current=setTimeout(()=>pushCloud(user.id,deals,activeId),1500);return ()=>{if(pushTimer.current)clearTimeout(pushTimer.current);};},[deals,activeId]);
+  const signIn=()=>{try{supa.current&&supa.current.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.href.split("#")[0]}});}catch(e){}};
+  const signOut=()=>{try{supa.current&&supa.current.auth.signOut();}catch(e){}setUser(null);setSync("idle");};
   const S=state;
   const set=(k,v)=>setState(p=>({...p,[k]:v}));
   const setFin=(k,v)=>setState(p=>({...p,financing:{...p.financing,[k]:v}}));
@@ -1296,6 +1334,12 @@ export default function App(){
               <button onClick={exportCSV} style={hb} title="Download this deal as a CSV (opens in Excel)">⬇ Export CSV</button>
               <button onClick={importCSV} style={hb} title="Import a deal from CSV as a new deal">⬆ Import CSV</button>
               <button onClick={handlePrint} style={hb}>🖨 Print / PDF</button>
+              {cloudCfg&&(user
+                ?<span style={{display:"inline-flex",alignItems:"center",gap:6}}>
+                   <span title={"Signed in"+(user.email?" as "+user.email:"")+" · "+(sync==="syncing"?"saving…":sync==="error"?"sync error":"synced")} style={{fontSize:10,color:"#fff",opacity:0.85,whiteSpace:"nowrap"}}>{sync==="syncing"?"⟳ Saving…":sync==="error"?"⚠ Sync error":"✓ Synced"}</span>
+                   <button onClick={signOut} style={hb} title={user.email||"Sign out"}>Sign out</button>
+                 </span>
+                :<button onClick={signIn} style={{...hb,background:"rgba(255,255,255,0.2)",fontWeight:700}} title="Sign in to sync your deals across devices">🔑 Sign in with Google</button>)}
             </>;})()}
           </div>
         </div>

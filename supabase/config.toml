@@ -1,0 +1,4 @@
+# Supabase CLI project config. `project_id` is just the local name used by the CLI.
+# Link to your hosted project with:  supabase link --project-ref <your-project-ref>
+# Then apply migrations with:        supabase db push
+project_id = "rental-deal-analyzer"
