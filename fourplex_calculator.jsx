@@ -823,10 +823,10 @@ function AnalysisTab({SEN,R,S,Y}){
             {rVars.map(r=><th key={r} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"center",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{r===0?"Current":(r>0?"+":"")+r.toFixed(1)+"%"}</th>)}
           </tr></thead>
           <tbody>{SEN.priceRate.map((row,ri)=><tr key={ri}>
-            <td style={{padding:"5px 10px",fontWeight:600,color:row.label==="Current"?C.navy:C.text,background:row.label==="Current"?"var(--c-hl)":C.white,whiteSpace:"nowrap"}}>
+            <td style={{padding:"5px 10px",fontWeight:600,color:row.label==="Current"?C.heading:C.text,background:row.label==="Current"?"var(--c-hl)":C.white,whiteSpace:"nowrap"}}>
               {row.label==="Current"?"Current":row.label} {row.label!=="Current"&&<span style={{fontSize:9,color:C.slate}}>({fmtD(row.price)})</span>}
             </td>
-            {row.cells.map((cell,ci)=><td key={ci} style={{padding:"5px 8px",textAlign:"center",background:row.label==="Current"&&cell.label==="Current"?"#E8F4FF":cfBg(cell.cf),fontWeight:row.label==="Current"&&cell.label==="Current"?700:500,color:cfColor(cell.cf),fontVariantNumeric:"tabular-nums"}}>{fmtD(cell.cf/12)}/mo</td>)}
+            {row.cells.map((cell,ci)=>{const isCur=row.label==="Current"&&cell.label==="Current";return <td key={ci} style={{padding:"5px 8px",textAlign:"center",background:cfBg(cell.cf),fontWeight:isCur?800:500,color:cfColor(cell.cf),fontVariantNumeric:"tabular-nums",outline:isCur?"2px solid "+C.heading:"none",outlineOffset:-2}}>{fmtD(cell.cf/12)}/mo</td>;})}
           </tr>)}</tbody>
         </table>
       </div>
@@ -854,7 +854,7 @@ function AnalysisTab({SEN,R,S,Y}){
             const loanCF=R.noi-loan.monthly*12;
             const isCurrent=i===0;
             return <tr key={loan.name} style={{background:isCurrent?"var(--c-hl)":i%2===0?C.white:C.bg}}>
-              <td style={{padding:"5px 8px",fontWeight:isCurrent?600:400,color:isCurrent?C.navy:C.text,textAlign:"right",whiteSpace:"nowrap"}}>{loan.name}{isCurrent&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:"#BFDBFE",color:"#1D4ED8",borderRadius:4}}>current</span>}</td>
+              <td style={{padding:"5px 8px",fontWeight:isCurrent?600:400,color:isCurrent?C.heading:C.text,textAlign:"right",whiteSpace:"nowrap"}}>{loan.name}{isCurrent&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:C.hl,color:C.heading,borderRadius:4}}>current</span>}</td>
               <td style={{padding:"5px 8px",textAlign:"right"}}>{loan.rate.toFixed(3)}%</td>
               <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600}}>{fmtD(loan.monthly)}/mo</td>
               <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600,color:loanCF>=0?C.teal:C.red}}>{fmtD(loanCF/12)}/mo</td>
@@ -1197,7 +1197,12 @@ export default function App(){
       <style>{`
         .ytable-scroll.cap{max-height:340px;overflow-y:auto}
         @media print{.no-print{display:none!important}.layout{display:block!important}.sticky-col{position:static!important;margin-top:20px}.ytable-scroll{max-height:none!important;overflow:visible!important}body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}:root{color-scheme:light}}
-        @media (max-width:680px){.layout{grid-template-columns:1fr!important}.sticky-col{position:static!important}.mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
+        @media (max-width:680px){
+          html,body{overflow-x:hidden;max-width:100%}
+          .layout{grid-template-columns:1fr!important}
+          .layout,.layout>div,.sticky-col{min-width:0!important}
+          .sticky-col{position:static!important}
+          .mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
           .preset-grid{grid-template-columns:repeat(3,1fr)!important}
           input,select,textarea{font-size:16px!important}}
         input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(30,58,110,0.25)}
@@ -1388,7 +1393,7 @@ export default function App(){
         <div id="results-panel" className="sticky-col" style={{position:"sticky",top:8}}>
           {/* Tab bar */}
           {!isPrinting&&<div className="no-print" style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
-            {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.navy:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
+            {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.heading:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
           </div>}
           {isPrinting?(
             <div>
