@@ -1074,7 +1074,7 @@ export default function App(){
   const duplicateDeal=id=>{const src=deals.find(x=>x._id===id);if(src)addDeal(src,dealTitle(src)+" (copy)");};
   const renameDeal=(id,label)=>setDeals(ds=>{const n=ds.map(d=>d._id===id?{...d,_label:label}:d);persistDeals(n,activeId);return n;});
   const deleteDeal=id=>setDeals(ds=>{let n=ds.filter(d=>d._id!==id);if(!n.length)n=[makeDeal(INIT,{})];let act=activeId;if(id===activeId){act=n[n.length-1]._id;touchRef.current=false;setActiveId(act);setState(fullState(n.find(d=>d._id===act)));setSelEx(null);}persistDeals(n,act);return n;});
-  const loadEx=ex=>{addDeal({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}},ex.label);setSelEx(ex.id);};
+  const loadEx=ex=>{touchRef.current=false;setState(fullState({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}}));setSelEx(ex.id);};
   const mergeImported=p=>({...INIT,...p,
     financing:{...INIT.financing,...(p.financing||{})},
     closing:{...DCC,...(p.closing||{})},
@@ -1157,12 +1157,15 @@ export default function App(){
         <button onClick={()=>setShowEx(!showEx)} style={{fontSize:11,fontWeight:700,color:C.slate,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"0 0 6px",display:"flex",alignItems:"center",gap:5}}>
           <span>Load Atlanta example deal</span><span style={{transition:"transform 0.2s",display:"inline-block",transform:showEx?"rotate(180deg)":"none"}}>▾</span>
         </button>
-        {showEx&&<div className="preset-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
-          {EXAMPLES.map(ex=>{const on=selEx===ex.id;return <button key={ex.id} onClick={()=>loadEx(ex)} style={{padding:"7px 5px",borderRadius:9,border:"1.5px solid "+(on?ex.col:C.border),background:on?ex.col:C.white,cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all 0.15s"}}>
-            <div style={{fontSize:10,fontWeight:700,color:on?"#fff":C.text}}>{ex.label}</div>
-            <div style={{fontSize:9,color:on?"rgba(255,255,255,0.7)":C.slate,lineHeight:1.3}}>{ex.sub}</div>
-            <div style={{marginTop:3,fontSize:9,fontWeight:700,color:on?"rgba(255,255,255,0.85)":ex.col}}>{ex.tag}</div>
-          </button>;})}
+        {showEx&&<div>
+          <div className="preset-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
+            {EXAMPLES.map(ex=>{const on=selEx===ex.id;return <button key={ex.id} onClick={()=>loadEx(ex)} style={{padding:"7px 5px",borderRadius:9,border:"1.5px solid "+(on?ex.col:C.border),background:on?ex.col:C.white,cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all 0.15s"}}>
+              <div style={{fontSize:10,fontWeight:700,color:on?"#fff":C.text}}>{ex.label}</div>
+              <div style={{fontSize:9,color:on?"rgba(255,255,255,0.7)":C.slate,lineHeight:1.3}}>{ex.sub}</div>
+              <div style={{marginTop:3,fontSize:9,fontWeight:700,color:on?"rgba(255,255,255,0.85)":ex.col}}>{ex.tag}</div>
+            </button>;})}
+          </div>
+          <div style={{fontSize:9,color:C.muted,marginTop:5}}>Loads into the current deal. Click <strong>＋ New deal</strong> first if you want to keep it as a separate saved deal.</div>
         </div>}
       </div>
 
