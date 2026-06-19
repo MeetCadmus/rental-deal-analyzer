@@ -810,12 +810,12 @@ function ProjectionTab({R,Y,S}){
   return <div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
       <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:10,padding:"10px 12px",color:"#fff"}}>
-        <div style={{fontSize:9,opacity:0.65,marginBottom:2,display:"flex",alignItems:"center"}}>Total return ({hold}yr)<Info tint="#fff" lines={totRetTip}/></div>
+        <div style={{fontSize:9,marginBottom:2,display:"flex",alignItems:"center"}}><span style={{opacity:0.65}}>Total return ({hold}yr)</span><Info tint="#fff" lines={totRetTip}/></div>
         <div style={{fontSize:18,fontWeight:700,color:Y.totRet>=0?C.gold:"#F87171"}}>{fmtD(Y.totRet)}</div>
         <div style={{fontSize:10,opacity:0.55}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
       </div>
       <div style={{background:Y.irr>=15?C.tealS:Y.irr>=10?C.amberS:C.redS,borderRadius:10,padding:"10px 12px",color:"#fff"}}>
-        <div style={{fontSize:9,opacity:0.65,marginBottom:2,display:"flex",alignItems:"center"}}>Est. IRR<Info tint="#fff" lines={irrTip}/></div>
+        <div style={{fontSize:9,marginBottom:2,display:"flex",alignItems:"center"}}><span style={{opacity:0.65}}>Est. IRR</span><Info tint="#fff" lines={irrTip}/></div>
         <div style={{fontSize:18,fontWeight:700}}>{fmtP(Y.irr)}</div>
         <div style={{fontSize:10,opacity:0.7}}>{Y.irr>=15?"Excellent":Y.irr>=10?"Good":"Below target"}</div>
       </div>
