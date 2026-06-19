@@ -1,6 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 
-const C={navy:"#0D1F3C",navyM:"#1e3a6e",gold:"#C8922A",goldL:"#FDF3E3",teal:"#14705A",tealL:"#DFF2EC",red:"#9B2335",redL:"#FCEAEC",amber:"#8C5A0A",amberL:"#FDF3E3",slate:"#4A5568",border:"#E2E8F0",bg:"#F7F8FA",white:"#fff",text:"#1A202C"};
+const C={navy:"var(--c-navy)",navyM:"var(--c-navyM)",gold:"var(--c-gold)",goldL:"var(--c-goldL)",teal:"var(--c-teal)",tealL:"var(--c-tealL)",red:"var(--c-red)",redL:"var(--c-redL)",amber:"var(--c-amber)",amberL:"var(--c-amberL)",slate:"var(--c-slate)",border:"var(--c-border)",bg:"var(--c-bg)",white:"var(--c-white)",text:"var(--c-text)",heading:"var(--c-heading)",rowline:"var(--c-rowline)",grid:"var(--c-grid)",hl:"var(--c-hl)",tealS:"var(--c-tealS)",redS:"var(--c-redS)",amberS:"var(--c-amberS)",blueS:"var(--c-blueS)",muted:"var(--c-muted)"};
+const THEME_CSS=`
+:root{--c-navy:#0D1F3C;--c-navyM:#1e3a6e;--c-gold:#C8922A;--c-goldL:#FDF3E3;--c-teal:#14705A;--c-tealL:#DFF2EC;--c-red:#9B2335;--c-redL:#FCEAEC;--c-amber:#8C5A0A;--c-amberL:#FDF3E3;--c-slate:#4A5568;--c-border:#E2E8F0;--c-bg:#F7F8FA;--c-white:#ffffff;--c-text:#1A202C;--c-heading:#0D1F3C;--c-page:#F7F8FA;--c-rowline:#F7FAFC;--c-grid:#EDF1F6;--c-hl:#EEF2FF;--c-tealS:#14705A;--c-redS:#9B2335;--c-amberS:#8C5A0A;--c-blueS:#185FA5;--c-muted:#718096;color-scheme:light;}
+:root[data-theme="dark"]{--c-navy:#16325C;--c-navyM:#244a86;--c-gold:#E0A93C;--c-goldL:#33280F;--c-teal:#3FD0AE;--c-tealL:#123A30;--c-red:#F08699;--c-redL:#3A1A20;--c-amber:#E6B454;--c-amberL:#33280F;--c-slate:#9AA7BC;--c-border:#2C3A53;--c-bg:#161F33;--c-white:#1C2740;--c-text:#E6EAF2;--c-heading:#9CC0F2;--c-page:#0F1624;--c-rowline:#222C42;--c-grid:#222C42;--c-hl:#1B2A47;--c-tealS:#0E7A5F;--c-redS:#B53049;--c-amberS:#8A5A0E;--c-blueS:#2A63A6;--c-muted:#8593A8;color-scheme:dark;}
+body{background:var(--c-page)!important;color:var(--c-text);transition:background .2s ease,color .2s ease;}
+`;
 const fmt =n=>new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(n||0);
 const fmtD=n=>(n<0?"−$":"$")+fmt(Math.abs(Math.round(n||0)));
 const fmtP=(n,d=1)=>isFinite(n)?n.toFixed(d)+"%":"—";
@@ -8,6 +13,63 @@ const fmtX=n=>isFinite(n)?n.toFixed(1)+"×":"—";
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const num =v=>parseFloat((v+"").replace(/,/g,""))||0;
 function lv(v,g,w,inv=false){return !inv?(v>=g?"good":v>=w?"warn":"bad"):(v<=w?"good":v<=g?"warn":"bad");}
+
+// ── CSV round-trip (export / import full deal state) ───────────
+function flattenState(obj,prefix,out){
+  out=out||[];prefix=prefix||"";
+  if(Array.isArray(obj)){if(obj.length===0)out.push([prefix,"[]"]);else obj.forEach((v,i)=>flattenState(v,prefix+"."+i,out));}
+  else if(obj&&typeof obj==="object"){const ks=Object.keys(obj);if(ks.length===0)out.push([prefix,"{}"]);else ks.forEach(k=>flattenState(obj[k],prefix?prefix+"."+k:k,out));}
+  else out.push([prefix,obj===null||obj===undefined?"":obj]);
+  return out;
+}
+function coerceVal(v){
+  if(v==="true")return true;if(v==="false")return false;
+  if(v==="[]")return [];if(v==="{}")return {};
+  if(v!==""&&/^-?\d+(\.\d+)?$/.test(v))return Number(v);
+  return v;
+}
+function unflattenState(pairs){
+  const root={};
+  pairs.forEach(([path,val])=>{
+    const parts=path.split(".");let cur=root;
+    for(let i=0;i<parts.length-1;i++){
+      const key=parts[i],nextIdx=/^\d+$/.test(parts[i+1]);
+      if(cur[key]===undefined||cur[key]===null||typeof cur[key]!=="object")cur[key]=nextIdx?[]:{};
+      cur=cur[key];
+    }
+    cur[parts[parts.length-1]]=coerceVal(val);
+  });
+  return root;
+}
+function csvCell(s){s=String(s);return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function stateToCSV(state){
+  const{_name,_ts,...clean}=state;
+  return "key,value\n"+flattenState(clean).map(([k,v])=>csvCell(k)+","+csvCell(v)).join("\n");
+}
+function parseCSV(text){
+  const rows=[];let i=0,field="",row=[],inq=false;
+  while(i<text.length){const c=text[i];
+    if(inq){if(c==='"'){if(text[i+1]==='"'){field+='"';i+=2;continue;}inq=false;i++;continue;}field+=c;i++;continue;}
+    if(c==='"'){inq=true;i++;continue;}
+    if(c===','){row.push(field);field="";i++;continue;}
+    if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);rows.push(row);row=[];field="";i++;continue;}
+    field+=c;i++;
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  return rows;
+}
+function csvToState(text){
+  const rows=parseCSV(text).filter(r=>r.length>=2&&r[0]!=="");
+  const pairs=rows.filter((r,i)=>!(i===0&&r[0]==="key"&&r[1]==="value")).map(r=>[r[0],r[1]]);
+  if(!pairs.length)throw new Error("no rows found");
+  return unflattenState(pairs);
+}
+function downloadFile(name,text,type){
+  const blob=new Blob([text],{type:type||"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),0);
+}
 
 // ── Atoms ─────────────────────────────────────────────────────
 function MoneyInput({value,onChange,label,sub,small,hint}){
@@ -20,7 +82,7 @@ function MoneyInput({value,onChange,label,sub,small,hint}){
         onChange={e=>onChange(parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
         style={{flex:1,padding:"6px 10px",fontSize:small?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
     </div>
-    {(sub||hint)&&<span style={{fontSize:10,color:hint?"#0F6E56":"#A0AEC0"}}>{sub||hint}</span>}
+    {(sub||hint)&&<span style={{fontSize:10,color:hint?"#0F6E56":C.muted}}>{sub||hint}</span>}
   </div>;
 }
 function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder}){
@@ -33,7 +95,7 @@ function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,x
         style={{flex:1,padding:"6px 8px",fontSize:xs?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
       {suffix&&<span style={{padding:"6px 8px 6px 4px",fontSize:11,color:C.slate,flexShrink:0}}>{suffix}</span>}
     </div>
-    {sub&&<span style={{fontSize:10,color:"#A0AEC0"}}>{sub}</span>}
+    {sub&&<span style={{fontSize:10,color:C.muted}}>{sub}</span>}
   </div>;
 }
 function Tog({checked,onChange,label,sub}){
@@ -60,9 +122,9 @@ function Bar({val,max,good,warn,inv=false}){
 function Info({lines}){
   const[s,setS]=useState(false);
   return <span style={{position:"relative",display:"inline-block",marginLeft:4}}>
-    <span onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} style={{cursor:"help",color:"#A0AEC0",fontSize:12,fontWeight:700,userSelect:"none"}}>ⓘ</span>
-    {s&&<div style={{position:"absolute",bottom:"130%",left:"50%",transform:"translateX(-50%)",background:"#1A202C",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:999,boxShadow:"0 4px 16px rgba(0,0,0,0.3)",whiteSpace:"nowrap",pointerEvents:"none",minWidth:200}}>
-      {lines.map((l,i)=><div key={i} style={{lineHeight:1.6,color:l.startsWith("=")?"#68D391":l.startsWith("·")?"#A0AEC0":"#fff",fontWeight:l.startsWith("=")?"700":"400"}}>{l}</div>)}
+    <span onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} onClick={e=>{e.stopPropagation();setS(v=>!v);}} style={{cursor:"pointer",color:C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
+    {s&&<div style={{position:"absolute",bottom:"130%",left:"50%",transform:"translateX(-50%)",background:"#1A202C",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:999,boxShadow:"0 4px 16px rgba(0,0,0,0.3)",whiteSpace:"normal",pointerEvents:"none",width:"max-content",minWidth:180,maxWidth:"min(240px,78vw)"}}>
+      {lines.map((l,i)=><div key={i} style={{lineHeight:1.6,color:l.startsWith("=")?"#68D391":l.startsWith("·")?C.muted:"#fff",fontWeight:l.startsWith("=")?"700":"400"}}>{l}</div>)}
       <div style={{position:"absolute",bottom:-5,left:"50%",transform:"translateX(-50%)",width:10,height:10,background:"#1A202C",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
     </div>}
   </span>;
@@ -81,13 +143,13 @@ function Card({title,icon,children,right}){
   </div>;
 }
 function SecLabel({text,right}){
-  return <div style={{display:"flex",justifyContent:"space-between",fontSize:10,fontWeight:700,color:C.navy,letterSpacing:"0.07em",textTransform:"uppercase",borderBottom:"1px solid "+C.border,paddingBottom:4,marginBottom:8}}>
+  return <div style={{display:"flex",justifyContent:"space-between",fontSize:10,fontWeight:700,color:C.heading,letterSpacing:"0.07em",textTransform:"uppercase",borderBottom:"1px solid "+C.border,paddingBottom:4,marginBottom:8}}>
     <span>{text}</span>{right&&<span style={{fontWeight:400,color:C.slate,textTransform:"none",fontSize:11}}>{right}</span>}
   </div>;
 }
 function PLRow({label,value,neg,pos,bold,hl,indent,note}){
-  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px 5px "+(indent?"20px":"8px"),background:hl?"#EEF2FF":"transparent",borderBottom:"1px solid #F7FAFC",fontWeight:bold?600:400,fontSize:12}}>
-    <span style={{color:bold?C.text:C.slate}}>{label}{note&&<span style={{fontSize:10,color:"#A0AEC0",marginLeft:5}}>{note}</span>}</span>
+  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px 5px "+(indent?"20px":"8px"),background:hl?"var(--c-hl)":"transparent",borderBottom:"1px solid var(--c-rowline)",fontWeight:bold?600:400,fontSize:12}}>
+    <span style={{color:bold?C.text:C.slate}}>{label}{note&&<span style={{fontSize:10,color:C.muted,marginLeft:5}}>{note}</span>}</span>
     <span style={{color:neg?C.red:pos?"#2563EB":C.text,fontVariantNumeric:"tabular-nums"}}>{value}</span>
   </div>;
 }
@@ -96,7 +158,7 @@ function MBox({label,value,sub,lvl,bar,bMax,bGood,bWarn,bInv,tip}){
   return <div style={{background:C.white,border:"1px solid "+C.border,borderRadius:10,padding:"10px 12px"}}>
     <div style={{fontSize:10,color:C.slate,fontWeight:700,letterSpacing:"0.04em",marginBottom:3,display:"flex",alignItems:"center"}}>{label}{tip&&<Info lines={tip}/>}</div>
     <div style={{fontSize:17,fontWeight:700,color:col,lineHeight:1.1}}>{value}</div>
-    {sub&&<div style={{fontSize:10,color:"#A0AEC0",marginTop:2}}>{sub}</div>}
+    {sub&&<div style={{fontSize:10,color:C.muted,marginTop:2}}>{sub}</div>}
     {bar!==undefined&&<Bar val={bar} max={bMax} good={bGood} warn={bWarn} inv={bInv}/>}
   </div>;
 }
@@ -123,12 +185,12 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate}){
   return <Card title="Closing costs" icon="📝">
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
       {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
-      <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.navy}}>{fmtD(total)}</strong></span>
+      <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(total)}</strong></span>
     </div>
     {cc.mode==="quick"&&<div>
       <Field label="Closing cost %" suffix="%" value={cc.quickPct||3} onChange={x=>sf("quickPct",x)} min={1} max={8} step={0.1} sub={fmtD(p*(cc.quickPct||3)/100)+" estimated"}/>
       <div style={{marginTop:9,background:C.bg,borderRadius:8,padding:"9px 12px",border:"1px solid "+C.border,fontSize:11}}>
-        <div style={{fontWeight:700,color:C.navy,marginBottom:4}}>Atlanta buyer ranges</div>
+        <div style={{fontWeight:700,color:C.heading,marginBottom:4}}>Atlanta buyer ranges</div>
         {[["Cash, no inspection","1.5–2%"],["Standard (financed)","2.5–3.5%"],["With inspection + survey","3–4%"],["Investment / multifamily","3–4.5%"]].map(([l2,r2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",color:C.slate,marginBottom:2}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{r2}</span></div>)}
       </div>
     </div>}
@@ -219,11 +281,11 @@ function Expenses({ex,setEx,units,egi,price}){
           <div style={{fontSize:9,opacity:0.7}}>{p.hint}</div>
         </button>)}
       </div>
-      <div style={{fontSize:9,color:"#A0AEC0",marginTop:4}}>{ex.mode==="quick"?"Quick mode: preset updates ratio only · switch to Itemized to see full preset":"Itemized mode: preset sets all expense fields"}</div>
+      <div style={{fontSize:9,color:C.muted,marginTop:4}}>{ex.mode==="quick"?"Quick mode: preset updates ratio only · switch to Itemized to see full preset":"Itemized mode: preset sets all expense fields"}</div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
       {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=ex.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
-      <span style={{marginLeft:"auto",fontSize:11,color:C.slate}}>Total: <strong style={{color:C.navy}}>{fmtD(totExp)}/yr</strong></span>
+      <span style={{marginLeft:"auto",fontSize:11,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(totExp)}/yr</strong></span>
     </div>
     <div style={{marginBottom:ex.mode==="quick"?10:12}}>
       <Field label="Vacancy rate" suffix="%" value={ex.vacancyPct||0} onChange={x=>sf("vacancyPct",x)} min={0} max={30} step={0.5} sub="ATL avg ~5.9%"/>
@@ -231,7 +293,7 @@ function Expenses({ex,setEx,units,egi,price}){
     {ex.mode==="quick"&&<div>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
         <label style={{fontSize:11,fontWeight:600,color:C.slate}}>Expense ratio (% of EGI/yr)</label>
-        <span style={{fontSize:14,fontWeight:700,color:C.navy}}>{ex.ratio||45}% = {fmtD(egi*(ex.ratio||45)/100)}/yr</span>
+        <span style={{fontSize:14,fontWeight:700,color:C.heading}}>{ex.ratio||45}% = {fmtD(egi*(ex.ratio||45)/100)}/yr</span>
       </div>
       <input type="range" min={30} max={60} step={1} value={ex.ratio||45} onChange={e=>sf("ratio",parseInt(e.target.value))} style={{width:"100%",accentColor:C.navy,cursor:"pointer"}}/>
       <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.slate,marginTop:2}}><span>30% new/stable</span><span>45% typical ATL</span><span>60% old/C-class</span></div>
@@ -370,7 +432,7 @@ function calcDealScore(R,Y){
   const pts=ms.reduce((s,m)=>s+(m==="good"?2:m==="warn"?1:0),0);
   const pct=pts/(ms.length*2);
   const grade=pct>=0.75?"A":pct>=0.5?"B":pct>=0.25?"C":"D";
-  const colors={A:C.teal,B:"#185FA5",C:C.amber,D:C.red};
+  const colors={A:C.tealS,B:C.blueS,C:C.amberS,D:C.redS};
   const labels={A:"Great deal",B:"Good deal",C:"Weak deal",D:"Risky deal"};
   const descs={A:"All key metrics in the green zone.",B:"Most metrics solid — some room to improve.",C:"Several red flags. Need a clear exit strategy.",D:"Critical issues. Renegotiate price or walk away."};
   return{grade,pct,color:colors[grade],label:labels[grade],desc:descs[grade],metrics:ms};
@@ -429,8 +491,8 @@ function CalcTrace({R,S}){
     {l:"= Per unit cashflow",v:fmtD(R.cf/numU/12)+"/unit/mo",f:"= monthly ÷ "+numU+" units",c:R.cf>=0?C.teal:C.red},
   ];
   return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginTop:8}}>
-    <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",background:open?"#EEF2FF":C.bg,border:"none",cursor:"pointer",fontFamily:"inherit",borderBottom:open?"1px solid "+C.border:"none"}}>
-      <span style={{fontSize:12,fontWeight:700,color:C.navy}}>🧮 How cashflow is calculated — step by step</span>
+    <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",background:open?"var(--c-hl)":C.bg,border:"none",cursor:"pointer",fontFamily:"inherit",borderBottom:open?"1px solid "+C.border:"none"}}>
+      <span style={{fontSize:12,fontWeight:700,color:C.heading}}>🧮 How cashflow is calculated — step by step</span>
       <span style={{fontSize:14,color:C.slate,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s"}}>▾</span>
     </button>
     {open&&<div style={{padding:"10px 13px",background:C.white}}>
@@ -439,7 +501,7 @@ function CalcTrace({R,S}){
           <span style={{fontSize:12,fontWeight:row.b?600:400,color:row.b?row.c:C.slate}}>{row.l}</span>
           <span style={{fontSize:13,fontWeight:700,color:row.c,marginLeft:8,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{row.v}</span>
         </div>
-        <div style={{fontSize:10,color:"#A0AEC0",marginTop:1}}>{row.f}</div>
+        <div style={{fontSize:10,color:C.muted,marginTop:1}}>{row.f}</div>
       </div>)}
       <div style={{padding:"7px 9px",background:C.goldL,borderRadius:7,fontSize:10,color:C.amber,border:"1px solid #EDCF8A",marginTop:6}}>
         Cap rate: {fmtD(R.noi)} ÷ ${fmt(S.price)} = <strong>{fmtP(R.capRate)}</strong> &nbsp;·&nbsp; CoC: {fmtD(R.cf)} ÷ {fmtD(R.cashIn)} = <strong>{fmtP(R.coc)}</strong> &nbsp;·&nbsp; DSCR: {fmtD(R.noi)} ÷ {fmtD(R.annPmt)} = <strong>{R.dscr.toFixed(2)}</strong> &nbsp;·&nbsp; Break-even rent: <strong>{fmtD(R.beRent)}/unit/mo</strong>
@@ -467,16 +529,16 @@ function OverviewTab({R,Y,S}){
         <div style={{fontSize:15,fontWeight:700,color:score.color,marginBottom:4}}>{score.label}</div>
         <div style={{fontSize:12,color:C.slate,marginBottom:8}}>{score.desc}</div>
         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {["Cap rate","CoC","DSCR","CF/unit","Break-even","IRR"].map((l,i)=><span key={l} style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:score.metrics[i]==="good"?"#DFF2EC":score.metrics[i]==="warn"?"#FDF3E3":"#FCEAEC",color:score.metrics[i]==="good"?C.teal:score.metrics[i]==="warn"?C.amber:C.red,fontWeight:600}}>{l}</span>)}
+          {["Cap rate","CoC","DSCR","CF/unit","Break-even","IRR"].map((l,i)=><span key={l} style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:score.metrics[i]==="good"?C.tealL:score.metrics[i]==="warn"?C.amberL:C.redL,color:score.metrics[i]==="good"?C.teal:score.metrics[i]==="warn"?C.amber:C.red,fontWeight:600}}>{l}</span>)}
         </div>
       </div>
     </div>
     {/* Deal killers */}
     {killers.length>0&&<div style={{marginBottom:11}}>
       {killers.map(([lvl,msg],i)=>{
-        const cfg={critical:["#FCEAEC",C.red,"⛔"],warn:["#FDF3E3",C.amber,"⚠"],info:["#E6F1FB","#185FA5","ℹ"]};
+        const cfg={critical:[C.redL,C.red,"⛔"],warn:[C.amberL,C.amber,"⚠"],info:[C.hl,C.heading,"ℹ"]};
         const[bg,col,ic]=cfg[lvl]||cfg.info;
-        return <div key={i} style={{display:"flex",gap:8,padding:"7px 10px",background:bg,border:"1px solid "+col+"44",borderRadius:8,marginBottom:5,fontSize:11,color:col}}>
+        return <div key={i} style={{display:"flex",gap:8,padding:"7px 10px",background:bg,border:"1px solid "+C.border,borderRadius:8,marginBottom:5,fontSize:11,color:col}}>
           <span style={{flexShrink:0}}>{ic}</span><span>{msg}</span>
         </div>;
       })}
@@ -498,10 +560,10 @@ function OverviewTab({R,Y,S}){
     </div>}
     {/* Cash required */}
     <div style={{padding:"9px 11px",background:C.white,border:"1px solid "+C.border,borderRadius:10,marginBottom:11}}>
-      <div style={{fontSize:10,fontWeight:700,color:C.navy,marginBottom:6}}>CASH REQUIRED AT CLOSE</div>
+      <div style={{fontSize:10,fontWeight:700,color:C.heading,marginBottom:6}}>CASH REQUIRED AT CLOSE</div>
       {[["Down payment",fmtD(R.down)],["Closing costs",fmtD(R.ccTotal)],...(S.repairs.include&&!S.repairs.unknown&&S.repairs.amount>0?[["Repairs",fmtD(S.repairs.amount)]]:[])]
-        .map(([l2,v2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #F7FAFC",fontSize:12,color:C.slate}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{v2}</span></div>)}
-      <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontWeight:700,color:C.navy,fontSize:13}}><span>Total</span><span>{fmtD(R.cashIn)}</span></div>
+        .map(([l2,v2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid var(--c-rowline)",fontSize:12,color:C.slate}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{v2}</span></div>)}
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontWeight:700,color:C.heading,fontSize:13}}><span>Total</span><span>{fmtD(R.cashIn)}</span></div>
     </div>
     {/* Key metrics */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
@@ -522,7 +584,7 @@ function OverviewTab({R,Y,S}){
     </div>
     {/* Quick checks (no GRM) */}
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden"}}>
-      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Quick checks</div>
+      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>Quick checks</div>
       <div style={{padding:"6px 13px"}}>
         {[{l:"1% rule ("+adjLbl+")",v:fmtP(R.pct1),pill:pct1Pass?"Passes":R.pct1>=R.adjThresh*0.85?"Close":"Below",lvl:pct1Pass?"good":R.pct1>=R.adjThresh*0.85?"warn":"bad",note:"Monthly rent ÷ price"}].map(m=><div key={m.l} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",gap:6}}>
           <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.l}</div><div style={{fontSize:10,color:C.slate}}>{m.note}</div></div>
@@ -543,7 +605,7 @@ function OverviewTab({R,Y,S}){
 function IncomeTab({R,S}){
   return <div>
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:8}}>
-      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>P&L statement (annual)</div>
+      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>P&L statement (annual)</div>
       <div style={{paddingBottom:4}}>
         <PLRow label="Gross potential income" value={fmtD(R.gpi)+"/yr"} pos note={R.numU+" units × "+fmtD(R.monRent/R.numU)+" avg"}/>
         <PLRow label={"(−) Vacancy ("+S.expenses.vacancyPct+"%)"}  value={"−"+fmtD(R.vacAmt)+"/yr"} neg indent/>
@@ -565,6 +627,95 @@ function IncomeTab({R,S}){
   </div>;
 }
 
+// ── Charts (dependency-free SVG) ───────────────────────────────
+const _pol=(cx,cy,r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
+function _donutArc(cx,cy,R,r,a1,a2){
+  const large=(a2-a1)>Math.PI?1:0;
+  const[x1,y1]=_pol(cx,cy,R,a1),[x2,y2]=_pol(cx,cy,R,a2);
+  const[x3,y3]=_pol(cx,cy,r,a2),[x4,y4]=_pol(cx,cy,r,a1);
+  return `M${x1} ${y1} A${R} ${R} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r} ${r} 0 ${large} 0 ${x4} ${y4} Z`;
+}
+function ChartBox({title,children,note}){
+  return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+    <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>{title}</div>
+    <div style={{padding:"12px 13px",background:C.white}}>{children}{note&&<div style={{fontSize:10,color:C.muted,marginTop:8,lineHeight:1.5}}>{note}</div>}</div>
+  </div>;
+}
+// Cumulative cash position (starts at −cash in) → shows years-to-payback
+function CashflowChart({yearly,cashIn}){
+  const W=540,H=170,pad={l:52,r:18,t:12,b:24};
+  const pts=[{x:0,y:-cashIn},...yearly.map(r=>({x:r.year,y:-cashIn+r.cumCF}))];
+  const ys=pts.map(p=>p.y),minY=Math.min(0,...ys),maxY=Math.max(0,...ys),spanY=(maxY-minY)||1;
+  const px=i=>pad.l+(pts.length<=1?0:(i/(pts.length-1))*(W-pad.l-pad.r));
+  const py=v=>pad.t+(1-(v-minY)/spanY)*(H-pad.t-pad.b);
+  const line=pts.map((p,i)=>(i?"L":"M")+px(i).toFixed(1)+" "+py(p.y).toFixed(1)).join(" ");
+  const area=line+` L${px(pts.length-1).toFixed(1)} ${py(minY).toFixed(1)} L${px(0).toFixed(1)} ${py(minY).toFixed(1)} Z`;
+  const zeroY=py(0);
+  // payback year (first crossing >= 0)
+  let payback=null;
+  for(let i=1;i<pts.length;i++){if(pts[i-1].y<0&&pts[i].y>=0){const t=(0-pts[i-1].y)/(pts[i].y-pts[i-1].y);payback=(pts[i-1].x+t).toFixed(1);break;}}
+  const ticks=[maxY,minY+spanY/2,minY].filter((v,i,a)=>a.indexOf(v)===i);
+  // thin out markers/labels as the hold period grows so 30yr stays legible
+  const yrs=yearly.length,step=yrs<=10?1:yrs<=20?2:5;
+  const showAt=i=>i===0||i===pts.length-1||(pts[i].x%step===0);
+  return <ChartBox title="Cumulative cash position" note={payback?`Crosses break-even at ~year ${payback} (cumulative cash flow recovers your ${fmtD(cashIn)} invested).`:"Does not recover initial investment from cash flow alone within the hold period — most of the return is at sale."}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+      {ticks.map((v,i)=><g key={i}><line x1={pad.l} y1={py(v)} x2={W-pad.r} y2={py(v)} strokeWidth="1" style={{stroke:"var(--c-grid)"}}/><text x={pad.l-6} y={py(v)+3} textAnchor="end" style={{fontSize:9,fill:C.slate}}>{fmtD(v)}</text></g>)}
+      <line x1={pad.l} y1={zeroY} x2={W-pad.r} y2={zeroY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3 3"/>
+      <path d={area} style={{fill:C.teal,opacity:0.10}}/>
+      <path d={line} fill="none" strokeWidth="2.5" strokeLinejoin="round" style={{stroke:C.teal}}/>
+      {pts.map((p,i)=>showAt(i)?<circle key={i} cx={px(i)} cy={py(p.y)} r="3" style={{fill:p.y>=0?C.teal:C.red}}/>:null)}
+      {pts.map((p,i)=>showAt(i)?<text key={i} x={px(i)} y={H-8} textAnchor="middle" style={{fontSize:9,fill:C.slate}}>{p.x===0?"Now":"Y"+p.x}</text>:null)}
+    </svg>
+  </ChartBox>;
+}
+// Equity vs loan balance, stacked per year
+function EquityChart({yearly,loan}){
+  const W=540,H=180,pad={l:52,r:14,t:12,b:24};
+  const maxV=Math.max(...yearly.map(r=>r.propVal),loan)||1;
+  const n=yearly.length,gap=n>20?2:n>12?3:n>6?6:10;
+  const bw=Math.max(2,(W-pad.l-pad.r-gap*(n-1))/n),rx=bw<5?1:2;
+  const py=v=>pad.t+(1-v/maxV)*(H-pad.t-pad.b);
+  const x=i=>pad.l+i*(bw+gap);
+  const ticks=[maxV,maxV/2,0];
+  const step=n<=10?1:n<=20?2:5;
+  const showLbl=(r,i)=>i===n-1||r.year%step===0;
+  return <ChartBox title="Equity vs. loan balance" note="Each bar = property value, split into your equity (gold) and remaining loan balance (navy). Equity grows from appreciation + principal paydown.">
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+      {ticks.map((v,i)=><g key={i}><line x1={pad.l} y1={py(v)} x2={W-pad.r} y2={py(v)} strokeWidth="1" style={{stroke:"var(--c-grid)"}}/><text x={pad.l-6} y={py(v)+3} textAnchor="end" style={{fontSize:9,fill:C.slate}}>{fmtD(v)}</text></g>)}
+      {yearly.map((r,i)=>{const eqTop=py(r.propVal),balTop=py(r.balance),base=py(0);return <g key={i}>
+        <rect x={x(i)} y={balTop} width={bw} height={Math.max(0,base-balTop)} rx={rx} style={{fill:C.navy}}/>
+        <rect x={x(i)} y={eqTop} width={bw} height={Math.max(0,balTop-eqTop)} rx={rx} style={{fill:C.gold}}/>
+        {showLbl(r,i)&&<text x={x(i)+bw/2} y={H-8} textAnchor="middle" style={{fontSize:9,fill:C.slate}}>{"Y"+r.year}</text>}
+      </g>;})}
+    </svg>
+    <div style={{display:"flex",gap:14,marginTop:8,fontSize:10,color:C.slate}}>
+      <span><span style={{display:"inline-block",width:9,height:9,background:C.gold,borderRadius:2,marginRight:4}}/>Equity</span>
+      <span><span style={{display:"inline-block",width:9,height:9,background:C.navy,borderRadius:2,marginRight:4}}/>Loan balance</span>
+    </div>
+  </ChartBox>;
+}
+// Return components donut
+function ReturnDonut({segs}){
+  const pos=segs.filter(s=>s.value>0),tot=pos.reduce((s,x)=>s+x.value,0)||1;
+  let a=-Math.PI/2;
+  const arcs=pos.map(s=>{const a2=a+(s.value/tot)*2*Math.PI;const path=_donutArc(64,64,58,38,a,a2);a=a2;return{path,color:s.color,label:s.label,value:s.value};});
+  const grand=segs.reduce((s,x)=>s+x.value,0);
+  return <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+    <svg viewBox="0 0 128 128" style={{width:128,height:128,flexShrink:0}}>
+      {arcs.map((a2,i)=><path key={i} d={a2.path} style={{fill:a2.color}}/>)}
+      <text x="64" y="60" textAnchor="middle" style={{fontSize:10,fill:C.muted}}>Total</text>
+      <text x="64" y="76" textAnchor="middle" style={{fontSize:13,fontWeight:700,fill:C.text}}>{fmtD(grand)}</text>
+    </svg>
+    <div style={{flex:1,minWidth:160}}>
+      {segs.map((s,i)=><div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"3px 0",fontSize:12}}>
+        <span style={{display:"flex",alignItems:"center",gap:6,color:C.slate}}><span style={{width:10,height:10,background:s.color,borderRadius:2,opacity:s.value>0?1:0.3}}/>{s.label}</span>
+        <span style={{fontWeight:700,color:s.value>=0?C.text:C.red,fontVariantNumeric:"tabular-nums"}}>{fmtD(s.value)}</span>
+      </div>)}
+    </div>
+  </div>;
+}
+
 function ProjectionTab({R,Y,S}){
   const hold=S.projection.holdYears||5;
   return <div>
@@ -574,19 +725,21 @@ function ProjectionTab({R,Y,S}){
         <div style={{fontSize:18,fontWeight:700,color:Y.totRet>=0?C.gold:"#F87171"}}>{fmtD(Y.totRet)}</div>
         <div style={{fontSize:10,opacity:0.55}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
       </div>
-      <div style={{background:Y.irr>=15?C.teal:Y.irr>=10?C.amber:C.red,borderRadius:10,padding:"10px 12px",color:"#fff"}}>
+      <div style={{background:Y.irr>=15?C.tealS:Y.irr>=10?C.amberS:C.redS,borderRadius:10,padding:"10px 12px",color:"#fff"}}>
         <div style={{fontSize:9,opacity:0.65,marginBottom:2}}>Est. IRR</div>
         <div style={{fontSize:18,fontWeight:700}}>{fmtP(Y.irr)}</div>
         <div style={{fontSize:10,opacity:0.7}}>{Y.irr>=15?"Excellent":Y.irr>=10?"Good":"Below target"}</div>
       </div>
     </div>
+    <CashflowChart yearly={Y.yearly} cashIn={R.cashIn}/>
+    <EquityChart yearly={Y.yearly} loan={R.loan}/>
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Year-by-year</div>
-      <div style={{overflowX:"auto"}}>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border,display:"flex",justifyContent:"space-between"}}><span>Year-by-year</span>{hold>12&&<span style={{fontWeight:400,color:C.muted}}>scroll ↓ · {hold} yrs</span>}</div>
+      <div className={"ytable-scroll"+(hold>12?" cap":"")} style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-          <thead><tr style={{background:C.bg}}>{["Yr","Rent/unit","NOI/yr","CF/yr","CF/mo","Equity","Value"].map(h=><th key={h} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"right",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Yr","Rent/unit","NOI/yr","CF/yr","CF/mo","Equity","Value"].map(h=><th key={h} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"right",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap",position:"sticky",top:0,background:C.bg,zIndex:1}}>{h}</th>)}</tr></thead>
           <tbody>{Y.yearly.map((row,i)=><tr key={row.year} style={{background:i%2===0?C.white:C.bg}}>
-            <td style={{padding:"5px 8px",fontWeight:600,color:C.navy,textAlign:"right"}}>{row.year}</td>
+            <td style={{padding:"5px 8px",fontWeight:600,color:C.heading,textAlign:"right"}}>{row.year}</td>
             <td style={{padding:"5px 8px",textAlign:"right"}}>{fmtD(row.monthlyRent)}</td>
             <td style={{padding:"5px 8px",textAlign:"right"}}>{fmtD(row.noi)}</td>
             <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600,color:row.cf>=0?C.teal:C.red}}>{fmtD(row.cf)}</td>
@@ -598,10 +751,10 @@ function ProjectionTab({R,Y,S}){
       </div>
     </div>
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden"}}>
-      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Return components</div>
-      <div style={{padding:"8px 12px"}}>
-        {[["Appreciation",fmtD(Y.appGain),C.teal],["Principal paydown",fmtD(Y.equityBuild),C.teal],["Net cashflow",fmtD(Y.totCF),Y.totCF>=0?C.teal:C.red],["Depreciation benefit (est.)",fmtD(Y.deprBen),C.teal]].map(([l2,v2,col])=><div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #F7FAFC",fontSize:12}}><span style={{color:C.slate}}>{l2}</span><span style={{fontWeight:700,color:col,fontVariantNumeric:"tabular-nums"}}>{v2}</span></div>)}
-        <div style={{fontSize:9,color:"#A0AEC0",marginTop:7}}>Exit: {fmtD(Y.exitVal)} · {S.projection.appreciationPct}%/yr · ~6% selling costs · consult CPA</div>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>Return components</div>
+      <div style={{padding:"12px"}}>
+        <ReturnDonut segs={[{label:"Appreciation",value:Y.appGain,color:C.teal},{label:"Principal paydown",value:Y.equityBuild,color:C.heading},{label:"Net cashflow",value:Y.totCF,color:C.gold},{label:"Depreciation benefit (est.)",value:Y.deprBen,color:"#185FA5"}]}/>
+        <div style={{fontSize:9,color:C.muted,marginTop:10}}>Exit: {fmtD(Y.exitVal)} · {S.projection.appreciationPct}%/yr · ~6% selling costs · consult CPA. Donut shows positive contributors only.</div>
       </div>
     </div>
   </div>;
@@ -612,7 +765,7 @@ function AnalysisTab({SEN,R,S,Y}){
   const wnt=useMemo(()=>whatNeedsToBeTrue(S,R,targetCF),[S,R,targetCF]);
   const loans=useMemo(()=>calcLoanOptions(S.price,S.financing.downPct,S.financing.rate,S.financing.loanYears),[S.price,S.financing.downPct,S.financing.rate,S.financing.loanYears]);
   const cfColor=v=>v>0?C.teal:v>-500?C.amber:C.red;
-  const cfBg=v=>v>0?"#DFF2EC":v>-500?"#FDF3E3":"#FCEAEC";
+  const cfBg=v=>v>0?C.tealL:v>-500?C.amberL:C.redL;
   const rVars=[-1.0,-0.5,0,+0.5,+1.0];
 
   return <div>
@@ -642,7 +795,7 @@ function AnalysisTab({SEN,R,S,Y}){
 
     {/* Sensitivity table */}
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Monthly CF — price vs rate</div>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>Monthly CF — price vs rate</div>
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
           <thead><tr style={{background:C.bg}}>
@@ -650,7 +803,7 @@ function AnalysisTab({SEN,R,S,Y}){
             {rVars.map(r=><th key={r} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"center",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{r===0?"Current":(r>0?"+":"")+r.toFixed(1)+"%"}</th>)}
           </tr></thead>
           <tbody>{SEN.priceRate.map((row,ri)=><tr key={ri}>
-            <td style={{padding:"5px 10px",fontWeight:600,color:row.label==="Current"?C.navy:C.text,background:row.label==="Current"?"#F0F4FF":C.white,whiteSpace:"nowrap"}}>
+            <td style={{padding:"5px 10px",fontWeight:600,color:row.label==="Current"?C.navy:C.text,background:row.label==="Current"?"var(--c-hl)":C.white,whiteSpace:"nowrap"}}>
               {row.label==="Current"?"Current":row.label} {row.label!=="Current"&&<span style={{fontSize:9,color:C.slate}}>({fmtD(row.price)})</span>}
             </td>
             {row.cells.map((cell,ci)=><td key={ci} style={{padding:"5px 8px",textAlign:"center",background:row.label==="Current"&&cell.label==="Current"?"#E8F4FF":cfBg(cell.cf),fontWeight:row.label==="Current"&&cell.label==="Current"?700:500,color:cfColor(cell.cf),fontVariantNumeric:"tabular-nums"}}>{fmtD(cell.cf/12)}/mo</td>)}
@@ -661,7 +814,7 @@ function AnalysisTab({SEN,R,S,Y}){
 
     {/* Rent sensitivity */}
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>CF sensitivity — rent/unit</div>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>CF sensitivity — rent/unit</div>
       <div style={{padding:"8px 12px",display:"flex",gap:6,flexWrap:"wrap"}}>
         {SEN.rentCells.map(cell=><div key={cell.delta} style={{flex:1,minWidth:80,padding:"8px",background:cfBg(cell.cf),borderRadius:8,textAlign:"center",border:"1px solid "+(cell.delta===0?"#93C5FD":"transparent")}}>
           <div style={{fontSize:10,color:C.slate,marginBottom:2}}>{cell.delta===0?"Current":(cell.delta>0?"+":"")+fmtD(cell.delta)+"/unit"}</div>
@@ -673,14 +826,14 @@ function AnalysisTab({SEN,R,S,Y}){
 
     {/* Loan comparison */}
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.navy,borderBottom:"1px solid "+C.border}}>Loan type comparison</div>
+      <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>Loan type comparison</div>
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
           <thead><tr style={{background:C.bg}}>{["Type","Rate","Payment/mo","CF/mo","Notes"].map(h=><th key={h} style={{padding:"5px 8px",fontWeight:600,color:C.slate,textAlign:"right",borderBottom:"1px solid "+C.border,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
           <tbody>{loans.map((loan,i)=>{
             const loanCF=R.noi-loan.monthly*12;
             const isCurrent=i===0;
-            return <tr key={loan.name} style={{background:isCurrent?"#F0F4FF":i%2===0?C.white:C.bg}}>
+            return <tr key={loan.name} style={{background:isCurrent?"var(--c-hl)":i%2===0?C.white:C.bg}}>
               <td style={{padding:"5px 8px",fontWeight:isCurrent?600:400,color:isCurrent?C.navy:C.text,textAlign:"right",whiteSpace:"nowrap"}}>{loan.name}{isCurrent&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:"#BFDBFE",color:"#1D4ED8",borderRadius:4}}>current</span>}</td>
               <td style={{padding:"5px 8px",textAlign:"right"}}>{loan.rate.toFixed(3)}%</td>
               <td style={{padding:"5px 8px",textAlign:"right",fontWeight:600}}>{fmtD(loan.monthly)}/mo</td>
@@ -710,7 +863,7 @@ function ScenarioManager({currentState,onLoad}){
   return <div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:scenarios.length>0?8:0}}>
       {scenarios.map(s=><div key={s._name} style={{display:"flex",alignItems:"center",gap:4,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"4px 8px"}}>
-        <button onClick={()=>onLoad(s)} style={{fontSize:11,fontWeight:600,color:C.navy,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0}}>{s._name}</button>
+        <button onClick={()=>onLoad(s)} style={{fontSize:11,fontWeight:600,color:C.heading,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0}}>{s._name}</button>
         <button onClick={()=>remove(s._name)} style={{fontSize:10,color:C.red,background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:2}}>✕</button>
       </div>)}
       {!saving&&<button onClick={()=>setSaving(true)} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"1px solid "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>💾 Save</button>}
@@ -723,6 +876,63 @@ function ScenarioManager({currentState,onLoad}){
       <button onClick={()=>setSaving(false)} style={{padding:"5px 10px",borderRadius:7,background:C.white,color:C.slate,border:"1px solid "+C.border,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕</button>
     </div>}
   </div>;
+}
+
+// ── Scenario comparison (side-by-side) ────────────────────────
+function ScenarioCompare({currentState}){
+  const[open,setOpen]=useState(false);
+  const[sel,setSel]=useState([]);
+  const saved=()=>{try{return JSON.parse(localStorage.getItem("re_scenarios")||"[]");}catch{return [];}};
+  const list=open?saved():[];
+  const toggle=n=>setSel(s=>s.includes(n)?s.filter(x=>x!==n):[...s,n]);
+  const cols=[{name:"Current deal",st:currentState,cur:true},...list.filter(s=>sel.includes(s._name)).map(s=>({name:s._name,st:s}))];
+  const computed=cols.map(c=>{const R=computeBase(c.st);const Y=computeYearly(c.st,R);return{...c,R,Y,score:calcDealScore(R,Y)};});
+  const rows=[
+    {l:"Purchase price",f:c=>fmtD(c.st.price)},
+    {l:"Monthly CF",f:c=>fmtD(c.R.cf/12)+"/mo",col:c=>c.R.cf>=0?C.teal:C.red},
+    {l:"CF / unit / mo",f:c=>fmtD(c.R.cf/c.R.numU/12),col:c=>c.R.cf>=0?C.teal:C.red},
+    {l:"Cap rate",f:c=>fmtP(c.R.capRate),lvl:c=>lv(c.R.capRate,7,4.5)},
+    {l:"Cash-on-cash",f:c=>fmtP(c.R.coc),lvl:c=>lv(c.R.coc,8,4)},
+    {l:"DSCR",f:c=>c.R.dscr.toFixed(2),lvl:c=>lv(c.R.dscr,1.25,1.0)},
+    {l:"Break-even occ.",f:c=>fmtP(c.R.beOcc),lvl:c=>lv(c.R.beOcc,70,85,true)},
+    {l:"Est. IRR",f:c=>fmtP(c.Y.irr),lvl:c=>lv(c.Y.irr,15,10)},
+    {l:"Cash needed",f:c=>fmtD(c.R.cashIn)},
+    {l:"Total return",f:c=>fmtD(c.Y.totRet)},
+  ];
+  const lvlCol={good:C.teal,warn:C.amber,bad:C.red};
+  return <>
+    <button onClick={()=>setOpen(true)} style={{fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>⚖ Compare</button>
+    {open&&<div className="no-print" onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.55)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"24px 12px",overflowY:"auto"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:14,maxWidth:900,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,0.3)",overflow:"hidden"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")"}}>
+          <span style={{fontSize:13,fontWeight:700,color:"#fff"}}>⚖ Compare scenarios</span>
+          <button onClick={()=>setOpen(false)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
+        </div>
+        <div style={{padding:"14px 16px"}}>
+          <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved scenarios to compare against your current deal{list.length===0?" — none saved yet. Use 💾 Save first.":":"}</div>
+          {list.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            {list.map(s=>{const on=sel.includes(s._name);return <button key={s._name} onClick={()=>toggle(s._name)} style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{on?"✓ ":""}{s._name}</button>;})}
+          </div>}
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead><tr>
+                <th style={{padding:"7px 10px",textAlign:"left",borderBottom:"2px solid "+C.border,position:"sticky",left:0,background:C.white}}></th>
+                {computed.map((c,i)=><th key={i} style={{padding:"7px 10px",textAlign:"right",borderBottom:"2px solid "+C.border,minWidth:120}}>
+                  <div style={{fontSize:11,fontWeight:700,color:c.cur?C.navy:C.text,whiteSpace:"nowrap"}}>{c.name}{c.cur&&<span style={{fontSize:9,marginLeft:4,padding:"1px 5px",background:"#BFDBFE",color:"#1D4ED8",borderRadius:4}}>current</span>}</div>
+                  <div style={{marginTop:3}}><span style={{fontSize:11,fontWeight:700,padding:"1px 8px",borderRadius:10,background:c.score.color,color:"#fff"}}>{c.score.grade} · {c.score.label}</span></div>
+                </th>)}
+              </tr></thead>
+              <tbody>{rows.map((row,ri)=><tr key={ri} style={{background:ri%2?C.bg:C.white}}>
+                <td style={{padding:"6px 10px",color:C.slate,fontWeight:600,whiteSpace:"nowrap",position:"sticky",left:0,background:ri%2?C.bg:C.white}}>{row.l}</td>
+                {computed.map((c,i)=>{const col=row.lvl?lvlCol[row.lvl(c)]:row.col?row.col(c):C.text;return <td key={i} style={{padding:"6px 10px",textAlign:"right",fontWeight:600,color:col,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{row.f(c)}</td>;})}
+              </tr>)}</tbody>
+            </table>
+          </div>
+          {computed.length===1&&<div style={{fontSize:11,color:C.muted,marginTop:12,textAlign:"center"}}>Select one or more saved scenarios above to see them side-by-side.</div>}
+        </div>
+      </div>
+    </div>}
+  </>;
 }
 
 // ── Comparables ───────────────────────────────────────────────
@@ -745,7 +955,7 @@ function ComparablesCard({comps,setComps,currentR}){
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {comps.map((c,i)=><div key={c.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-          <input value={c.label} onChange={e=>setC(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.navy,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:80}}/>
+          <input value={c.label} onChange={e=>setC(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:80}}/>
           <button onClick={()=>rem(i)} style={{fontSize:10,color:C.red,background:C.redL,border:"none",borderRadius:5,cursor:"pointer",padding:"2px 6px"}}>✕</button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
@@ -772,11 +982,11 @@ const INIT={
   comparables:[],
 };
 const EXAMPLES=[
-  {id:"en",label:"English Ave",sub:"SW ATL·D",tag:"Disaster",col:C.red,address:"English Ave, Atlanta, GA",price:240000,units:[{id:1,label:"U1",rent:700,beds:1,bath:1,sqft:600},{id:2,label:"U2",rent:700,beds:1,bath:1,sqft:600},{id:3,label:"U3",rent:700,beds:1,bath:1,sqft:600},{id:4,label:"U4",rent:700,beds:1,bath:1,sqft:600}],financing:{downPct:25,rate:8,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:52,vacancyPct:14,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
-  {id:"cp",label:"College Park",sub:"South ATL·C",tag:"Bad",col:C.red,address:"College Park, GA",price:420000,units:[{id:1,label:"U1",rent:1050,beds:2,bath:1,sqft:850},{id:2,label:"U2",rent:1050,beds:2,bath:1,sqft:850},{id:3,label:"U3",rent:1050,beds:2,bath:1,sqft:850},{id:4,label:"U4",rent:1050,beds:2,bath:1,sqft:850}],financing:{downPct:25,rate:7.5,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:48,vacancyPct:9,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2.5},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
-  {id:"cl",label:"Clarkston",sub:"DeKalb·B",tag:"Mixed",col:C.amber,address:"Clarkston, GA",price:560000,units:[{id:1,label:"U1",rent:1500,beds:2,bath:1,sqft:950},{id:2,label:"U2",rent:1500,beds:2,bath:1,sqft:950},{id:3,label:"U3",rent:1300,beds:1,bath:1,sqft:700},{id:4,label:"U4",rent:1300,beds:1,bath:1,sqft:700}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:45,vacancyPct:6,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:3.5},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
-  {id:"sm",label:"Smyrna",sub:"Cobb·B+",tag:"Good",col:C.teal,address:"Smyrna, GA",price:680000,units:[{id:1,label:"U1",rent:1900,beds:3,bath:2,sqft:1200},{id:2,label:"U2",rent:1900,beds:3,bath:2,sqft:1200},{id:3,label:"U3",rent:1600,beds:2,bath:1,sqft:900},{id:4,label:"U4",rent:1600,beds:2,bath:1,sqft:900}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"detailed",vacancyPct:5,taxes:8400,insurance:5000,mgmtPct:8,maintenance:200,capex:400,utilities:150,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:4},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
-  {id:"kw",label:"Kirkwood",sub:"Intown·Value-add",tag:"🔥 Home run",col:C.teal,address:"Kirkwood, Atlanta, GA",price:620000,units:[{id:1,label:"U1",rent:1350,beds:2,bath:1,sqft:950},{id:2,label:"U2",rent:1350,beds:2,bath:1,sqft:950},{id:3,label:"U3",rent:1100,beds:1,bath:1,sqft:650},{id:4,label:"U4",rent:1100,beds:1,bath:1,sqft:650}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3.5},expenses:{...DEX,mode:"detailed",vacancyPct:5,taxes:7800,insurance:4600,mgmtPct:8,maintenance:250,capex:400,utilities:160,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:4.5,vaEnabled:true,vaMarketRentPerUnit:1700,vaYear:2},repairs:{include:true,unknown:false,amount:35000},partnership:{...INIT.partnership},comparables:[]},
+  {id:"en",label:"English Ave",sub:"SW ATL · C/D",tag:"⛔ Disaster",col:C.red,address:"English Ave, Atlanta, GA 30314",notes:"Distressed SW Atlanta block. Below-market rents but deferred maintenance, high vacancy and crime drag. Riskier-area financing pushes the rate higher. NOI can't cover the mortgage — a money pit unless bought all-cash at a deep discount.",price:250000,units:[{id:1,label:"Unit 1",rent:700,beds:2,bath:1,sqft:780},{id:2,label:"Unit 2",rent:700,beds:2,bath:1,sqft:780},{id:3,label:"Unit 3",rent:650,beds:1,bath:1,sqft:560},{id:4,label:"Unit 4",rent:650,beds:1,bath:1,sqft:560}],financing:{downPct:25,rate:8.75,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:56,vacancyPct:14,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:1,rentGrowthPct:1},repairs:{include:false,unknown:true,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"cp",label:"College Park",sub:"South ATL · C",tag:"Bad",col:C.red,address:"College Park, GA 30337",notes:"Near the airport, steady C-class demand. Priced too high for the rents it produces — cap rate sits below the mortgage rate, so it bleeds cash every month. Lender DSCR also falls short of 1.0. Needs a price cut to work.",price:410000,units:[{id:1,label:"Unit 1",rent:1150,beds:2,bath:1,sqft:880},{id:2,label:"Unit 2",rent:1150,beds:2,bath:1,sqft:880},{id:3,label:"Unit 3",rent:1050,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1050,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:7.5,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:49,vacancyPct:8,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2.5,rentGrowthPct:2},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"cl",label:"Clarkston",sub:"DeKalb · B−",tag:"Mixed",col:C.amber,address:"Clarkston, GA 30021",notes:"Stable, diverse DeKalb rental market with reliable demand. Roughly breaks even today with a thin DSCR — the return is mostly a bet on modest appreciation and rent growth. Workable but no margin for error.",price:520000,units:[{id:1,label:"Unit 1",rent:1500,beds:2,bath:1,sqft:930},{id:2,label:"Unit 2",rent:1500,beds:2,bath:1,sqft:930},{id:3,label:"Unit 3",rent:1325,beds:1,bath:1,sqft:700},{id:4,label:"Unit 4",rent:1325,beds:1,bath:1,sqft:700}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:45,vacancyPct:6,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:3.2,rentGrowthPct:3},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"sm",label:"Smyrna",sub:"Cobb · B+",tag:"Good",col:C.teal,address:"Smyrna, GA 30080",notes:"Strong Cobb County submarket — low vacancy, good schools, steady appreciation. Bought at a fair price with a relationship rate, it clears a 1.2 DSCR and cash-flows from day one. A solid, financeable hold.",price:620000,units:[{id:1,label:"Unit 1",rent:1800,beds:2,bath:1,sqft:950},{id:2,label:"Unit 2",rent:1800,beds:2,bath:1,sqft:950},{id:3,label:"Unit 3",rent:1550,beds:1,bath:1,sqft:700},{id:4,label:"Unit 4",rent:1550,beds:1,bath:1,sqft:700}],financing:{downPct:25,rate:6.9,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:42,vacancyPct:5,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:4,rentGrowthPct:3.5},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"kw",label:"Kirkwood",sub:"Intown · Value-add",tag:"🔥 Home run",col:C.teal,address:"Kirkwood, Atlanta, GA 30317",notes:"Off-market intown fourplex with below-market rents and light cosmetic needs. Bought right, it already cash-flows and clears every metric. Turn the units and push rents to market (≈$2,050) for forced appreciation and a true home run.",price:550000,units:[{id:1,label:"Unit 1",rent:1850,beds:2,bath:1,sqft:950},{id:2,label:"Unit 2",rent:1850,beds:2,bath:1,sqft:950},{id:3,label:"Unit 3",rent:1600,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1600,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:6.75,loanYears:30},closing:{...DCC,quickPct:3.5},expenses:{...DEX,mode:"quick",ratio:40,vacancyPct:5,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:5,rentGrowthPct:4,vaEnabled:true,vaMarketRentPerUnit:2050,vaYear:2},repairs:{include:true,unknown:false,amount:25000},partnership:{...INIT.partnership},comparables:[]},
 ];
 let _uid=10;function uid(){return ++_uid;}
 // ── App ────────────────────────────────────────────────────────
@@ -787,6 +997,8 @@ export default function App(){
   const[selEx,setSelEx]=useState(null);
   const[tab,setTab]=useState("overview");
   const[isPrinting,setIsPrinting]=useState(false);
+  const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
+  useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
   const S=state;
   const set=(k,v)=>setState(p=>({...p,[k]:v}));
   const setFin=(k,v)=>setState(p=>({...p,financing:{...p.financing,[k]:v}}));
@@ -800,6 +1012,23 @@ export default function App(){
   const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
   const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
   const loadEx=ex=>{setSelEx(ex.id);setState({...INIT,...ex,closing:ex.closing||{...DCC},expenses:ex.expenses||{...DEX},projection:{...INIT.projection,...ex.projection}});};
+  const mergeImported=p=>({...INIT,...p,
+    financing:{...INIT.financing,...(p.financing||{})},
+    closing:{...DCC,...(p.closing||{})},
+    expenses:{...DEX,...(p.expenses||{})},
+    projection:{...INIT.projection,...(p.projection||{})},
+    repairs:{...INIT.repairs,...(p.repairs||{})},
+    partnership:{...INIT.partnership,...(p.partnership||{})},
+    units:Array.isArray(p.units)&&p.units.length?p.units:INIT.units,
+    comparables:Array.isArray(p.comparables)?p.comparables:[]});
+  const exportCSV=()=>{const base=(S.address||"deal").replace(/[^a-z0-9]+/gi,"_").replace(/^_|_$/g,"").slice(0,40)||"deal";downloadFile(base+".csv",stateToCSV(S));};
+  const importCSV=()=>{
+    const inp=document.createElement("input");inp.type="file";inp.accept=".csv,text/csv";
+    inp.onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();
+      rd.onload=()=>{try{setState(mergeImported(csvToState(rd.result)));setSelEx(null);}catch(err){alert("Could not import this CSV: "+err.message);}};
+      rd.readAsText(f);};
+    inp.click();
+  };
 
   // Auto-save to localStorage
   useEffect(()=>{try{localStorage.setItem("re_autosave",JSON.stringify(state));}catch{};},[state]);
@@ -814,13 +1043,18 @@ export default function App(){
 
   const TABS=[["overview","Overview"],["income","Income"],["projection","Projection"],["analysis","Analysis"]];
 
-  const handlePrint=()=>{setIsPrinting(true);setTimeout(()=>{window.print();setTimeout(()=>setIsPrinting(false),300);},150);};
+  const handlePrint=()=>{setIsPrinting(true);const prev=dark;try{document.documentElement.setAttribute("data-theme","light");}catch{}setTimeout(()=>{window.print();setTimeout(()=>{setIsPrinting(false);try{document.documentElement.setAttribute("data-theme",prev?"dark":"light");}catch{}},300);},150);};
 
   return(
     <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:860,margin:"0 auto",padding:"0.5rem 0"}}>
+      <style>{THEME_CSS}</style>
       <style>{`
-        @media print{.no-print{display:none!important}.layout{display:block!important}.sticky-col{position:static!important;margin-top:20px}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-        @media (max-width:680px){.layout{grid-template-columns:1fr!important}.sticky-col{position:static!important}.mobile-bar{display:flex!important}}
+        .ytable-scroll.cap{max-height:340px;overflow-y:auto}
+        @media print{.no-print{display:none!important}.layout{display:block!important}.sticky-col{position:static!important;margin-top:20px}.ytable-scroll{max-height:none!important;overflow:visible!important}body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}:root{color-scheme:light}}
+        @media (max-width:680px){.layout{grid-template-columns:1fr!important}.sticky-col{position:static!important}.mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
+          .preset-grid{grid-template-columns:repeat(3,1fr)!important}
+          input,select,textarea{font-size:16px!important}}
+        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(30,58,110,0.25)}
       `}</style>
 
       {/* Header */}
@@ -834,7 +1068,13 @@ export default function App(){
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
             <ScenarioManager currentState={S} onLoad={s=>{setState({...INIT,...s});setSelEx(null);}}/>
-            <button onClick={handlePrint} style={{fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>🖨 Print / PDF</button>
+            <ScenarioCompare currentState={S}/>
+            {(() => {const hb={fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"};return <>
+              <button onClick={()=>setDark(d=>!d)} style={hb} title="Toggle dark mode">{dark?"☀ Light":"🌙 Dark"}</button>
+              <button onClick={exportCSV} style={hb} title="Download this deal as a CSV (opens in Excel)">⬇ Export CSV</button>
+              <button onClick={importCSV} style={hb} title="Load a deal from a previously exported CSV">⬆ Import CSV</button>
+              <button onClick={handlePrint} style={hb}>🖨 Print / PDF</button>
+            </>;})()}
           </div>
         </div>
       </div>
@@ -844,7 +1084,7 @@ export default function App(){
         <button onClick={()=>setShowEx(!showEx)} style={{fontSize:11,fontWeight:700,color:C.slate,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"0 0 6px",display:"flex",alignItems:"center",gap:5}}>
           <span>Load Atlanta example deal</span><span style={{transition:"transform 0.2s",display:"inline-block",transform:showEx?"rotate(180deg)":"none"}}>▾</span>
         </button>
-        {showEx&&<div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
+        {showEx&&<div className="preset-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
           {EXAMPLES.map(ex=>{const on=selEx===ex.id;return <button key={ex.id} onClick={()=>loadEx(ex)} style={{padding:"7px 5px",borderRadius:9,border:"1.5px solid "+(on?ex.col:C.border),background:on?ex.col:C.white,cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all 0.15s"}}>
             <div style={{fontSize:10,fontWeight:700,color:on?"#fff":C.text}}>{ex.label}</div>
             <div style={{fontSize:9,color:on?"rgba(255,255,255,0.7)":C.slate,lineHeight:1.3}}>{ex.sub}</div>
@@ -881,12 +1121,12 @@ export default function App(){
               {S.units.map((u,i)=><div key={u.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showUD?8:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.navy,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:58}}/>
+                    <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:11,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",width:58}}/>
                     <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white}}>
                       <span style={{padding:"5px 6px 5px 8px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border}}>$</span>
                       <input type="text" value={u.rent>0?new Intl.NumberFormat("en-US").format(u.rent):""} placeholder="0"
                         onChange={e=>setUnit(i,"rent",parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
-                        style={{width:75,padding:"5px 8px",fontSize:13,fontWeight:600,border:"none",background:"transparent",color:C.navy,outline:"none"}}/>
+                        style={{width:75,padding:"5px 8px",fontSize:13,fontWeight:600,border:"none",background:"transparent",color:C.heading,outline:"none"}}/>
                       <span style={{padding:"5px 7px 5px 2px",fontSize:10,color:C.slate}}>/mo</span>
                     </div>
                   </div>
@@ -902,7 +1142,7 @@ export default function App(){
             <button onClick={addUnit} style={{marginTop:8,width:"100%",padding:"7px",borderRadius:8,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",fontSize:12,fontWeight:600,color:C.slate,fontFamily:"inherit"}}>+ Add unit</button>
             <div style={{marginTop:9,padding:"6px 9px",background:C.bg,borderRadius:7,border:"1px solid "+C.border,fontSize:12,display:"flex",justifyContent:"space-between"}}>
               <span style={{color:C.slate}}>Total monthly</span>
-              <span style={{fontWeight:700,color:C.navy}}>{fmtD(totalRent)}/mo · {fmtD(totalRent*12)}/yr</span>
+              <span style={{fontWeight:700,color:C.heading}}>{fmtD(totalRent)}/mo · {fmtD(totalRent*12)}/yr</span>
             </div>
           </Card>
 
@@ -914,8 +1154,8 @@ export default function App(){
               <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={x=>setFin("loanYears",x)} min={1} max={40}/>
               <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
                 <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Monthly payment</div>
-                <div style={{fontSize:14,fontWeight:700,color:C.navy}}>{fmtD(R.pmt)}/mo</div>
-                <div style={{fontSize:10,color:"#A0AEC0"}}>Loan: {fmtD(R.loan)}</div>
+                <div style={{fontSize:14,fontWeight:700,color:C.heading}}>{fmtD(R.pmt)}/mo</div>
+                <div style={{fontSize:10,color:C.muted}}>Loan: {fmtD(R.loan)}</div>
               </div>
             </div>
             {/* Partnership */}
@@ -976,7 +1216,7 @@ export default function App(){
         </div>
 
         {/* RIGHT: Results */}
-        <div className="sticky-col" style={{position:"sticky",top:8}}>
+        <div id="results-panel" className="sticky-col" style={{position:"sticky",top:8}}>
           {/* Tab bar */}
           {!isPrinting&&<div className="no-print" style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
             {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.navy:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
@@ -986,6 +1226,7 @@ export default function App(){
               <OverviewTab R={R} Y={Y} S={S}/>
               <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><IncomeTab R={R} S={S}/></div>
               <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><ProjectionTab R={R} Y={Y} S={S}/></div>
+              <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><AnalysisTab SEN={SEN} R={R} S={S} Y={Y}/></div>
             </div>
           ):(
             <div>
@@ -999,14 +1240,15 @@ export default function App(){
       </div>
 
       {/* Mobile floating bar */}
-      <div className="mobile-bar" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around"}}>
+      <div className="mobile-bar" onClick={()=>{try{document.getElementById("results-panel").scrollIntoView({behavior:"smooth",block:"start"});}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
         {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
           <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
           <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{v2}</div>
         </div>)}
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.7)",alignSelf:"center"}}>tap ↑</div>
       </div>
 
-      <div style={{marginTop:10,fontSize:9,color:"#A0AEC0",borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
+      <div style={{marginTop:10,fontSize:9,color:C.muted,borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
         Educational only · Not financial/legal/tax advice · Atlanta data: Yardi Matrix, Marcus &amp; Millichap, CoStar, GA DOR 2025–26
       </div>
     </div>
