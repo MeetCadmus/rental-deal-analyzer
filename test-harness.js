@@ -29,7 +29,7 @@ function loadModule() {
   const exportNames = [
     "computeBase", "computeYearly", "computeSensitivity",
     "calcDealScore", "calcKillers", "whatNeedsToBeTrue", "calcLoanOptions",
-    "calcCC", "calcExp",
+    "calcCC", "calcExp", "migrateExpenses",
     "flattenState", "unflattenState", "coerceVal", "stateToCSV", "csvToState", "parseCSV",
     "fullState", "makeDeal", "dealTitle", "relTime", "mergeDealStores",
     "INIT", "DCC", "DEX", "CLASS_PRESETS", "EXAMPLES",
