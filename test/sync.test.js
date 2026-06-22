@@ -39,6 +39,31 @@ test("mergeDealStores: keeps local activeId when still present, else falls back"
   assert.equal(M.mergeDealStores({ deals: [], activeId: "gone" }, { deals: [d("c", 1)], activeId: "c" }).activeId, "c");
 });
 
+test("mergeDealStores: a tombstoned deal stays deleted (doesn't come back from cloud)", () => {
+  const local = { deals: [d("a", 5)], activeId: "a", deleted: { b: 9 } };
+  const cloud = { deals: [d("a", 5), d("b", 2)], activeId: "b" }; // cloud still has b
+  const m = M.mergeDealStores(local, cloud);
+  assert.deepStrictEqual(m.deals.map((x) => x._id), ["a"], "b is removed");
+  assert.equal(m.deleted.b, 9, "tombstone retained for propagation");
+});
+
+test("mergeDealStores: an edit newer than the deletion resurrects the deal", () => {
+  const local = { deals: [], activeId: null, deleted: { b: 100 } };
+  const cloud = { deals: [d("b", 200)], activeId: "b" }; // edited after the delete
+  const m = M.mergeDealStores(local, cloud);
+  assert.deepStrictEqual(m.deals.map((x) => x._id), ["b"], "b resurrected (edit wins)");
+  assert.ok(!("b" in m.deleted), "tombstone pruned for surviving deal");
+});
+
+test("mergeDealStores: tombstones from both sides are unioned", () => {
+  const m = M.mergeDealStores(
+    { deals: [d("a", 1)], activeId: "a", deleted: { x: 5 } },
+    { deals: [d("a", 1)], activeId: "a", deleted: { y: 6 } }
+  );
+  assert.equal(m.deleted.x, 5);
+  assert.equal(m.deleted.y, 6);
+});
+
 test("mergeDealStores: stable order by _created; tolerates empty/missing input", () => {
   const m = M.mergeDealStores({ deals: [d("z", 9, { _created: 9 }), d("a", 1, { _created: 1 })] }, undefined);
   assert.deepStrictEqual(m.deals.map((x) => x._id), ["a", "z"]);
