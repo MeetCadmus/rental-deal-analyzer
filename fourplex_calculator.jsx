@@ -1321,7 +1321,7 @@ export default function App(){
   const setCC=useCallback(fn=>setState(p=>({...p,closing:fn(p.closing||{...DCC})})),[]);
   const setEx=useCallback(fn=>setState(p=>({...p,expenses:fn(p.expenses||{...DEX})})),[]);
   const setUnit=(i,k,v)=>setState(p=>{const u=[...p.units];u[i]={...u[i],[k]:v};return{...p,units:u};});
-  const addUnit=()=>setState(p=>({...p,units:[...p.units,{id:uid(),label:"Unit "+(p.units.length+1),rent:1400,beds:1,bath:1,sqft:700}]}));
+  const addUnit=()=>setState(p=>{const next=p.units.reduce((m,u)=>{const mm=/(\d+)\s*$/.exec(u.label||"");return Math.max(m,mm?parseInt(mm[1],10):0);},0)+1;return{...p,units:[...p.units,{id:uid(),label:"Unit "+next,rent:1400,beds:1,bath:1,sqft:700}]};});
   const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
   const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
   // ── Deal portfolio actions ──────────────────────────────────
