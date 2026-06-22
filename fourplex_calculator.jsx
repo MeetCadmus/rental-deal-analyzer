@@ -171,7 +171,7 @@ function buildAIPrompt(s,listing){
 "Known so far:",
 "• Address: "+((s&&s.address)||"(unknown)"),
 "• Asking price: "+(s&&s.price?("$"+s.price):"(unknown)"),
-"• Units: "+u.length+(rents?(" · current rents/mo: "+rents):""),
+"• Units: "+(rents?(u.length+" · current rents/mo: "+rents):"(determine from the listing)"),
 "",
 "Listing (open this link / use this text; if blank, estimate from the address):",
 (listing&&String(listing).trim())?String(listing).trim():"<<paste the Zillow link or listing text here>>"
@@ -1279,6 +1279,9 @@ const INIT={
   partnership:{enabled:false,myPct:60},
   comparables:[],
 };
+// A genuinely empty deal for "+ New deal": keeps sensible financing/expense defaults
+// but zeroes the property-specific fields so nothing misleads you or the AI prompt.
+const BLANK={...INIT,price:0,address:"",notes:"",listingUrl:"",insights:null,comparables:[],units:[{id:1,label:"Unit 1",rent:0,beds:0,bath:0,sqft:0}]};
 const EXAMPLES=[
   {id:"en",label:"English Ave",sub:"SW ATL · C/D",tag:"⛔ Disaster",col:C.red,address:"English Ave, Atlanta, GA 30314",notes:"Distressed SW Atlanta block. Below-market rents but deferred maintenance, high vacancy and crime drag. Riskier-area financing pushes the rate higher. NOI can't cover the mortgage — a money pit unless bought all-cash at a deep discount.",price:250000,units:[{id:1,label:"Unit 1",rent:700,beds:2,bath:1,sqft:780},{id:2,label:"Unit 2",rent:700,beds:2,bath:1,sqft:780},{id:3,label:"Unit 3",rent:650,beds:1,bath:1,sqft:560},{id:4,label:"Unit 4",rent:650,beds:1,bath:1,sqft:560}],financing:{downPct:25,rate:8.75,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:56,vacancyPct:14,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:1,rentGrowthPct:1},repairs:{include:false,unknown:true,amount:0},partnership:{...INIT.partnership},comparables:[]},
   {id:"cp",label:"College Park",sub:"South ATL · C",tag:"Bad",col:C.red,address:"College Park, GA 30337",notes:"Near the airport, steady C-class demand. Priced too high for the rents it produces — cap rate sits below the mortgage rate, so it bleeds cash every month. Lender DSCR also falls short of 1.0. Needs a price cut to work.",price:410000,units:[{id:1,label:"Unit 1",rent:1150,beds:2,bath:1,sqft:880},{id:2,label:"Unit 2",rent:1150,beds:2,bath:1,sqft:880},{id:3,label:"Unit 3",rent:1050,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1050,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:7.5,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:49,vacancyPct:8,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2.5,rentGrowthPct:2},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
@@ -1592,7 +1595,7 @@ export default function App(){
   // ── Deal portfolio actions ──────────────────────────────────
   const addDeal=(data,label)=>{touchRef.current=false;const d=makeDeal(data,label?{label}:{});setDeals(ds=>{const n=[...ds,d];persistDeals(n,d._id);return n;});setActiveId(d._id);setState(fullState(d));return d._id;};
   const switchDeal=id=>{if(id===activeId)return;const d=deals.find(x=>x._id===id);if(!d)return;touchRef.current=false;setActiveId(id);setState(fullState(d));setSelEx(null);};
-  const newDeal=()=>{addDeal(INIT);setSelEx(null);setDealsOpen(false);};
+  const newDeal=()=>{addDeal(BLANK);setSelEx(null);setDealsOpen(false);};
   const duplicateDeal=id=>{const src=deals.find(x=>x._id===id);if(src)addDeal(src,dealTitle(src)+" (copy)");};
   const renameDeal=(id,label)=>setDeals(ds=>{const n=ds.map(d=>d._id===id?{...d,_label:label}:d);persistDeals(n,activeId);return n;});
   const deleteDeal=id=>{
