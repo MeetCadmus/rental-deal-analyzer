@@ -169,10 +169,16 @@ function buildAIPrompt(s,listing){
   ].join("\n");
 }
 function parseAIResult(text){
-  let t=String(text||"").trim();
-  t=t.replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+  let t=String(text||"");
+  // Normalize copy-paste artifacts that break JSON.parse: smart quotes, unicode
+  // spaces (NBSP etc.), code fences, and trailing commas.
+  t=t.replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g,'"')
+     .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g,"'")
+     .replace(/[\u00A0\u2007\u2009\u200A\u202F\u200B\uFEFF]/g," ")
+     .replace(/```(?:json)?/gi,"").trim();
   const i=t.indexOf("{"),j=t.lastIndexOf("}");
-  if(i>=0&&j>i)t=t.slice(i,j+1);
+  if(i<0||j<=i)return null;
+  t=t.slice(i,j+1).replace(/,(\s*[}\]])/g,"$1");
   try{const o=JSON.parse(t);return (o&&typeof o==="object")?o:null;}catch(e){return null;}
 }
 

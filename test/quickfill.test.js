@@ -57,6 +57,14 @@ test("parseAIResult: tolerates code fences and surrounding prose", () => {
   assert.equal(o.price, 410000);
 });
 
+test("parseAIResult: tolerates smart quotes, NBSP and trailing commas (copy-paste artifacts)", () => {
+  const dirty = "{“price”: 620000, “units”:[{“rent”:1550,}],}";
+  const o = M.parseAIResult(dirty);
+  assert.ok(o, "should parse despite smart quotes/NBSP/trailing commas");
+  assert.equal(o.price, 620000);
+  assert.equal(o.units[0].rent, 1550);
+});
+
 test("parseAIResult: returns null on non-JSON", () => {
   assert.equal(M.parseAIResult("no json here"), null);
   assert.equal(M.parseAIResult(""), null);
