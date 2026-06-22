@@ -466,6 +466,11 @@ function computeBase(state){
   const ccTotal=calcCC(closing,price,loan,expenses.taxes||0,expenses.insurance||0,financing.rate??7.25);
   const repairCost=repairs.include&&!repairs.unknown?(repairs.amount||0):0;
   const cashIn=down+ccTotal+repairCost;
+  // Lender cash reserves: months of PITI you must keep on hand (not spent → excluded from CoC).
+  const pitiMo=pmt+((expenses.taxes||0)+(expenses.insurance||0))/12;
+  const reserveMonths=financing.reserveMonths||0;
+  const reserves=reserveMonths*pitiMo;
+  const cashOnHand=cashIn+reserves;
   const cf=noi-annPmt;
   const capRate=price>0?(noi/price)*100:0;
   const coc=cashIn>0?(cf/cashIn)*100:0;
@@ -488,7 +493,7 @@ function computeBase(state){
   // Partnership
   const myPct=(state.partnership?.myPct||100)/100;
   const myCF=cf*myPct,myCoc=cashIn>0?(myCF/cashIn)*100:0;
-  return{gpi,vacAmt,egi,totExp,expItems,noi,down,loan,pmt,annPmt,ccTotal,repairCost,cashIn,cf,capRate,coc,dscr,beOcc,grm,pct1,adjThresh,expRatio,beRent,monRent,numU,vaEnabled,vaCF,vaCapRate,vaCoc,myCF,myCoc,myPct};
+  return{gpi,vacAmt,egi,totExp,expItems,noi,down,loan,pmt,annPmt,ccTotal,repairCost,cashIn,pitiMo,reserveMonths,reserves,cashOnHand,cf,capRate,coc,dscr,beOcc,grm,pct1,adjThresh,expRatio,beRent,monRent,numU,vaEnabled,vaCF,vaCapRate,vaCoc,myCF,myCoc,myPct};
 }
 
 function computeYearly(state,R){
@@ -678,7 +683,11 @@ function OverviewTab({R,Y,S}){
       <div style={{fontSize:10,fontWeight:700,color:C.heading,marginBottom:6}}>CASH REQUIRED AT CLOSE</div>
       {[["Down payment",fmtD(R.down)],["Closing costs",fmtD(R.ccTotal)],...(S.repairs.include&&!S.repairs.unknown&&S.repairs.amount>0?[["Repairs",fmtD(S.repairs.amount)]]:[])]
         .map(([l2,v2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid var(--c-rowline)",fontSize:12,color:C.slate}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{v2}</span></div>)}
-      <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontWeight:700,color:C.heading,fontSize:13}}><span>Total</span><span>{fmtD(R.cashIn)}</span></div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontWeight:700,color:C.heading,fontSize:13}}><span>Total to close</span><span>{fmtD(R.cashIn)}</span></div>
+      {R.reserves>0&&<div style={{marginTop:7,paddingTop:7,borderTop:"1px dashed "+C.border}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.slate}}><span>+ Lender reserves <span style={{fontSize:10,color:C.muted}}>({R.reserveMonths} mo PITI · kept, not spent)</span></span><span style={{fontWeight:600,color:C.text}}>{fmtD(R.reserves)}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:4,fontWeight:700,color:C.heading,fontSize:13}}><span>Total cash on hand</span><span>{fmtD(R.cashOnHand)}</span></div>
+      </div>}
     </div>
     {/* Key metrics */}
     <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:11}}>
@@ -1184,7 +1193,7 @@ const INIT={
   address:"",notes:"",
   price:620000,
   units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
-  financing:{downPct:25,rate:7.25,loanYears:30},
+  financing:{downPct:25,rate:7.25,loanYears:30,reserveMonths:0},
   closing:{...DCC},expenses:{...DEX},
   projection:{appreciationPct:4.5,holdYears:5,rentGrowthPct:3,sellingCostPct:6,exitCapEnabled:false,exitCapRate:6,vaEnabled:false,vaMarketRentPerUnit:1750,vaYear:2,refiEnabled:false,refiYear:3,refiRate:6.5},
   repairs:{include:false,unknown:false,amount:0},
@@ -1606,6 +1615,11 @@ export default function App(){
                 <div style={{fontSize:14,fontWeight:700,color:C.heading}}>{fmtD(R.pmt)}/mo</div>
                 <div style={{fontSize:10,color:C.muted}}>Loan: {fmtD(R.loan)}</div>
               </div>
+            </div>
+            <div style={{marginTop:9}}>
+              <Field label="Cash reserves" suffix="mo PITI" value={S.financing.reserveMonths||0} onChange={x=>setFin("reserveMonths",x)} min={0} max={24} step={1}
+                tip={["Liquid cash a lender wants you to keep AFTER closing — months of PITI (principal+interest+taxes+insurance).","· Investment / multifamily: often 6 months","· DSCR loans: ~3–12 months","· Owner-occupied: 0–2 months","· You keep this money — it's not spent, so it's not counted in cash-on-cash."]}
+                sub={(S.financing.reserveMonths||0)>0?("= "+fmtD(R.reserves)+" to keep on hand · PITI ≈ "+fmtD(R.pitiMo)+"/mo"):"0 = none. Investment loans often require ~6."}/>
             </div>
             {/* Partnership */}
             <div style={{marginTop:11,paddingTop:11,borderTop:"1px solid "+C.border}}>
