@@ -48,6 +48,8 @@ function loadModule() {
     useEffect: function () {},
     useLayoutEffect: function () {},
     useRef: function (v) { return { current: v }; },
+    createContext: function (d) { return { Provider: function (p) { return p && p.children; }, _cur: d }; },
+    useContext: function (c) { return c ? c._cur : undefined; },
   };
   const noStore = { getItem: function () { return null; }, setItem: function () {}, removeItem: function () {} };
   const win = { matchMedia: function () { return { matches: false }; }, print: function () {} };
