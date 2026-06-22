@@ -31,7 +31,7 @@ function loadModule() {
     "calcDealScore", "calcKillers", "whatNeedsToBeTrue", "calcLoanOptions",
     "calcCC", "calcExp", "migrateExpenses",
     "flattenState", "unflattenState", "coerceVal", "stateToCSV", "csvToState", "parseCSV",
-    "fullState", "makeDeal", "dealTitle", "relTime", "mergeDealStores",
+    "fullState", "makeDeal", "dealTitle", "relTime", "fmtWhen", "mergeDealStores",
     "INIT", "DCC", "DEX", "CLASS_PRESETS", "EXAMPLES",
     "fmt", "fmtD", "fmtP", "fmtX", "clamp", "num", "lv", "fmtGroup", "editNumber",
   ];

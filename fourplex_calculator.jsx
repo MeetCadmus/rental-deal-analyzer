@@ -1217,6 +1217,21 @@ function relTime(ts){
   if(d<7)return d+" days ago";if(d<30)return Math.floor(d/7)+"w ago";
   if(d<365)return Math.floor(d/30)+"mo ago";return Math.floor(d/365)+"y ago";
 }
+// Compact absolute last-modified stamp (mobile-friendly):
+// today -> "3:45p" · yesterday -> "Yest 3:45p" · this year -> "Jun 22, 3:45p" · older -> "Jun 22 '24"
+const _MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtWhen(ts){
+  if(!ts)return "";
+  const d=new Date(ts),now=new Date();
+  let h=d.getHours();const ap=h<12?"a":"p";h=h%12||12;
+  const time=h+":"+String(d.getMinutes()).padStart(2,"0")+ap;
+  const day=d.toDateString(),today=now.toDateString();
+  const yest=new Date(now.getTime()-86400000).toDateString();
+  if(day===today)return time;
+  if(day===yest)return "Yest "+time;
+  const md=_MON[d.getMonth()]+" "+d.getDate();
+  return d.getFullYear()===now.getFullYear()?md+", "+time:md+" '"+String(d.getFullYear()).slice(2);
+}
 
 function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRename,onDelete,onDuplicate,onExportAll,onImportAll}){
   const[q,setQ]=useState("");
@@ -1250,7 +1265,8 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
                 {editing
                   ? <input autoFocus value={editVal} onClick={e=>e.stopPropagation()} onChange={e=>setEditVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEdit();if(e.key==="Escape")setEditId(null);}} onBlur={commitEdit} placeholder="Name this deal…" style={{width:"100%",padding:"3px 6px",fontSize:13,border:"1px solid "+C.navy,borderRadius:6,fontFamily:"inherit",color:C.text,background:C.white}}/>
                   : <div style={{fontSize:13,fontWeight:700,color:C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isA?(liveTitle||dealTitle(d)):dealTitle(d)}</div>}
-                <div style={{fontSize:10,color:C.muted,marginTop:2}}>{fmtD(d.price)} · {(d.units||[]).length} units · {relTime(d._ts)}{isA?" · open now":""}</div>
+                <div style={{fontSize:10,color:C.muted,marginTop:2}}>{fmtD(d.price)} · {(d.units||[]).length} units{isA?" · open now":""}</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:1}}>✎ {fmtWhen(d._ts)} <span style={{opacity:0.6}}>· {relTime(d._ts)}</span></div>
               </div>
               <div style={{textAlign:"right",flexShrink:0}}>
                 <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:9,background:sc.color,color:"#fff"}}>{sc.grade}</span>
