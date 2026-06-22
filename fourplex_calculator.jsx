@@ -1274,12 +1274,17 @@ function fmtWhen(ts){
 
 function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRename,onDelete,onDuplicate,onExportAll,onImportAll}){
   const[q,setQ]=useState("");
+  const[sortBy,setSortBy]=useState("recent");
+  const[gradeF,setGradeF]=useState("all");
   const[editId,setEditId]=useState(null);
   const[editVal,setEditVal]=useState("");
   if(!open)return null;
-  const sorted=[...deals].sort((a,b)=>(b._ts||0)-(a._ts||0));
+  // Compute metrics once per deal so we can sort/filter and render without recomputing.
+  const enriched=deals.map(d=>{const fs=fullState(d),R=computeBase(fs),Y=computeYearly(fs,R),sc=calcDealScore(R,Y);return {d,R,Y,sc};});
+  const SORTS={recent:["Recently edited",c=>c.d._ts||0],grade:["Grade",c=>c.sc.pct],cf:["Cash flow",c=>c.R.cf],cap:["Cap rate",c=>c.R.capRate],irr:["IRR",c=>c.Y.irr],price:["Price",c=>c.d.price],name:["Name (A–Z)",null]};
   const ql=q.trim().toLowerCase();
-  const list=ql?sorted.filter(d=>dealTitle(d).toLowerCase().includes(ql)):sorted;
+  let list=enriched.filter(c=>(gradeF==="all"||c.sc.grade===gradeF)&&(!ql||dealTitle(c.d).toLowerCase().includes(ql)));
+  list=sortBy==="name"?list.sort((a,b)=>dealTitle(a.d).localeCompare(dealTitle(b.d))):list.sort((a,b)=>SORTS[sortBy][1](b)-SORTS[sortBy][1](a));
   const startEdit=d=>{setEditId(d._id);setEditVal(d._label||d.address||"");};
   const commitEdit=()=>{if(editId!=null)onRename(editId,editVal.trim());setEditId(null);};
   const xbtn={fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit"};
@@ -1289,14 +1294,21 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
         <span style={{fontSize:14,fontWeight:700,color:"#fff"}}>📁 My deals <span style={{opacity:0.55,fontWeight:400}}>({deals.length})</span></span>
         <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
       </div>
-      <div style={{padding:"10px 12px",display:"flex",gap:8,borderBottom:"1px solid "+C.border,background:C.white,flexShrink:0}}>
-        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by address / name…" style={{flex:1,padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:8,background:C.bg,color:C.text,outline:"none"}}/>
-        <button onClick={onNew} style={{padding:"7px 13px",borderRadius:8,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>+ New</button>
+      <div style={{padding:"10px 12px 8px",borderBottom:"1px solid "+C.border,background:C.white,flexShrink:0}}>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by address / name…" style={{flex:1,minWidth:0,padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:8,background:C.bg,color:C.text,outline:"none"}}/>
+          <button onClick={onNew} style={{padding:"7px 13px",borderRadius:8,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>+ New</button>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <select value={sortBy} onChange={e=>setSortBy(e.target.value)} title="Sort deals" style={{padding:"5px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.bg}}>
+            {Object.keys(SORTS).map(k=><option key={k} value={k}>Sort: {SORTS[k][0]}</option>)}
+          </select>
+          {["all","A","B","C","D"].map(g=>{const on=gradeF===g;return <button key={g} onClick={()=>setGradeF(g)} style={{fontSize:11,fontWeight:700,padding:"4px 9px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.bg,color:on?"#fff":C.slate}}>{g==="all"?"All":g}</button>;})}
+        </div>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"8px",WebkitOverflowScrolling:"touch"}}>
-        {list.length===0&&<div style={{textAlign:"center",color:C.muted,fontSize:12,padding:"28px 12px"}}>No deals match “{q}”.</div>}
-        {list.map(d=>{
-          const fs=fullState(d),R=computeBase(fs),Y=computeYearly(fs,R),sc=calcDealScore(R,Y);
+        {list.length===0&&<div style={{textAlign:"center",color:C.muted,fontSize:12,padding:"28px 12px"}}>No deals match{ql?" “"+q+"”":""}{gradeF!=="all"?" · grade "+gradeF:""}.</div>}
+        {list.map(({d,R,Y,sc})=>{
           const isA=d._id===activeId,editing=editId===d._id;
           return <div key={d._id} onClick={()=>{if(!editing){onSelect(d._id);onClose();}}} style={{border:"1px solid "+(isA?C.navy:C.border),background:isA?C.hl:C.white,borderRadius:10,padding:"9px 11px",marginBottom:7,cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
