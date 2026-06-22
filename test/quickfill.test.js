@@ -21,6 +21,11 @@ test("addressFromUrl / parseListing: pull address from a Zillow URL", () => {
   assert.equal(M.addressFromUrl("https://example.com/foo"), null);
 });
 
+test("parseListing: captures the listing URL", () => {
+  const p = M.parseListing("Check it: https://www.zillow.com/homedetails/x/12_zpid/ — $500,000");
+  assert.equal(p.url, "https://www.zillow.com/homedetails/x/12_zpid/");
+});
+
 test("buildAIPrompt: embeds the pasted listing/link", () => {
   const p = M.buildAIPrompt({ units: [] }, "https://www.zillow.com/homedetails/x/1_zpid/");
   assert.match(p, /zillow\.com\/homedetails/);

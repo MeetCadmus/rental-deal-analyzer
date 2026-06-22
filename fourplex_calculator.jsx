@@ -139,6 +139,7 @@ function parseListing(text){
   else if(/\b(duplex|2-?plex)\b/i.test(t))out.units=2;
   if((m=t.match(/(\d{1,6}\s+[^,\n]+,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5})/)))out.address=m[1].replace(/\s+/g," ").trim();
   else {const a=addressFromUrl(t);if(a)out.address=a;}
+  const urlm=t.match(/https?:\/\/[^\s"'<>]+/i);if(urlm)out.url=urlm[0];
   return out;
 }
 function buildAIPrompt(s,listing){
@@ -1260,7 +1261,7 @@ function ComparablesCard({comps,setComps,currentR}){
 }
 // ── Init state & examples ──────────────────────────────────────
 const INIT={
-  address:"",notes:"",
+  address:"",notes:"",listingUrl:"",
   price:620000,
   units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
   financing:{downPct:25,rate:7.25,loanYears:30,reserveMonths:0},
@@ -1403,10 +1404,11 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
                 <div style={{fontSize:11,fontWeight:700,color:R.cf>=0?C.teal:C.red,marginTop:3}}>{fmtD(R.cf/12)}/mo</div>
               </div>
             </div>
-            <div style={{display:"flex",gap:6,marginTop:8}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}} onClick={e=>e.stopPropagation()}>
               <button onClick={()=>startEdit(d)} style={xbtn}>✎ Rename</button>
               <button onClick={()=>onDuplicate(d._id)} style={xbtn}>⧉ Duplicate</button>
               <button onClick={()=>onDelete(d._id)} style={{...xbtn,color:C.red,borderColor:C.redL}}>🗑 Delete</button>
+              {/^https?:\/\//i.test(d.listingUrl||"")&&<a href={d.listingUrl} target="_blank" rel="noopener noreferrer" style={{...xbtn,color:C.heading,textDecoration:"none",marginLeft:"auto"}}>↗ Listing</a>}
             </div>
           </div>;
         })}
@@ -1511,7 +1513,7 @@ export default function App(){
   const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
   const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
   // Quick-fill: apply parsed listing fields / AI JSON estimate into the working deal.
-  const applyListing=pl=>setState(p=>{const np={...p};if(pl.address)np.address=pl.address;if(num(pl.price)>0)np.price=num(pl.price);
+  const applyListing=pl=>setState(p=>{const np={...p};if(pl.url)np.listingUrl=pl.url;if(pl.address)np.address=pl.address;if(num(pl.price)>0)np.price=num(pl.price);
     if(pl.units>=1){const cnt=Math.min(pl.units,16);np.units=Array.from({length:cnt},(_,i)=>{const ex=p.units[i]||{rent:0};return {...ex,id:ex.id||uid(),label:ex.label||("Unit "+(i+1)),beds:num(pl.beds)||ex.beds||0,bath:num(pl.bath)||ex.bath||0,sqft:num(pl.sqft)||ex.sqft||0,rent:ex.rent||0};});}
     else if(pl.beds||pl.bath||pl.sqft){np.units=p.units.map((u,i)=>i===0?{...u,beds:num(pl.beds)||u.beds,bath:num(pl.bath)||u.bath,sqft:num(pl.sqft)||u.sqft}:u);}
     return np;});
@@ -1692,6 +1694,14 @@ export default function App(){
               <div style={{display:"flex",flexDirection:"column",gap:2}}>
                 <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Address / MLS #</label>
                 <input value={S.address||""} onChange={e=>set("address",e.target.value)} placeholder="123 Maple St, Atlanta, GA 30308"
+                  style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Listing link (Zillow, Realtor…)</label>
+                  {/^https?:\/\//i.test(S.listingUrl||"")&&<a href={S.listingUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:11,fontWeight:700,color:C.heading,textDecoration:"none"}}>↗ Open listing</a>}
+                </div>
+                <input value={S.listingUrl||""} onChange={e=>set("listingUrl",e.target.value)} placeholder="https://www.zillow.com/homedetails/…" inputMode="url"
                   style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:2}}>
