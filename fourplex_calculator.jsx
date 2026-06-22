@@ -1178,22 +1178,31 @@ function fullState(d){d=d||{};
   comparables:Array.isArray(d.comparables)?d.comparables:[]};}
 function makeDeal(data,meta){const ts=Date.now();meta=meta||{};const{_id,_name,_label,_ts,_created,...d}=fullState(data);return {...d,_id:newDealId(),_label:meta.label||_label||_name||"",_ts:meta.ts||ts,_created:meta.created||ts};}
 function dealTitle(d){return (d&&d._label&&d._label.trim())||(d&&d.address&&d.address.trim())||"Untitled deal";}
-function persistDeals(deals,activeId){try{localStorage.setItem(DEALS_KEY,JSON.stringify({deals,activeId}));}catch{}}
-// Merge two deal libraries (local + cloud) for cross-device sync: union by _id,
-// newest edit (_ts) wins per deal. Keeps a sensible activeId. Pure & testable.
+// Tombstones: id -> deletion timestamp. Kept module-level so persistDeals/sync always
+// include them, so a deleted deal stays deleted (and the delete propagates to the cloud).
+let TOMB={};
+function persistDeals(deals,activeId){try{localStorage.setItem(DEALS_KEY,JSON.stringify({deals,activeId,deleted:TOMB}));}catch{}}
+// Merge two deal libraries (local + cloud) for cross-device sync: union by _id (newest
+// edit wins), minus tombstoned deals (a delete wins unless the deal was edited after it).
+// Returns {deals, activeId, deleted}. Pure & testable.
 function mergeDealStores(localStore,cloudStore){
   localStore=localStore||{};cloudStore=cloudStore||{};
+  const tomb={};
+  const addTomb=t=>{if(t)for(const id in t){if(!(id in tomb)||t[id]>tomb[id])tomb[id]=t[id];}};
+  addTomb(localStore.deleted);addTomb(cloudStore.deleted);
   const byId=new Map();
   const add=d=>{if(!d||!d._id)return;const ex=byId.get(d._id);if(!ex||(d._ts||0)>(ex._ts||0))byId.set(d._id,d);};
   (localStore.deals||[]).forEach(add);
   (cloudStore.deals||[]).forEach(add);
-  const deals=[...byId.values()].sort((a,b)=>(a._created||0)-(b._created||0));
-  const has=id=>deals.some(d=>d._id===id);
+  const deals=[...byId.values()].filter(d=>!(d._id in tomb)||(d._ts||0)>tomb[d._id]).sort((a,b)=>(a._created||0)-(b._created||0));
+  const survive=new Set(deals.map(d=>d._id));
+  const deleted={};for(const id in tomb){if(!survive.has(id))deleted[id]=tomb[id];}
+  const has=id=>survive.has(id);
   const activeId=has(localStore.activeId)?localStore.activeId:has(cloudStore.activeId)?cloudStore.activeId:(deals.length?deals[deals.length-1]._id:null);
-  return {deals,activeId};
+  return {deals,activeId,deleted};
 }
 function loadDealStore(){
-  try{const r=JSON.parse(localStorage.getItem(DEALS_KEY));if(r&&Array.isArray(r.deals)&&r.deals.length)return {deals:r.deals,activeId:r.deals.some(d=>d._id===r.activeId)?r.activeId:r.deals[r.deals.length-1]._id};}catch{}
+  try{const r=JSON.parse(localStorage.getItem(DEALS_KEY));if(r&&Array.isArray(r.deals)&&r.deals.length){TOMB=r.deleted&&typeof r.deleted==="object"?r.deleted:{};return {deals:r.deals,activeId:r.deals.some(d=>d._id===r.activeId)?r.activeId:r.deals[r.deals.length-1]._id};}}catch{}
   const deals=[];
   try{const sc=JSON.parse(localStorage.getItem("re_scenarios")||"[]");if(Array.isArray(sc))sc.forEach(s=>deals.push(makeDeal(s,{label:s._name,ts:s._ts,created:s._ts})));}catch{}
   try{const a=JSON.parse(localStorage.getItem("re_autosave"));if(a&&typeof a==="object"&&Object.keys(a).length)deals.push(makeDeal(a,{}));}catch{}
@@ -1293,14 +1302,14 @@ export default function App(){
   const storeRef=useRef({deals,activeId});           // always-current snapshot (avoids stale closures in sync)
   useEffect(()=>{storeRef.current={deals,activeId};},[deals,activeId]);
   const syncedOnce=useRef(false);                    // full merge-and-open happens once per load, not on every focus
-  const applyStore=st=>{touchRef.current=false;setDeals(st.deals);setActiveId(st.activeId);persistDeals(st.deals,st.activeId);const a=st.deals.find(d=>d._id===st.activeId)||st.deals[0];if(a)setState(fullState(a));setSelEx(null);};
-  const pushCloud=(uid,deals2,activeId2)=>{const c=supa.current;if(!c||!uid)return;setSync("syncing");c.from("user_data").upsert({user_id:uid,data:{deals:deals2,activeId:activeId2},updated_at:new Date().toISOString()}).then(({error})=>setSync(error?"error":"synced"));};
-  const fetchCloud=async u=>{const{data,error}=await supa.current.from("user_data").select("data").eq("user_id",u.id).maybeSingle();if(error)throw error;return (data&&data.data)||{deals:[],activeId:null};};
+  const applyStore=st=>{touchRef.current=false;TOMB=st.deleted||{};setDeals(st.deals);setActiveId(st.activeId);persistDeals(st.deals,st.activeId);const a=st.deals.find(d=>d._id===st.activeId)||st.deals[0];if(a)setState(fullState(a));setSelEx(null);};
+  const pushCloud=(uid,deals2,activeId2)=>{const c=supa.current;if(!c||!uid)return;setSync("syncing");c.from("user_data").upsert({user_id:uid,data:{deals:deals2,activeId:activeId2,deleted:TOMB},updated_at:new Date().toISOString()}).then(({error})=>setSync(error?"error":"synced"));};
+  const fetchCloud=async u=>{const{data,error}=await supa.current.from("user_data").select("data").eq("user_id",u.id).maybeSingle();if(error)throw error;return (data&&data.data)||{deals:[],activeId:null,deleted:{}};};
   // Initial sync (sign-in / page load): merge cloud in and keep the deal you had open.
-  const initialSync=async u=>{if(!supa.current||!u)return;setSync("syncing");try{const cloud=await fetchCloud(u);const cur=storeRef.current;const merged=mergeDealStores(cur,cloud);if(cur.deals.some(d=>d._id===cur.activeId))merged.activeId=cur.activeId;applyStore(merged);pushCloud(u.id,merged.deals,merged.activeId);}catch(e){setSync("error");}};
+  const initialSync=async u=>{if(!supa.current||!u)return;setSync("syncing");try{const cloud=await fetchCloud(u);const cur={...storeRef.current,deleted:TOMB};const merged=mergeDealStores(cur,cloud);if(merged.deals.some(d=>d._id===cur.activeId))merged.activeId=cur.activeId;applyStore(merged);pushCloud(u.id,merged.deals,merged.activeId);}catch(e){setSync("error");}};
   // Re-sync (returning to the tab / token refresh): pull other devices' changes WITHOUT
   // touching the deal you're currently editing or the active selection.
-  const backgroundSync=async u=>{if(!supa.current||!u)return;try{const cloud=await fetchCloud(u);const cur=storeRef.current;const merged=mergeDealStores(cur,cloud);const keep=cur.activeId,localActive=cur.deals.find(d=>d._id===keep);const deals2=merged.deals.map(d=>(d._id===keep&&localActive)?localActive:d);setDeals(deals2);persistDeals(deals2,keep);setSync("synced");}catch(e){}};
+  const backgroundSync=async u=>{if(!supa.current||!u)return;try{const cloud=await fetchCloud(u);const cur={...storeRef.current,deleted:TOMB};const merged=mergeDealStores(cur,cloud);TOMB=merged.deleted||{};const keep=cur.activeId,localActive=cur.deals.find(d=>d._id===keep);const deals2=merged.deals.map(d=>(d._id===keep&&localActive)?localActive:d);setDeals(deals2);setActiveId(merged.deals.some(d=>d._id===keep)?keep:merged.activeId);persistDeals(deals2,keep);setSync("synced");}catch(e){}};
   const onAuthUser=u=>{setUser(u||null);if(!u){syncedOnce.current=false;setSync("idle");return;}if(!syncedOnce.current){syncedOnce.current=true;initialSync(u);}else backgroundSync(u);};
   useEffect(()=>{if(!cloudCfg)return;let unsub;try{const c=window.supabase.createClient(cloudCfg.url,cloudCfg.key);supa.current=c;
     c.auth.getSession().then(({data})=>{const u=data&&data.session&&data.session.user;if(u)onAuthUser(u);});
@@ -1333,6 +1342,7 @@ export default function App(){
   const deleteDeal=id=>{
     const idx=deals.findIndex(d=>d._id===id);if(idx<0)return;
     const removed=deals[idx];
+    TOMB={...TOMB,[id]:Date.now()};   // tombstone so the delete sticks & propagates
     setDeals(ds=>{let n=ds.filter(d=>d._id!==id);let act=activeId;
       if(id===activeId){if(!n.length){const blank=makeDeal(INIT,{});n=[blank];}act=(n[Math.max(0,idx-1)]||n[n.length-1])._id;touchRef.current=false;setActiveId(act);setState(fullState(n.find(d=>d._id===act)));setSelEx(null);}
       persistDeals(n,act);return n;});
@@ -1342,6 +1352,7 @@ export default function App(){
   };
   const undoDelete=()=>{
     if(!undo)return;const d=undo.deal;
+    {const t={...TOMB};delete t[d._id];TOMB=t;}   // lift the tombstone so it isn't re-deleted on sync
     setDeals(ds=>{const n=[...ds];n.splice(Math.min(undo.idx,n.length),0,d);persistDeals(n,d._id);return n;});
     touchRef.current=false;setActiveId(d._id);setState(fullState(d));setUndo(null);
     if(undoTimer.current)clearTimeout(undoTimer.current);
