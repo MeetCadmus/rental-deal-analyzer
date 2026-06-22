@@ -1460,6 +1460,23 @@ function AreaInsights({data}){
     {list("Risks / red flags",data.risks,C.red,"⚠")}
   </Card>;
 }
+// ── Listing link: compact Open + Edit (input only while editing) ──
+function ListingLink({url,onChange}){
+  const[edit,setEdit]=useState(false);
+  const valid=/^https?:\/\//i.test(url||"");
+  const b={fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"};
+  return <div style={{display:"flex",flexDirection:"column",gap:5}}>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Listing</label>
+      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+        {valid&&<a href={url} target="_blank" rel="noopener noreferrer" style={{...b,background:C.navy,color:"#fff",border:"1px solid "+C.navy,textDecoration:"none"}}>↗ Open</a>}
+        <button onClick={()=>setEdit(e=>!e)} style={{...b,background:C.white,color:C.slate,border:"1px solid "+C.border}}>{edit?"Done":(valid?"✎ Edit":"+ Add link")}</button>
+      </div>
+    </div>
+    {edit&&<input autoFocus value={url||""} onChange={e=>onChange(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape")setEdit(false);}} placeholder="https://www.zillow.com/homedetails/…" inputMode="url"
+      style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.navy,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/>}
+  </div>;
+}
 // ── Quick fill (paste a listing / round-trip an AI estimate) ──
 function QuickFill({state,onListing,onAI}){
   const[open,setOpen]=useState(false);
@@ -1735,14 +1752,7 @@ export default function App(){
                 <input value={S.address||""} onChange={e=>set("address",e.target.value)} placeholder="123 Maple St, Atlanta, GA 30308"
                   style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/>
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Listing link (Zillow, Realtor…)</label>
-                  {/^https?:\/\//i.test(S.listingUrl||"")&&<a href={S.listingUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:11,fontWeight:700,color:C.heading,textDecoration:"none"}}>↗ Open listing</a>}
-                </div>
-                <input value={S.listingUrl||""} onChange={e=>set("listingUrl",e.target.value)} placeholder="https://www.zillow.com/homedetails/…" inputMode="url"
-                  style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/>
-              </div>
+              <ListingLink url={S.listingUrl} onChange={v=>set("listingUrl",v)}/>
               <div style={{display:"flex",flexDirection:"column",gap:2}}>
                 <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Notes / assumptions</label>
                 <textarea value={S.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Seller motivated, rents below market, new roof 2022..."
