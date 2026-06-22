@@ -88,6 +88,24 @@ test("computeBase: repairs add to cash-in only when included & not 'unknown'", (
   close(unknown.cashIn, noRep.cashIn, 1e-6, "'unknown' repairs are excluded from cash-in");
 });
 
+test("computeBase: lender reserves = months of PITI, kept out of cash-on-cash", () => {
+  const base = {
+    price: 1000000, units: [{ id: 1, rent: 5000 }, { id: 2, rent: 5000 }],
+    financing: { downPct: 25, rate: 6, loanYears: 30 },
+    expenses: { mode: "detailed", v: 2, taxes: 12000, insurance: 6000 },
+    closing: { mode: "quick", quickPct: 3 },
+  };
+  const noRes = M.computeBase(M.fullState({ ...base, financing: { ...base.financing, reserveMonths: 0 } }));
+  const withRes = M.computeBase(M.fullState({ ...base, financing: { ...base.financing, reserveMonths: 6 } }));
+  const pitiMo = M.pmtOf(750000, 6, 30) + (12000 + 6000) / 12;
+  close(withRes.pitiMo, pitiMo, 1e-6, "PITI/mo = P&I + (taxes+ins)/12");
+  close(withRes.reserves, 6 * pitiMo, 1e-4, "reserves = months * PITI");
+  close(withRes.cashOnHand, withRes.cashIn + withRes.reserves, 1e-6, "cash on hand = cash-in + reserves");
+  // reserves are NOT spent -> cash-in and cash-on-cash are unchanged
+  close(withRes.cashIn, noRes.cashIn, 1e-9, "cash-in excludes reserves");
+  close(withRes.coc, noRes.coc, 1e-9, "cash-on-cash unaffected by reserves");
+});
+
 test("computeBase: partnership splits cashflow by my equity share", () => {
   const st = M.fullState({
     price: 600000, units: [{ id: 1, rent: 2000 }, { id: 2, rent: 2000 }],
