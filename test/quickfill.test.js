@@ -14,6 +14,18 @@ test("parseListing: pulls price, beds/baths, sqft, units, address from listing t
   assert.match(p.address, /123 Maple St, Atlanta, GA 30317/);
 });
 
+test("addressFromUrl / parseListing: pull address from a Zillow URL", () => {
+  const url = "https://www.zillow.com/homedetails/123-Maple-St-Atlanta-GA-30317/12345678_zpid/";
+  assert.equal(M.addressFromUrl(url), "123 Maple St Atlanta, GA 30317");
+  assert.equal(M.parseListing(url).address, "123 Maple St Atlanta, GA 30317");
+  assert.equal(M.addressFromUrl("https://example.com/foo"), null);
+});
+
+test("buildAIPrompt: embeds the pasted listing/link", () => {
+  const p = M.buildAIPrompt({ units: [] }, "https://www.zillow.com/homedetails/x/1_zpid/");
+  assert.match(p, /zillow\.com\/homedetails/);
+});
+
 test("parseListing: infers unit count from 'duplex'/'triplex' words", () => {
   assert.equal(M.parseListing("Lovely duplex, $300,000").units, 2);
   assert.equal(M.parseListing("triplex investment").units, 3);
