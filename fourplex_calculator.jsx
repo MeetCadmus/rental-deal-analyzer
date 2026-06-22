@@ -86,13 +86,18 @@ function MoneyInput({value,onChange,label,sub,small,hint}){
   </div>;
 }
 function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder,showZero}){
-  const display=(value===null||value===undefined||(value===0&&!showZero))?"":value;
+  // Hold the raw text while editing so you can fully clear it and type partials
+  // ("", "7.", "-", "0"); only convert to a number for the parent/calculations.
+  const[buf,setBuf]=useState(null);
+  const display=buf!=null?buf:((value===null||value===undefined||(value===0&&!showZero))?"":value);
+  const commit=()=>{if(buf==null)return;let n=num(buf);if(min!=null&&n<min)n=min;if(max!=null&&n>max)n=max;if(n!==value)onChange(n);setBuf(null);};
   return <div style={{display:"flex",flexDirection:"column",gap:2}}>
     {label&&<label style={{fontSize:xs?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
     <div style={{display:"flex",alignItems:"center",border:"1px solid "+(disabled?"#e8e8e8":C.border),borderRadius:7,overflow:"hidden",background:disabled?"#F4F4F4":C.white}}>
       {prefix&&<span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>{prefix}</span>}
-      <input type="number" value={display} min={min} max={max} step={step} disabled={!!disabled} placeholder={placeholder||"0"}
-        onChange={e=>{const v=e.target.value;onChange(v===""?0:num(v));}}
+      <input type="text" inputMode="decimal" value={display} disabled={!!disabled} placeholder={placeholder||"0"}
+        onChange={e=>{const raw=e.target.value;if(raw===""||/^-?\d*\.?\d*$/.test(raw)){setBuf(raw);const t=raw.trim();onChange(t===""||t==="-"||t==="."||t==="-."?0:num(raw));}}}
+        onBlur={commit}
         style={{flex:1,padding:"6px 8px",fontSize:xs?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
       {suffix&&<span style={{padding:"6px 8px 6px 4px",fontSize:11,color:C.slate,flexShrink:0}}>{suffix}</span>}
     </div>
