@@ -177,11 +177,15 @@ function Bar({val,max,good,warn,inv=false}){
 }
 function Info({lines,tint}){
   const[s,setS]=useState(false);
+  const[pos,setPos]=useState(null);   // fixed coords, clamped to viewport so it never clips
+  const ref=useRef(null);
+  const show=()=>{const el=ref.current;try{const r=el.getBoundingClientRect();const vw=window.innerWidth;const W=Math.min(240,vw-16);let left=r.left+r.width/2-W/2;left=Math.max(8,Math.min(left,vw-W-8));const arrow=Math.max(12,Math.min(W-12,r.left+r.width/2-left));setPos({left,top:r.top-8,W,arrow});}catch(e){setPos(null);}setS(true);};
+  const hide=()=>setS(false);
   return <span style={{position:"relative",display:"inline-block",marginLeft:4}}>
-    <span onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} onClick={e=>{e.stopPropagation();setS(v=>!v);}} style={{cursor:"pointer",color:tint||C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
-    {s&&<div style={{position:"absolute",bottom:"130%",left:"50%",transform:"translateX(-50%)",background:"#0B1220",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:999,boxShadow:"0 10px 30px rgba(0,0,0,0.6)",border:"1px solid rgba(255,255,255,0.22)",whiteSpace:"normal",pointerEvents:"none",width:"max-content",minWidth:180,maxWidth:"min(240px,78vw)"}}>
+    <span ref={ref} onMouseEnter={show} onMouseLeave={hide} onClick={e=>{e.stopPropagation();s?hide():show();}} style={{cursor:"pointer",color:tint||C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
+    {s&&pos&&<div style={{position:"fixed",left:pos.left,top:pos.top,transform:"translateY(-100%)",width:pos.W,background:"#0B1220",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:1200,boxShadow:"0 10px 30px rgba(0,0,0,0.6)",border:"1px solid rgba(255,255,255,0.22)",whiteSpace:"normal",pointerEvents:"none"}}>
       {lines.map((l,i)=><div key={i} style={{lineHeight:1.6,color:l.startsWith("=")?"#68D391":l.startsWith("·")?"#C2CCDA":"#fff",fontWeight:l.startsWith("=")?"700":"400"}}>{l}</div>)}
-      <div style={{position:"absolute",bottom:-6,left:"50%",transform:"translateX(-50%)",width:11,height:11,background:"#0B1220",borderRight:"1px solid rgba(255,255,255,0.22)",borderBottom:"1px solid rgba(255,255,255,0.22)",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
+      <div style={{position:"absolute",bottom:-6,left:pos.arrow,transform:"translateX(-50%)",width:11,height:11,background:"#0B1220",borderRight:"1px solid rgba(255,255,255,0.22)",borderBottom:"1px solid rgba(255,255,255,0.22)",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
     </div>}
   </span>;
 }
