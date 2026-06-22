@@ -243,7 +243,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate}){
     </div>}
     {cc.mode==="detailed"&&<div>
       <SecLabel text="Lender fees" right={"= "+fmtD(lT)}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:12}}>
         <Field label="Origination fee" suffix="% of loan" value={cc.origPct||0} onChange={x=>sf("origPct",x)} min={0} max={3} step={0.125} sub={fmtD(l*(cc.origPct||0)/100)} xs/>
         <Field label="Discount points" suffix="% of loan" value={cc.pointsPct||0} onChange={x=>sf("pointsPct",x)} min={0} max={4} step={0.125} sub={fmtD(l*(cc.pointsPct||0)/100)} xs/>
         <Field label="Appraisal" prefix="$" value={cc.appraisal||0} onChange={x=>sf("appraisal",x)} min={0} step={50} sub="$600–1,200" xs/>
@@ -255,28 +255,28 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate}){
         <Field label="Recording fees" prefix="$" value={cc.recordingFees||0} onChange={x=>sf("recordingFees",x)} min={0} step={5} sub="~$75–100" xs/>
       </div>
       <SecLabel text="Title & attorney" right={"= "+fmtD(titleT)}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:12}}>
         <Field label="Closing attorney" prefix="$" value={cc.attyFee||0} onChange={x=>sf("attyFee",x)} min={0} step={50} sub="Required in GA" xs/>
         <Field label="Title search" prefix="$" value={cc.titleSearch||0} onChange={x=>sf("titleSearch",x)} min={0} step={25} xs/>
         <Field label="Lender's title ins." prefix="$" value={cc.lenderTitle||0} onChange={x=>sf("lenderTitle",x)} min={0} step={50} xs/>
         <Field label="Owner's title ins." prefix="$" value={cc.ownerTitle||0} onChange={x=>sf("ownerTitle",x)} min={0} step={50} xs/>
       </div>
       <SecLabel text="Prepaids & escrow" right={"= "+fmtD(prepT)}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:12}}>
         <MoneyInput label="First-year insurance" value={cc.firstYearInsurance||0} onChange={x=>sf("firstYearInsurance",x)} small/>
         <Field label="Prepaid interest" suffix="days" value={cc.prepaidDays||0} onChange={x=>sf("prepaidDays",x)} min={0} max={31} sub={fmtD(prepInt)+" auto"} xs/>
         <Field label="Tax escrow" suffix="mo" value={cc.taxEscrowMonths||0} onChange={x=>sf("taxEscrowMonths",x)} min={0} max={6} sub={fmtD(taxEsc)+" auto"} xs/>
         <Field label="Insurance escrow" suffix="mo" value={cc.insEscrowMonths||0} onChange={x=>sf("insEscrowMonths",x)} min={0} max={6} sub={fmtD(insEsc)+" auto"} xs/>
       </div>
       <SecLabel text="Inspection & DD" right={"= "+fmtD(ddT)}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:12}}>
         <Field label="Property inspection" prefix="$" value={cc.inspection||0} onChange={x=>sf("inspection",x)} min={0} step={50} sub="$400–700" xs/>
         <Field label="Pest / termite" prefix="$" value={cc.termite||0} onChange={x=>sf("termite",x)} min={0} step={25} xs/>
         <Field label="Survey" prefix="$" value={cc.survey||0} onChange={x=>sf("survey",x)} min={0} step={50} xs/>
         <Field label="Environmental" prefix="$" value={cc.enviro||0} onChange={x=>sf("enviro",x)} min={0} step={100} xs/>
       </div>
       {(cc.customItems||[]).length>0&&<SecLabel text="Other"/>}
-      {(cc.customItems||[]).map((item,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"1fr 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
+      {(cc.customItems||[]).map((item,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Description</label>}<input value={item.name||""} onChange={e=>setI(i,"name",e.target.value)} placeholder="e.g. HOA fee" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={item.amt||0} onChange={x=>setI(i,"amt",x)} min={0} step={10} xs/>
         <button onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
@@ -285,7 +285,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate}){
       <div style={{background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderRadius:9,padding:"10px 14px",color:"#fff",marginTop:12}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:11,opacity:0.7}}><span>Total closing costs</span><span>{p>0?(grand/p*100).toFixed(2):0}% of price</span></div>
         <div style={{fontSize:20,fontWeight:700,color:C.gold,marginBottom:7}}>{fmtD(grand)}</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:5}}>
           {[["Lender",lT],["GA taxes",gaT],["Title/atty",titleT],["Prepaids",prepT]].map(([l2,v2])=><div key={l2} style={{background:"rgba(255,255,255,0.08)",borderRadius:6,padding:"4px 7px"}}><div style={{fontSize:9,opacity:0.65}}>{l2}</div><div style={{fontSize:11,fontWeight:700,color:C.gold}}>{fmtD(v2)}</div></div>)}
         </div>
       </div>
@@ -359,7 +359,7 @@ function Expenses({ex,setEx,units,egi,price}){
     </div>}
     {ex.mode==="detailed"&&<div>
       <SecLabel text="Fixed annual costs"/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
         <div style={{display:"flex",flexDirection:"column",gap:3}}>
           <div style={{display:"flex",alignItems:"center",gap:5}}><label style={{fontSize:10,color:C.slate,fontWeight:600}}>Property taxes</label><SmBtn active={ex.taxMode==="fixed"} onClick={()=>sf("taxMode","fixed")} label="$"/><SmBtn active={ex.taxMode==="pct"} onClick={()=>sf("taxMode","pct")} label="% price"/></div>
           {ex.taxMode==="fixed"?<MoneyInput value={ex.taxes||0} onChange={x=>sf("taxes",x)} sub={"Auto est: "+fmtD(Math.round((price||0)*1.2/100))} small/>:<Field suffix="% of price" value={ex.taxPct||1.2} onChange={x=>sf("taxPct",x)} min={0} max={5} step={0.05} sub={fmtD(Math.round((price||0)*(ex.taxPct||1.2)/100))+"/yr"} xs/>}
@@ -367,7 +367,7 @@ function Expenses({ex,setEx,units,egi,price}){
         <MoneyInput label="Annual insurance" value={ex.insurance||0} onChange={x=>sf("insurance",x)} sub="ATL rising ~35%" small/>
       </div>
       <SecLabel text="Variable costs"/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
         <Field label="Management fee" suffix="%" value={ex.mgmtPct||0} onChange={x=>sf("mgmtPct",x)} min={0} max={15} step={0.5} sub="8% even if self-managing" xs/>
         <div style={{display:"flex",flexDirection:"column",gap:3}}>
           <div style={{display:"flex",alignItems:"center",gap:5}}><label style={{fontSize:10,color:C.slate,fontWeight:600}}>Maintenance</label><SmBtn active={ex.maintMode==="fixed"} onClick={()=>sf("maintMode","fixed")} label="$/unit/mo"/><SmBtn active={ex.maintMode==="pct"} onClick={()=>sf("maintMode","pct")} label="% value/yr"/></div>
@@ -383,7 +383,7 @@ function Expenses({ex,setEx,units,egi,price}){
         <div style={{gridColumn:"1/-1"}}><Field label="Misc. /yr" prefix="$" value={ex.misc||0} onChange={x=>sf("misc",x)} min={0} step={100} sub="ads, supplies, HOA" xs/></div>
       </div>
       {(ex.customExpenses||[]).length>0&&<SecLabel text="Custom"/>}
-      {(ex.customExpenses||[]).map((e,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"1fr 90px 80px 26px",gap:6,marginBottom:6,alignItems:"end"}}>
+      {(ex.customExpenses||[]).map((e,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 90px 80px 26px",gap:6,marginBottom:6,alignItems:"end"}}>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Name</label>}<input value={e.name||""} onChange={ev=>setCE(i,"name",ev.target.value)} placeholder="e.g. pest control" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={e.amt||0} onChange={x=>setCE(i,"amt",x)} min={0} step={10} xs/>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Period</label>}<select value={e.period||"annual"} onChange={ev=>setCE(i,"period",ev.target.value)} style={{padding:"6px 7px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text}}><option value="annual">Annual</option><option value="monthly">Monthly</option></select></div>
@@ -605,7 +605,7 @@ function OverviewTab({R,Y,S}){
     </div>}
     {/* Verdict banner */}
     <div style={{borderRadius:11,padding:"12px 15px",marginBottom:11,background:score.color,color:"#fff"}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:7}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7}}>
         {[["Monthly CF",fmtD(R.cf/12)+"/mo"],["Per unit",fmtD(R.cf/R.numU/12)+"/unit/mo"],["Annual CF",fmtD(R.cf)+"/yr"],["Cash needed",fmtD(R.cashIn)]].map(([l2,val])=><div key={l2} style={{background:"rgba(255,255,255,0.15)",borderRadius:7,padding:"6px 9px"}}>
           <div style={{fontSize:9,opacity:0.75}}>{l2}</div><div style={{fontSize:12,fontWeight:700}}>{val}</div>
         </div>)}
@@ -614,7 +614,7 @@ function OverviewTab({R,Y,S}){
     {/* Partnership split */}
     {partnerEnabled&&<div style={{padding:"9px 11px",background:"#EEF4FF",border:"1px solid #BFDBFE",borderRadius:10,marginBottom:11}}>
       <div style={{fontSize:10,fontWeight:700,color:"#185FA5",marginBottom:5}}>MY SHARE ({S.partnership.myPct}%)</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
         {[["My CF/mo",fmtD(R.myCF/12)+"/mo"],["My CoC",fmtP(R.myCoc)],["Invested",fmtD(R.cashIn*(S.partnership.myPct/100))]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:"#185FA5"}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:"#185FA5"}}>{v2}</div></div>)}
       </div>
     </div>}
@@ -626,7 +626,7 @@ function OverviewTab({R,Y,S}){
       <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontWeight:700,color:C.heading,fontSize:13}}><span>Total</span><span>{fmtD(R.cashIn)}</span></div>
     </div>
     {/* Key metrics */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+    <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:11}}>
       <MBox label="Cap rate" value={fmtP(R.capRate)} sub="≥5% (A) · ≥7% (B)" lvl={lv(R.capRate,7,4.5)} bar={R.capRate} bMax={12} bGood={7} bWarn={4.5} tip={["Cap rate = NOI ÷ Price","= "+fmtD(R.noi)+" ÷ $"+fmt(S.price),"= "+fmtP(R.capRate)]}/>
       <MBox label="Cash-on-cash" value={fmtP(R.coc)} sub="Good ≥8%" lvl={lv(R.coc,8,4)} bar={R.coc} bMax={20} bGood={8} bWarn={4} tip={["CoC = Annual CF ÷ Cash in","= "+fmtD(R.cf)+" ÷ "+fmtD(R.cashIn),"= "+fmtP(R.coc)]}/>
       <MBox label="DSCR" value={R.dscr.toFixed(2)} sub="Lenders need ≥1.25" lvl={lv(R.dscr,1.25,1.0)} bar={R.dscr} bMax={2.5} bGood={1.25} bWarn={1.0} tip={["DSCR = NOI ÷ Debt service","= "+fmtD(R.noi)+" ÷ "+fmtD(R.annPmt),"= "+R.dscr.toFixed(2)]}/>
@@ -655,7 +655,7 @@ function OverviewTab({R,Y,S}){
     </div>
     {R.vaEnabled&&<div style={{padding:"9px 11px",background:C.goldL,border:"1px solid #EDCF8A",borderRadius:10,marginTop:8}}>
       <div style={{fontSize:10,fontWeight:700,color:C.amber,marginBottom:5}}>VALUE-ADD AT STABILIZATION</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
         {[["Cap rate",fmtP(R.vaCapRate)],["Cash-on-cash",fmtP(R.vaCoc)],["Monthly CF",fmtD(R.vaCF/12)+"/mo"]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:C.amber}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:C.amber}}>{v2}</div></div>)}
       </div>
     </div>}
@@ -854,7 +854,7 @@ function ProjectionTab({R,Y,S}){
   const totRetTip=["Total return = sum of 4 parts:","· Appreciation "+fmtD(Y.appGain),"· Principal paydown "+fmtD(Y.equityBuild),"· Net cash flow "+fmtD(Y.totCF),"· Depreciation est. "+fmtD(Y.deprBen),"= "+fmtD(Y.totRet)+"  ("+fmtP(Y.totRet/(R.cashIn||1)*100)+" of cash in)","Full detail below ↓"];
   const irrTip=["IRR = annual rate where all cash flows net to $0:","· Year 0: "+fmtD(-R.cashIn)+" (cash in)","· Years 1–"+Math.max(1,hold-1)+": each year's CF","· Year "+hold+": CF + net sale "+fmtD(netSale),"= "+fmtP(Y.irr)+" / yr","Full detail below ↓"];
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+    <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:11}}>
       <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:10,padding:"10px 12px",color:"#fff"}}>
         <div style={{fontSize:9,marginBottom:2,display:"flex",alignItems:"center"}}><span style={{opacity:0.65}}>Total return ({hold}yr)</span><Info tint="#fff" lines={totRetTip}/></div>
         <div style={{fontSize:18,fontWeight:700,color:Y.totRet>=0?C.gold:"#F87171"}}>{fmtD(Y.totRet)}</div>
@@ -913,7 +913,7 @@ function AnalysisTab({SEN,R,S,Y}){
         <div style={{display:"flex",gap:9,alignItems:"end",marginBottom:12}}>
           <div style={{flex:1}}><Field label="Target CF/mo" prefix="$" value={targetCF} onChange={setTargetCF} min={-5000} max={10000} step={50} sub="0 = break-even, positive = cash flow"/></div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:9}}>
           {[
             {icon:"🏠",label:"Needed rent/unit",val:fmtD(wnt.neededRentPU)+"/mo",curr:fmtD(R.monRent/R.numU)+"/mo current",delta:wnt.neededRentPU-(R.monRent/R.numU),good:wnt.neededRentPU<=R.monRent/R.numU},
             {icon:"💰",label:"Max purchase price",val:wnt.neededPrice?fmtD(wnt.neededPrice):"Not possible",curr:fmtD(S.price)+" current",delta:wnt.neededPrice?wnt.neededPrice-S.price:null,good:wnt.neededPrice>=S.price},
@@ -1074,7 +1074,7 @@ function ComparablesCard({comps,setComps,currentR}){
           <input value={c.label} onChange={e=>setC(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"1 1 auto",minWidth:0,maxWidth:160}}/>
           <button onClick={()=>rem(i)} style={{fontSize:11,color:C.red,background:C.redL,border:"none",borderRadius:5,cursor:"pointer",padding:"3px 8px",flexShrink:0,marginLeft:8}}>✕</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:7}}>
           <MoneyInput label="Price" value={c.price} onChange={x=>setC(i,"price",x)} small/>
           <MoneyInput label="Total rent/mo" value={c.rent} onChange={x=>setC(i,"rent",x)} small/>
           <Field label="Cap rate" suffix="%" value={c.capRate} onChange={x=>setC(i,"capRate",x)} min={0} max={20} step={0.1} xs/>
@@ -1405,7 +1405,7 @@ export default function App(){
           <span>Load Atlanta example deal</span><span style={{transition:"transform 0.2s",display:"inline-block",transform:showEx?"rotate(180deg)":"none"}}>▾</span>
         </button>
         {showEx&&<div>
-          <div className="preset-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
+          <div className="preset-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:5}}>
             {EXAMPLES.map(ex=>{const on=selEx===ex.id;return <button key={ex.id} onClick={()=>loadEx(ex)} style={{padding:"7px 5px",borderRadius:9,border:"1.5px solid "+(on?ex.col:C.border),background:on?ex.col:C.white,cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all 0.15s"}}>
               <div style={{fontSize:10,fontWeight:700,color:on?"#fff":C.text}}>{ex.label}</div>
               <div style={{fontSize:9,color:on?"rgba(255,255,255,0.7)":C.slate,lineHeight:1.3}}>{ex.sub}</div>
@@ -1416,7 +1416,7 @@ export default function App(){
         </div>}
       </div>
 
-      <div className="layout" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11,alignItems:"start"}}>
+      <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:11,alignItems:"start"}}>
         {/* LEFT: Inputs */}
         <div>
           {/* Address + Notes */}
@@ -1447,7 +1447,7 @@ export default function App(){
                   <RentInput value={u.rent} onChange={v=>setUnit(i,"rent",v)}/>
                   {numU>1&&<button onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
                 </div>
-                {showUD&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                {showUD&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:6}}>
                   <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
                   <Field label="Baths" value={u.bath||0} onChange={x=>setUnit(i,"bath",x)} min={0} max={6} step={0.5} xs/>
                   <Field label="Sq ft" value={u.sqft||0} onChange={x=>setUnit(i,"sqft",x)} min={0} step={50} xs/>
@@ -1463,7 +1463,7 @@ export default function App(){
 
           {/* Financing */}
           <Card title="Financing" icon="🏦">
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+            <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
               <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
               <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
               <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={x=>setFin("loanYears",x)} min={1} max={40}/>
@@ -1488,7 +1488,7 @@ export default function App(){
           {/* Repairs */}
           <Card title="Repairs & Rehab" icon="🔧">
             <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
-            {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"1fr auto",gap:9,alignItems:"end"}}>
+            {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:9,alignItems:"end"}}>
               <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 <label style={{fontSize:10,color:C.slate,fontWeight:600}}>Unknown?</label>
@@ -1500,7 +1500,7 @@ export default function App(){
 
           {/* Projection */}
           <Card title="Projection & Growth" icon="📈">
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
               <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
               <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
               <Field label="Rent growth/yr" suffix="%" value={S.projection.rentGrowthPct||0} onChange={x=>setProj("rentGrowthPct",x)} min={0} max={10} step={0.25} sub="Applied to all units each year"/>
@@ -1511,7 +1511,7 @@ export default function App(){
             </div>
             <SecLabel text="Exit assumptions"/>
             <div style={{marginBottom:12}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:9}}>
+              <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:9}}>
                 <Field label="Selling costs" suffix="%" value={S.projection.sellingCostPct} onChange={x=>setProj("sellingCostPct",x)} min={0} max={12} step={0.5} sub="agent + closing at sale" showZero/>
                 <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
                   <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Net sale proceeds (yr {S.projection.holdYears})</div>
@@ -1519,7 +1519,7 @@ export default function App(){
                 </div>
               </div>
               <div style={{marginBottom:8}}><Tog checked={S.projection.exitCapEnabled||false} onChange={x=>setProj("exitCapEnabled",x)} label="Value the exit on a cap rate" sub="Sale price = final-year NOI ÷ exit cap (instead of appreciation %)"/></div>
-              {S.projection.exitCapEnabled&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+              {S.projection.exitCapEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
                 <Field label="Exit cap rate" suffix="%" value={S.projection.exitCapRate} onChange={x=>setProj("exitCapRate",x)} min={1} max={15} step={0.1} sub={"vs entry cap "+fmtP(R.capRate)}/>
                 <div style={{padding:"7px 10px",background:C.goldL,borderRadius:8,border:"1px solid #EDCF8A",fontSize:10,color:C.amber}}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
               </div>}
@@ -1527,7 +1527,7 @@ export default function App(){
             <SecLabel text="Value-add scenario"/>
             <div style={{marginBottom:12}}>
               <div style={{marginBottom:8}}><Tog checked={S.projection.vaEnabled||false} onChange={x=>setProj("vaEnabled",x)} label="Below-market rents — value-add potential" sub="Show metrics at stabilized market rents"/></div>
-              {S.projection.vaEnabled&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+              {S.projection.vaEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
                 <Field label="Market rent / unit" prefix="$" value={S.projection.vaMarketRentPerUnit||1700} onChange={x=>setProj("vaMarketRentPerUnit",x)} min={0} step={25} sub={"current: "+fmtD(totalRent/numU)+"/unit"}/>
                 <Field label="Stabilized by year" value={S.projection.vaYear||2} onChange={x=>setProj("vaYear",x)} min={1} max={10}/>
               </div>}
@@ -1535,7 +1535,7 @@ export default function App(){
             <SecLabel text="Refinance scenario"/>
             <div>
               <div style={{marginBottom:8}}><Tog checked={S.projection.refiEnabled||false} onChange={x=>setProj("refiEnabled",x)} label="Model a refinance in projection" sub="New rate applies from refi year onward"/></div>
-              {S.projection.refiEnabled&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+              {S.projection.refiEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
                 <Field label="Refi year" value={S.projection.refiYear||3} onChange={x=>setProj("refiYear",x)} min={1} max={S.projection.holdYears||5}/>
                 <Field label="New rate" suffix="%" value={S.projection.refiRate||6.5} onChange={x=>setProj("refiRate",x)} min={1} max={15} step={0.125}/>
               </div>}
