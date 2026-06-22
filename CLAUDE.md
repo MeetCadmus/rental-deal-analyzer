@@ -48,7 +48,7 @@ python3 -m http.server 8000   # then open http://localhost:8000 (file:// won't w
 - Commit author identity is `Maksym Andreiev <vipmindwalker@gmail.com>`.
 
 ## Data model (a "deal")
-Working state `S` (see `INIT`): `address, notes, listingUrl, insights, price, units[],
+Working state `S` (see `INIT`): `address, notes, listingUrl, insights, aiSource/aiAt, price, units[],
 financing{downPct,rate,loanYears,reserveMonths}, closing(DCC), expenses(DEX), projection{…},
 repairs{…}, partnership{…}, comparables[]`.
 - **Deals library**: array of deals, each with `_id, _label, _ts, _created`, persisted to
@@ -58,6 +58,19 @@ repairs{…}, partnership{…}, comparables[]`.
 - **Expenses are stored ANNUAL** (`expenses.v === 2`); `migrateExpenses()` upgrades old per-mo data.
 - `fullState(d)` merges a partial deal over defaults (and migrates). `computeBase` / `computeYearly`
   / `computeSensitivity` are the pure metric engines — covered by tests; change them carefully.
+
+## Quick fill / AI round-trip
+- Capture: paste a Zillow **link** (or text) → `parseListing` (uses `addressFromUrl` for the
+  URL slug) fills address/price/units/`listingUrl`. Or **Copy AI prompt** (`buildAIPrompt`,
+  embeds the link) → run in any chat AI → paste its JSON → `parseAIResult` (tolerant of smart
+  quotes / NBSP / code fences / trailing commas) → `applyAI` fills units+rents, itemized
+  expenses, financing rate/refi, closing %, projection (appreciation/rent-growth/exit cap),
+  `insights`, the opinion (→ notes), and `aiSource` (the model names itself; blank if unsure).
+- `parseListing` / `addressFromUrl` / `buildAIPrompt` / `parseAIResult` are pure and **tested**.
+- **Area & due-diligence** (`insights`) is editable and **non-math** (informational only);
+  collapses to a slim "add" bar when empty.
+- `+ New deal` uses `BLANK` (empty property fields) so the prompt isn't seeded with fake
+  "known" values; `QuickFill` is keyed by `activeId` so its inputs reset per deal.
 
 ## Conventions
 - Numbers in inputs use `Field` / `MoneyInput` / `RentInput` (live comma grouping, caret-safe,
