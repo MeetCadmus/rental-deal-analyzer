@@ -1668,7 +1668,7 @@ export default function App(){
       </div>
 
       <div style={{marginTop:10,fontSize:9,color:C.muted,borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
-        Educational only · Not financial/legal/tax advice · Atlanta data: Yardi Matrix, Marcus &amp; Millichap, CoStar, GA DOR 2025–26
+        Built by <a href="https://www.linkedin.com/in/maksym--andreiev/" target="_blank" rel="noopener noreferrer" style={{color:C.heading,fontWeight:600,textDecoration:"none"}}>Maksym Andreiev</a> · Educational only — not financial, legal, or tax advice.
       </div>
     </div>
   );
