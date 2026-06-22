@@ -1787,7 +1787,7 @@ export default function App(){
       <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:11,alignItems:"start"}}>
         {/* LEFT: Inputs */}
         <div>
-          <QuickFill state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
+          <QuickFill key={activeId} state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
           {/* Address + Notes */}
           <Card title="Property details" icon="📍">
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
