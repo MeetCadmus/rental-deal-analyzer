@@ -33,7 +33,7 @@ function loadModule() {
     "flattenState", "unflattenState", "coerceVal", "stateToCSV", "csvToState", "parseCSV",
     "fullState", "makeDeal", "dealTitle", "relTime", "mergeDealStores",
     "INIT", "DCC", "DEX", "CLASS_PRESETS", "EXAMPLES",
-    "fmt", "fmtD", "fmtP", "fmtX", "clamp", "num", "lv",
+    "fmt", "fmtD", "fmtP", "fmtX", "clamp", "num", "lv", "fmtGroup",
   ];
   const body = js + "\nreturn {" + exportNames.join(",") + "};";
 
@@ -45,6 +45,7 @@ function loadModule() {
     useMemo: function (f) { return f(); },
     useCallback: function (f) { return f; },
     useEffect: function () {},
+    useLayoutEffect: function () {},
     useRef: function (v) { return { current: v }; },
   };
   const noStore = { getItem: function () { return null; }, setItem: function () {}, removeItem: function () {} };

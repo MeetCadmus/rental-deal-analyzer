@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 
 const C={navy:"var(--c-navy)",navyM:"var(--c-navyM)",gold:"var(--c-gold)",goldL:"var(--c-goldL)",teal:"var(--c-teal)",tealL:"var(--c-tealL)",red:"var(--c-red)",redL:"var(--c-redL)",amber:"var(--c-amber)",amberL:"var(--c-amberL)",slate:"var(--c-slate)",border:"var(--c-border)",bg:"var(--c-bg)",white:"var(--c-white)",text:"var(--c-text)",heading:"var(--c-heading)",rowline:"var(--c-rowline)",grid:"var(--c-grid)",hl:"var(--c-hl)",tealS:"var(--c-tealS)",redS:"var(--c-redS)",amberS:"var(--c-amberS)",blueS:"var(--c-blueS)",muted:"var(--c-muted)"};
 const THEME_CSS=`
@@ -13,6 +13,39 @@ const fmtX=n=>isFinite(n)?n.toFixed(1)+"×":"—";
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const num =v=>parseFloat((v+"").replace(/,/g,""))||0;
 function lv(v,g,w,inv=false){return !inv?(v>=g?"good":v>=w?"warn":"bad"):(v<=w?"good":v<=g?"warn":"bad");}
+
+// Live thousands-grouping for number inputs, tolerant of partial typing ("", "1,", "7.").
+function fmtGroup(raw,decimals){
+  if(raw===null||raw===undefined)return "";
+  let s=String(raw);
+  const neg=/^\s*-/.test(s);
+  s=s.replace(decimals?/[^0-9.]/g:/[^0-9]/g,"");
+  let intp=s,dec=null;
+  if(decimals){const i=s.indexOf(".");if(i>=0){intp=s.slice(0,i);dec=s.slice(i+1).replace(/\./g,"");}}
+  intp=intp.replace(/^0+(?=\d)/,"");
+  const g=intp===""?"":Number(intp).toLocaleString("en-US");
+  let out=g;
+  if(dec!==null)out=(g===""?"0":g)+"."+dec;
+  return out===""?(neg?"-":""):(neg?"-"+out:out);
+}
+// Shared editing logic: shows grouped value, preserves caret position across comma
+// insertion, and tolerates clearing/partials. Returns props to spread on <input>.
+function useGrouped(value,onChange,decimals,idle){
+  const ref=useRef(null);
+  const[buf,setBuf]=useState(null);
+  const caret=useRef(null);
+  useLayoutEffect(()=>{if(caret.current!=null&&ref.current){try{ref.current.setSelectionRange(caret.current,caret.current);}catch(e){}caret.current=null;}});
+  const display=buf!=null?buf:idle(value);
+  const onInput=e=>{
+    const prev=e.target.value,sel=e.target.selectionStart||0;
+    const digitsLeft=prev.slice(0,sel).replace(/[^0-9]/g,"").length;
+    const g=fmtGroup(e.target.value,decimals);
+    let pos=0,seen=0;while(pos<g.length&&seen<digitsLeft){if(/[0-9]/.test(g[pos]))seen++;pos++;}
+    caret.current=pos;
+    setBuf(g);onChange(num(g));
+  };
+  return {ref,display,onInput,clearBuf:()=>setBuf(null)};
+}
 
 // ── CSV round-trip (export / import full deal state) ───────────
 function flattenState(obj,prefix,out){
@@ -73,18 +106,13 @@ function downloadFile(name,text,type){
 
 // ── Atoms ─────────────────────────────────────────────────────
 function MoneyInput({value,onChange,label,sub,small,hint}){
-  // While editing show raw digits (no comma reformat → no caret jump, can fully clear);
-  // reformat with commas on blur.
-  const[buf,setBuf]=useState(null);
-  const fmtL=n=>n>0?new Intl.NumberFormat("en-US").format(n):"";
-  const display=buf!=null?buf:fmtL(value);
+  const g=useGrouped(value,onChange,false,v=>v>0?fmtGroup(v,false):"");
   return <div style={{display:"flex",flexDirection:"column",gap:2}}>
     {label&&<label style={{fontSize:small?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
     <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white}}>
       <span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
-      <input type="text" inputMode="numeric" value={display} placeholder="0"
-        onChange={e=>{const raw=e.target.value.replace(/[^0-9]/g,"");setBuf(raw);onChange(raw===""?0:parseInt(raw,10));}}
-        onBlur={()=>setBuf(null)}
+      <input ref={g.ref} type="text" inputMode="numeric" value={g.display} placeholder="0"
+        onChange={g.onInput} onBlur={g.clearBuf}
         style={{flex:1,padding:"6px 10px",fontSize:small?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
     </div>
     {(sub||hint)&&<span style={{fontSize:10,color:hint?"#0F6E56":C.muted}}>{sub||hint}</span>}
@@ -92,30 +120,25 @@ function MoneyInput({value,onChange,label,sub,small,hint}){
 }
 // Per-unit rent box ($ … /mo). Edit buffer so it clears cleanly and doesn't caret-jump.
 function RentInput({value,onChange}){
-  const[buf,setBuf]=useState(null);
-  const display=buf!=null?buf:(value>0?new Intl.NumberFormat("en-US").format(value):"");
+  const g=useGrouped(value,onChange,false,v=>v>0?fmtGroup(v,false):"");
   return <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white,flex:"1 1 auto",minWidth:0}}>
     <span style={{padding:"6px 6px 6px 9px",fontSize:12,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
-    <input type="text" inputMode="numeric" value={display} placeholder="0"
-      onChange={e=>{const raw=e.target.value.replace(/[^0-9]/g,"");setBuf(raw);onChange(raw===""?0:parseInt(raw,10));}}
-      onBlur={()=>setBuf(null)}
+    <input ref={g.ref} type="text" inputMode="numeric" value={g.display} placeholder="0"
+      onChange={g.onInput} onBlur={g.clearBuf}
       style={{flex:1,minWidth:0,padding:"6px 8px",fontSize:14,fontWeight:600,border:"none",background:"transparent",color:C.heading,outline:"none"}}/>
     <span style={{padding:"6px 8px 6px 2px",fontSize:11,color:C.slate,flexShrink:0}}>/mo</span>
   </div>;
 }
 function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder,showZero}){
-  // Hold the raw text while editing so you can fully clear it and type partials
-  // ("", "7.", "-", "0"); only convert to a number for the parent/calculations.
-  const[buf,setBuf]=useState(null);
-  const display=buf!=null?buf:((value===null||value===undefined||(value===0&&!showZero))?"":value);
-  const commit=()=>{if(buf==null)return;let n=num(buf);if(min!=null&&n<min)n=min;if(max!=null&&n>max)n=max;if(n!==value)onChange(n);setBuf(null);};
+  // Live thousands-grouping with decimals; tolerant of clearing/partials; clamps on blur.
+  const g=useGrouped(value,onChange,true,v=>(v===null||v===undefined||(v===0&&!showZero))?"":fmtGroup(v,true));
+  const onBlur=()=>{g.clearBuf();let n=value;if(min!=null&&n<min)onChange(min);else if(max!=null&&n>max)onChange(max);};
   return <div style={{display:"flex",flexDirection:"column",gap:2}}>
     {label&&<label style={{fontSize:xs?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
     <div style={{display:"flex",alignItems:"center",border:"1px solid "+(disabled?"#e8e8e8":C.border),borderRadius:7,overflow:"hidden",background:disabled?"#F4F4F4":C.white}}>
       {prefix&&<span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>{prefix}</span>}
-      <input type="text" inputMode="decimal" value={display} disabled={!!disabled} placeholder={placeholder||"0"}
-        onChange={e=>{const raw=e.target.value;if(raw===""||/^-?\d*\.?\d*$/.test(raw)){setBuf(raw);const t=raw.trim();onChange(t===""||t==="-"||t==="."||t==="-."?0:num(raw));}}}
-        onBlur={commit}
+      <input ref={g.ref} type="text" inputMode="decimal" value={g.display} disabled={!!disabled} placeholder={placeholder||"0"}
+        onChange={g.onInput} onBlur={onBlur}
         style={{flex:1,padding:"6px 8px",fontSize:xs?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
       {suffix&&<span style={{padding:"6px 8px 6px 4px",fontSize:11,color:C.slate,flexShrink:0}}>{suffix}</span>}
     </div>
