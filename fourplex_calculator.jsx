@@ -73,16 +73,34 @@ function downloadFile(name,text,type){
 
 // ── Atoms ─────────────────────────────────────────────────────
 function MoneyInput({value,onChange,label,sub,small,hint}){
+  // While editing show raw digits (no comma reformat → no caret jump, can fully clear);
+  // reformat with commas on blur.
+  const[buf,setBuf]=useState(null);
   const fmtL=n=>n>0?new Intl.NumberFormat("en-US").format(n):"";
+  const display=buf!=null?buf:fmtL(value);
   return <div style={{display:"flex",flexDirection:"column",gap:2}}>
     {label&&<label style={{fontSize:small?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
     <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white}}>
       <span style={{padding:"6px 7px 6px 9px",fontSize:11,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
-      <input type="text" value={fmtL(value)} placeholder="0"
-        onChange={e=>onChange(parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
+      <input type="text" inputMode="numeric" value={display} placeholder="0"
+        onChange={e=>{const raw=e.target.value.replace(/[^0-9]/g,"");setBuf(raw);onChange(raw===""?0:parseInt(raw,10));}}
+        onBlur={()=>setBuf(null)}
         style={{flex:1,padding:"6px 10px",fontSize:small?12:13,border:"none",background:"transparent",color:C.text,outline:"none",minWidth:0}}/>
     </div>
     {(sub||hint)&&<span style={{fontSize:10,color:hint?"#0F6E56":C.muted}}>{sub||hint}</span>}
+  </div>;
+}
+// Per-unit rent box ($ … /mo). Edit buffer so it clears cleanly and doesn't caret-jump.
+function RentInput({value,onChange}){
+  const[buf,setBuf]=useState(null);
+  const display=buf!=null?buf:(value>0?new Intl.NumberFormat("en-US").format(value):"");
+  return <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white,flex:"1 1 auto",minWidth:0}}>
+    <span style={{padding:"6px 6px 6px 9px",fontSize:12,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
+    <input type="text" inputMode="numeric" value={display} placeholder="0"
+      onChange={e=>{const raw=e.target.value.replace(/[^0-9]/g,"");setBuf(raw);onChange(raw===""?0:parseInt(raw,10));}}
+      onBlur={()=>setBuf(null)}
+      style={{flex:1,minWidth:0,padding:"6px 8px",fontSize:14,fontWeight:600,border:"none",background:"transparent",color:C.heading,outline:"none"}}/>
+    <span style={{padding:"6px 8px 6px 2px",fontSize:11,color:C.slate,flexShrink:0}}>/mo</span>
   </div>;
 }
 function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder,showZero}){
@@ -1403,13 +1421,7 @@ export default function App(){
               {S.units.map((u,i)=><div key={u.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showUD?8:0}}>
                   <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"0 1 72px",minWidth:0}}/>
-                  <div style={{display:"flex",alignItems:"center",border:"1px solid "+C.border,borderRadius:7,overflow:"hidden",background:C.white,flex:"1 1 auto",minWidth:0}}>
-                    <span style={{padding:"6px 6px 6px 9px",fontSize:12,color:C.slate,background:C.bg,borderRight:"1px solid "+C.border,flexShrink:0}}>$</span>
-                    <input type="text" inputMode="numeric" value={u.rent>0?new Intl.NumberFormat("en-US").format(u.rent):""} placeholder="0"
-                      onChange={e=>setUnit(i,"rent",parseInt(e.target.value.replace(/[^0-9]/g,""))||0)}
-                      style={{flex:1,minWidth:0,padding:"6px 8px",fontSize:14,fontWeight:600,border:"none",background:"transparent",color:C.heading,outline:"none"}}/>
-                    <span style={{padding:"6px 8px 6px 2px",fontSize:11,color:C.slate,flexShrink:0}}>/mo</span>
-                  </div>
+                  <RentInput value={u.rent} onChange={v=>setUnit(i,"rent",v)}/>
                   {numU>1&&<button onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
                 </div>
                 {showUD&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
