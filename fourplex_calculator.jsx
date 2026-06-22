@@ -1187,17 +1187,21 @@ export default function App(){
   const[user,setUser]=useState(null);
   const[sync,setSync]=useState("idle"); // idle | syncing | synced | error
   const pushTimer=useRef(null);
+  const storeRef=useRef({deals,activeId});           // always-current snapshot (avoids stale closures in sync)
+  useEffect(()=>{storeRef.current={deals,activeId};},[deals,activeId]);
+  const syncedOnce=useRef(false);                    // full merge-and-open happens once per load, not on every focus
   const applyStore=st=>{touchRef.current=false;setDeals(st.deals);setActiveId(st.activeId);persistDeals(st.deals,st.activeId);const a=st.deals.find(d=>d._id===st.activeId)||st.deals[0];if(a)setState(fullState(a));setSelEx(null);};
   const pushCloud=(uid,deals2,activeId2)=>{const c=supa.current;if(!c||!uid)return;setSync("syncing");c.from("user_data").upsert({user_id:uid,data:{deals:deals2,activeId:activeId2},updated_at:new Date().toISOString()}).then(({error})=>setSync(error?"error":"synced"));};
-  const pullMergePush=async u=>{const c=supa.current;if(!c||!u)return;setSync("syncing");
-    try{const{data,error}=await c.from("user_data").select("data").eq("user_id",u.id).maybeSingle();if(error)throw error;
-      const cloud=(data&&data.data)||{deals:[],activeId:null};
-      const merged=mergeDealStores({deals,activeId},cloud);
-      applyStore(merged);pushCloud(u.id,merged.deals,merged.activeId);
-    }catch(e){setSync("error");}};
+  const fetchCloud=async u=>{const{data,error}=await supa.current.from("user_data").select("data").eq("user_id",u.id).maybeSingle();if(error)throw error;return (data&&data.data)||{deals:[],activeId:null};};
+  // Initial sync (sign-in / page load): merge cloud in and keep the deal you had open.
+  const initialSync=async u=>{if(!supa.current||!u)return;setSync("syncing");try{const cloud=await fetchCloud(u);const cur=storeRef.current;const merged=mergeDealStores(cur,cloud);if(cur.deals.some(d=>d._id===cur.activeId))merged.activeId=cur.activeId;applyStore(merged);pushCloud(u.id,merged.deals,merged.activeId);}catch(e){setSync("error");}};
+  // Re-sync (returning to the tab / token refresh): pull other devices' changes WITHOUT
+  // touching the deal you're currently editing or the active selection.
+  const backgroundSync=async u=>{if(!supa.current||!u)return;try{const cloud=await fetchCloud(u);const cur=storeRef.current;const merged=mergeDealStores(cur,cloud);const keep=cur.activeId,localActive=cur.deals.find(d=>d._id===keep);const deals2=merged.deals.map(d=>(d._id===keep&&localActive)?localActive:d);setDeals(deals2);persistDeals(deals2,keep);setSync("synced");}catch(e){}};
+  const onAuthUser=u=>{setUser(u||null);if(!u){syncedOnce.current=false;setSync("idle");return;}if(!syncedOnce.current){syncedOnce.current=true;initialSync(u);}else backgroundSync(u);};
   useEffect(()=>{if(!cloudCfg)return;let unsub;try{const c=window.supabase.createClient(cloudCfg.url,cloudCfg.key);supa.current=c;
-    c.auth.getSession().then(({data})=>{const u=data&&data.session&&data.session.user;if(u){setUser(u);pullMergePush(u);}});
-    const sub=c.auth.onAuthStateChange((_e,session)=>{const u=session&&session.user;setUser(u||null);if(u)pullMergePush(u);else setSync("idle");});
+    c.auth.getSession().then(({data})=>{const u=data&&data.session&&data.session.user;if(u)onAuthUser(u);});
+    const sub=c.auth.onAuthStateChange((_e,session)=>onAuthUser(session&&session.user));
     unsub=sub&&sub.data&&sub.data.subscription;}catch(e){}
     return ()=>{try{unsub&&unsub.unsubscribe();}catch(e){}};
   },[]);
