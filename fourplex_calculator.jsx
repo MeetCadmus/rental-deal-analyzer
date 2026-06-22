@@ -1042,8 +1042,20 @@ function ScenarioCompare({deals,activeId,currentState}){
   const[open,setOpen]=useState(false);
   const[sel,setSel]=useState([]);
   const[sortBy,setSortBy]=useState("irr");
+  const[q,setQ]=useState("");
+  const[gradeF,setGradeF]=useState("all");
+  const[pickSort,setPickSort]=useState("grade");
   const pool=(deals||[]).filter(d=>d._id!==activeId);
   const toggle=id=>setSel(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  // Compute metrics for each selectable deal (only while the modal is open) so we can
+  // search, sort, filter by grade, and show grade + cash flow on each row.
+  const info=open?pool.map(d=>{const st=fullState(d);const R=computeBase(st);const Y=computeYearly(st,R);return {d,st,R,Y,score:calcDealScore(R,Y)};}):[];
+  const PSORT={grade:["Grade",c=>c.score.pct],cf:["Cash flow",c=>c.R.cf],cap:["Cap rate",c=>c.R.capRate],irr:["IRR",c=>c.Y.irr],price:["Price",c=>c.st.price],recent:["Recently edited",c=>c.d._ts||0],name:["Name (A–Z)",c=>c.d]};
+  const ql=q.trim().toLowerCase();
+  let picks=info.filter(c=>(gradeF==="all"||c.score.grade===gradeF)&&(!ql||dealTitle(c.d).toLowerCase().includes(ql)));
+  picks=pickSort==="name"?picks.sort((a,b)=>dealTitle(a.d).localeCompare(dealTitle(b.d))):picks.sort((a,b)=>(PSORT[pickSort][1](b))-(PSORT[pickSort][1](a)));
+  const filteredIds=picks.map(c=>c.d._id);
+  const selectAll=()=>setSel(s=>Array.from(new Set([...s,...filteredIds])));
   const cols=[{name:"Current deal",st:currentState,cur:true},...pool.filter(d=>sel.includes(d._id)).map(d=>({name:dealTitle(d),st:fullState(d)}))];
   const computed=cols.map(c=>{const R=computeBase(c.st);const Y=computeYearly(c.st,R);return{...c,R,Y,score:calcDealScore(R,Y)};});
   const rows=[
@@ -1073,9 +1085,36 @@ function ScenarioCompare({deals,activeId,currentState}){
           <button onClick={()=>setOpen(false)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
         </div>
         <div style={{padding:"14px 16px"}}>
-          <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved deals to compare against your current deal{pool.length===0?" — no other deals saved yet. Add one with ＋ New deal.":":"}</div>
-          {pool.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {pool.map(d=>{const on=sel.includes(d._id);return <button key={d._id} onClick={()=>toggle(d._id)} style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{on?"✓ ":""}{dealTitle(d)}</button>;})}
+          <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved deals to compare against your current deal{pool.length===0?" — no other deals saved yet. Add one with ＋ New deal.":". Search, filter by grade, or sort to find them:"}</div>
+          {pool.length>0&&<div style={{border:"1px solid "+C.border,borderRadius:10,padding:"10px",marginBottom:12,background:C.bg}}>
+            <div style={{display:"flex",gap:7,marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
+              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by name / address…" style={{flex:"1 1 150px",minWidth:0,padding:"6px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:8,background:C.white,color:C.text,outline:"none"}}/>
+              <select value={pickSort} onChange={e=>setPickSort(e.target.value)} title="Sort the list" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white}}>
+                {Object.keys(PSORT).map(k=><option key={k} value={k}>Sort: {PSORT[k][0]}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
+              {["all","A","B","C","D"].map(g=>{const on=gradeF===g;return <button key={g} onClick={()=>setGradeF(g)} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{g==="all"?"All":g}</button>;})}
+              <span style={{marginLeft:"auto",fontSize:11,color:C.slate}}>{sel.length} selected</span>
+            </div>
+            <div style={{maxHeight:240,overflowY:"auto",WebkitOverflowScrolling:"touch",display:"flex",flexDirection:"column",gap:5}}>
+              {picks.length===0&&<div style={{fontSize:12,color:C.muted,textAlign:"center",padding:"16px 8px"}}>No deals match.</div>}
+              {picks.map(c=>{const on=sel.includes(c.d._id);return <button key={c.d._id} onClick={()=>toggle(c.d._id)} style={{display:"flex",alignItems:"center",gap:9,width:"100%",textAlign:"left",padding:"7px 9px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(on?C.navy:C.border),background:on?C.hl:C.white}}>
+                <span style={{flexShrink:0,width:18,height:18,borderRadius:5,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:"#fff",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{on?"✓":""}</span>
+                <span style={{flex:1,minWidth:0}}>
+                  <span style={{display:"block",fontSize:12,fontWeight:700,color:C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{dealTitle(c.d)}</span>
+                  <span style={{display:"block",fontSize:10,color:C.muted}}>{fmtD(c.st.price)} · cap {fmtP(c.R.capRate)} · {fmtWhen(c.d._ts)}</span>
+                </span>
+                <span style={{flexShrink:0,textAlign:"right"}}>
+                  <span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:9,background:c.score.color,color:"#fff"}}>{c.score.grade}</span>
+                  <span style={{display:"block",fontSize:11,fontWeight:700,color:c.R.cf>=0?C.teal:C.red,marginTop:2}}>{fmtD(c.R.cf/12)}/mo</span>
+                </span>
+              </button>;})}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:8}}>
+              <button onClick={selectAll} disabled={!picks.length} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"1px solid "+C.border,background:C.white,cursor:picks.length?"pointer":"default",color:C.slate,fontFamily:"inherit",opacity:picks.length?1:0.5}}>+ Select all{ql||gradeF!=="all"?" shown":""} ({picks.length})</button>
+              {sel.length>0&&<button onClick={()=>setSel([])} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"1px solid "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>Clear selection</button>}
+            </div>
           </div>}
           {ordered.length>1&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
             <span style={{fontSize:11,color:C.slate}}>Rank by</span>
