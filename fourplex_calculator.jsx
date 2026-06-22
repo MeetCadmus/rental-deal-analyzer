@@ -167,7 +167,8 @@ function buildAIPrompt(s,listing){
 '    "demand": string,                               // rental demand & tenant pool, e.g. "strong; students near KSU"',
 '    "pros": [string], "cons": [string], "risks": [string]   // short bullets; risks = flood zone, zoning/permits, insurance trend, deferred maintenance, etc.',
 '  },',
-'  "opinion": string                                 // 2–3 sentences: is it a sensible rental buy + key risks',
+'  "opinion": string,                                // 2–3 sentences: is it a sensible rental buy + key risks',
+'  "model": string                                   // name yourself: provider + model, e.g. "OpenAI GPT-4o" / "Anthropic Claude Opus" / "Google Gemini"',
 "}",
 "Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic CURRENT market rates: financing.rate = today's typical investment-property mortgage rate, financing.refiRate = today's refinance rate, closingPct ≈ 3, and area-based appreciation / rent-growth / exit cap. Also use sensible local expense rates (property-tax % of price, insurance, ~5–8% vacancy, ~8% management, maintenance & capex reserves). For insights, use your best local knowledge — flag growth catalysts (transit like the Atlanta BeltLine, new employers, development/rezoning) and red flags (crime, flood zone, permit/zoning issues, rising insurance).",
 "",
@@ -1160,6 +1161,7 @@ function ScenarioCompare({deals,activeId,currentState}){
     {l:"Est. IRR",f:c=>fmtP(c.Y.irr),lvl:c=>lv(c.Y.irr,15,10),v:c=>c.Y.irr,best:"max"},
     {l:"Cash needed",f:c=>fmtD(c.R.cashIn),v:c=>c.R.cashIn,best:"min"},
     {l:"Total return",f:c=>fmtD(c.Y.totRet),v:c=>c.Y.totRet,best:"max"},
+    {l:"AI source",f:c=>c.st.aiSource||"—"},
   ];
   const lvlCol={good:C.teal,warn:C.amber,bad:C.red};
   const SORTS={irr:["IRR",c=>c.Y.irr],grade:["Grade",c=>c.score.pct],cf:["Cash flow",c=>c.R.cf],cap:["Cap rate",c=>c.R.capRate],coc:["Cash-on-cash",c=>c.R.coc],dscr:["DSCR",c=>c.R.dscr],totRet:["Total return",c=>c.Y.totRet]};
@@ -1272,7 +1274,7 @@ function ComparablesCard({comps,setComps,currentR}){
 }
 // ── Init state & examples ──────────────────────────────────────
 const INIT={
-  address:"",notes:"",listingUrl:"",insights:null,
+  address:"",notes:"",listingUrl:"",insights:null,aiSource:"",aiAt:0,
   price:620000,
   units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
   financing:{downPct:25,rate:7.25,loanYears:30,reserveMonths:0},
@@ -1411,7 +1413,7 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
                   ? <input autoFocus value={editVal} onClick={e=>e.stopPropagation()} onChange={e=>setEditVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEdit();if(e.key==="Escape")setEditId(null);}} onBlur={commitEdit} placeholder="Name this deal…" style={{width:"100%",padding:"3px 6px",fontSize:13,border:"1px solid "+C.navy,borderRadius:6,fontFamily:"inherit",color:C.text,background:C.white}}/>
                   : <div style={{fontSize:13,fontWeight:700,color:C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isA?(liveTitle||dealTitle(d)):dealTitle(d)}</div>}
                 <div style={{fontSize:10,color:C.muted,marginTop:2}}>{fmtD(d.price)} · {(d.units||[]).length} units{isA?" · open now":""}</div>
-                <div style={{fontSize:9,color:C.muted,marginTop:1}}>✎ {fmtWhen(d._ts)} <span style={{opacity:0.6}}>· {relTime(d._ts)}</span></div>
+                <div style={{fontSize:9,color:C.muted,marginTop:1}}>✎ {fmtWhen(d._ts)} <span style={{opacity:0.6}}>· {relTime(d._ts)}</span>{d.aiSource?<span> · 🤖 {d.aiSource}</span>:""}</div>
               </div>
               <div style={{textAlign:"right",flexShrink:0}}>
                 <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:9,background:sc.color,color:"#fff"}}>{sc.grade}</span>
@@ -1516,7 +1518,7 @@ function QuickFill({state,onListing,onAI}){
   const btn2={...btn,background:C.white,color:C.slate,border:"1px solid "+C.border,fontWeight:600};
   const doListing=()=>{const pl=parseListing(lt);const f=[];if(pl.address)f.push("address");if(pl.price)f.push("price "+fmtD(pl.price));if(pl.units)f.push(pl.units+" units");if(pl.beds)f.push(pl.beds+"bd");if(pl.bath)f.push(pl.bath+"ba");if(pl.sqft)f.push(pl.sqft+" sqft");if(!f.length){setMsg({e:1,t:"Couldn't read a Zillow link or price/beds from that. Paste the listing URL or some listing text."});return;}onListing(pl);setMsg({t:"Filled: "+f.join(" · ")});};
   const copyPrompt=()=>{const txt=buildAIPrompt(state,lt);try{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1600);},()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}};
-  const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.insights)f.push("area insights");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied AI estimate: "+(f.join(" · ")||"nothing recognized")});};
+  const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.financing||o.projection||o.closingPct)f.push("financing/projection");if(o.insights)f.push("area insights");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied"+(o.model?" "+String(o.model).trim().slice(0,40)+" estimate":" AI estimate")+": "+(f.join(" · ")||"nothing recognized")});};
   return <Card title="Quick fill — listing & AI" icon="⚡" right={<button onClick={()=>setOpen(o=>!o)} style={{fontSize:11,fontWeight:700,color:"#fff",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"2px 9px",cursor:"pointer",fontFamily:"inherit"}}>{open?"Hide":"Open"}</button>}>
     {!open&&<div style={{fontSize:11,color:C.slate}}>Paste the Zillow <strong>link</strong> to grab the address, then round-trip your AI for rents & expenses. <span style={{color:C.muted}}>Tip: hit ＋ New deal first to keep this as its own property.</span></div>}
     {open&&<div>
@@ -1624,6 +1626,7 @@ export default function App(){
     if(o.insights&&typeof o.insights==="object"){const x=o.insights,arr=v=>Array.isArray(v)?v.filter(s=>typeof s==="string"&&s.trim()).map(s=>s.trim()).slice(0,8):[];
       np.insights={neighborhoodGrade:String(x.neighborhoodGrade||"").trim().slice(0,2).toUpperCase(),schools:num(x.schools)||0,safety:String(x.safety||"").trim().slice(0,80),appreciation:String(x.appreciation||"").trim().slice(0,220),demand:String(x.demand||"").trim().slice(0,220),pros:arr(x.pros),cons:arr(x.cons),risks:arr(x.risks)};}
     if(typeof o.opinion==="string"&&o.opinion.trim())np.notes=(np.notes?np.notes+"\n\n":"")+"AI: "+o.opinion.trim();
+    if(typeof o.model==="string"&&o.model.trim()){np.aiSource=o.model.trim().slice(0,60);np.aiAt=Date.now();}
     return np;});
   // ── Deal portfolio actions ──────────────────────────────────
   const addDeal=(data,label)=>{touchRef.current=false;const d=makeDeal(data,label?{label}:{});setDeals(ds=>{const n=[...ds,d];persistDeals(n,d._id);return n;});setActiveId(d._id);setState(fullState(d));return d._id;};
