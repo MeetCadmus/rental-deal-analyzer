@@ -131,7 +131,8 @@ function RentInput({value,onChange}){
 }
 function Field({label,prefix,suffix,value,onChange,min,max,step=1,sub,disabled,xs,placeholder,showZero}){
   // Live thousands-grouping with decimals; tolerant of clearing/partials; clamps on blur.
-  const g=useGrouped(value,onChange,true,v=>(v===null||v===undefined||(v===0&&!showZero))?"":fmtGroup(v,true));
+  // value 0 shows as an empty field with the "0" placeholder (not a literal 0 you'd type into).
+  const g=useGrouped(value,onChange,true,v=>(v===null||v===undefined||v===0)?"":fmtGroup(v,true));
   const onBlur=()=>{g.clearBuf();let n=value;if(min!=null&&n<min)onChange(min);else if(max!=null&&n>max)onChange(max);};
   return <div style={{display:"flex",flexDirection:"column",gap:2}}>
     {label&&<label style={{fontSize:xs?10:11,color:C.slate,fontWeight:600}}>{label}</label>}
