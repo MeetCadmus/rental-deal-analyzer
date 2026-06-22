@@ -156,6 +156,9 @@ function buildAIPrompt(s,listing){
 '    "maintenanceAnnual": number, "capexAnnual": number,',
 '    "utilitiesAnnual": number, "landscapingAnnual": number',
 '  },',
+'  "financing": { "rate": number, "refiRate": number },   // TODAY\x27s market % for an investment purchase loan & a refinance',
+'  "closingPct": number,                                  // estimated closing costs as % of price (e.g. 3)',
+'  "projection": { "appreciationPct": number, "rentGrowthPct": number, "exitCapRate": number },  // area-based %/yr and a realistic exit cap',
 '  "insights": {',
 '    "neighborhoodGrade": "A"|"B"|"C"|"D",          // overall area class',
 '    "schools": number,                              // 1–10 GreatSchools-style, 0 if n/a',
@@ -166,7 +169,7 @@ function buildAIPrompt(s,listing){
 '  },',
 '  "opinion": string                                 // 2–3 sentences: is it a sensible rental buy + key risks',
 "}",
-"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic local rates where unknown (area property-tax % of price, insurance, ~5–8% vacancy, ~8% management, sensible maintenance & capex reserves). For insights, use your best local knowledge — flag growth catalysts (transit like the Atlanta BeltLine, new employers, development/rezoning) and red flags (crime, flood zone, permit/zoning issues, rising insurance).",
+"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic CURRENT market rates: financing.rate = today's typical investment-property mortgage rate, financing.refiRate = today's refinance rate, closingPct ≈ 3, and area-based appreciation / rent-growth / exit cap. Also use sensible local expense rates (property-tax % of price, insurance, ~5–8% vacancy, ~8% management, maintenance & capex reserves). For insights, use your best local knowledge — flag growth catalysts (transit like the Atlanta BeltLine, new employers, development/rezoning) and red flags (crime, flood zone, permit/zoning issues, rising insurance).",
 "",
 "Known so far:",
 "• Address: "+((s&&s.address)||"(unknown)"),
@@ -1434,12 +1437,16 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
     </div>
   </div>;
 }
-// ── Area insights (qualitative AI context for the invest/pass call) ──
-function AreaInsights({data}){
-  if(!data||typeof data!=="object")return null;
-  const has=data.neighborhoodGrade||data.schools||data.safety||data.appreciation||data.demand||(data.pros||[]).length||(data.cons||[]).length||(data.risks||[]).length;
-  if(!has)return null;
-  const gCol={A:C.teal,B:C.blueS,C:C.amber,D:C.red}[String(data.neighborhoodGrade||"").charAt(0)]||C.slate;
+// ── Area & due-diligence: qualitative context (AI-filled + editable). Non-math.
+// Stays a slim "add" bar when empty; doesn't affect any formula.
+function AreaInsights({data,onChange}){
+  const d=(data&&typeof data==="object")?data:{};
+  const has=d.neighborhoodGrade||d.schools||d.safety||d.appreciation||d.demand||(d.pros||[]).length||(d.cons||[]).length||(d.risks||[]).length;
+  const[edit,setEdit]=useState(false);
+  if(!has&&!edit)return <button onClick={()=>setEdit(true)} className="no-print" style={{width:"100%",padding:"9px 12px",borderRadius:11,border:"1px dashed "+C.border,background:"transparent",color:C.slate,fontSize:12,fontFamily:"inherit",cursor:"pointer",marginBottom:11,textAlign:"left"}}>📍 Add area &amp; due-diligence notes <span style={{color:C.muted}}>— neighborhood, schools, safety, pros/cons (optional; or let Quick-fill AI fill it)</span></button>;
+  const set=(k,v)=>onChange({...d,[k]:v});
+  const setList=(k,text)=>onChange({...d,[k]:String(text).split("\n").map(s=>s.trim()).filter(Boolean)});
+  const gCol={A:C.teal,B:C.blueS,C:C.amber,D:C.red}[String(d.neighborhoodGrade||"").charAt(0)]||C.slate;
   const Badge=({label,val,col})=>val?<div style={{textAlign:"center",padding:"6px 10px",borderRadius:8,background:C.bg,border:"1px solid "+C.border,minWidth:0}}>
     <div style={{fontSize:9,color:C.muted,marginBottom:2}}>{label}</div>
     <div style={{fontSize:13,fontWeight:700,color:col||C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{val}</div>
@@ -1449,18 +1456,35 @@ function AreaInsights({data}){
     <div style={{fontSize:10,fontWeight:700,color:col,marginBottom:3}}>{label}</div>
     {items.map((s,i)=><div key={i} style={{fontSize:11,color:C.text,display:"flex",gap:6,marginBottom:2}}><span style={{color:col,flexShrink:0}}>{mark}</span><span>{s}</span></div>)}
   </div>:null;
-  return <Card title="Area insights (AI)" icon="📍">
-    <div style={{fontSize:10,color:C.muted,marginBottom:9}}>AI-generated context — opinions, not facts. Verify schools (GreatSchools), crime maps, flood zone & permits independently before deciding.</div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7,marginBottom:11}}>
-      <Badge label="Neighborhood" val={data.neighborhoodGrade} col={gCol}/>
-      <Badge label="Schools" val={data.schools>0?data.schools+"/10":""}/>
-      <Badge label="Safety" val={data.safety}/>
-    </div>
-    {line("Appreciation",data.appreciation)}
-    {line("Rental demand",data.demand)}
-    {list("Pros",data.pros,C.teal,"✓")}
-    {list("Cons",data.cons,C.amber,"•")}
-    {list("Risks / red flags",data.risks,C.red,"⚠")}
+  const inp={width:"100%",boxSizing:"border-box",padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,background:C.white,outline:"none"};
+  const lbl={fontSize:10,fontWeight:700,color:C.slate,marginBottom:3,display:"block"};
+  const ta=t=>({...inp,resize:"vertical",lineHeight:1.4});
+  const toggle=<button onClick={()=>setEdit(e=>!e)} style={{fontSize:11,fontWeight:700,color:"#fff",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"2px 9px",cursor:"pointer",fontFamily:"inherit"}}>{edit?"Done":"✎ Edit"}</button>;
+  return <Card title="Area & due-diligence" icon="📍" right={toggle}>
+    <div style={{fontSize:10,color:C.muted,marginBottom:9}}>Context only — does not affect the math. AI fills it via Quick-fill; edit anything. Verify schools/crime/flood independently.</div>
+    {edit?<div style={{display:"flex",flexDirection:"column",gap:9}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+        <div><label style={lbl}>Neighborhood</label><select value={d.neighborhoodGrade||""} onChange={e=>set("neighborhoodGrade",e.target.value)} style={inp}><option value="">—</option>{["A","B","C","D"].map(g=><option key={g} value={g}>{g}</option>)}</select></div>
+        <div><label style={lbl}>Schools /10</label><input value={d.schools||""} onChange={e=>set("schools",num(e.target.value))} inputMode="numeric" placeholder="0" style={inp}/></div>
+        <div><label style={lbl}>Safety</label><input value={d.safety||""} onChange={e=>set("safety",e.target.value)} placeholder="low crime" style={inp}/></div>
+      </div>
+      <div><label style={lbl}>Appreciation outlook</label><input value={d.appreciation||""} onChange={e=>set("appreciation",e.target.value)} placeholder="e.g. high — near BeltLine extension" style={inp}/></div>
+      <div><label style={lbl}>Rental demand</label><input value={d.demand||""} onChange={e=>set("demand",e.target.value)} placeholder="e.g. strong; students nearby" style={inp}/></div>
+      <div><label style={lbl}>Pros (one per line)</label><textarea rows={2} value={(d.pros||[]).join("\n")} onChange={e=>setList("pros",e.target.value)} style={ta()}/></div>
+      <div><label style={lbl}>Cons (one per line)</label><textarea rows={2} value={(d.cons||[]).join("\n")} onChange={e=>setList("cons",e.target.value)} style={ta()}/></div>
+      <div><label style={lbl}>Risks / red flags (one per line)</label><textarea rows={2} value={(d.risks||[]).join("\n")} onChange={e=>setList("risks",e.target.value)} style={ta()}/></div>
+    </div>:<div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7,marginBottom:11}}>
+        <Badge label="Neighborhood" val={d.neighborhoodGrade} col={gCol}/>
+        <Badge label="Schools" val={d.schools>0?d.schools+"/10":""}/>
+        <Badge label="Safety" val={d.safety}/>
+      </div>
+      {line("Appreciation",d.appreciation)}
+      {line("Rental demand",d.demand)}
+      {list("Pros",d.pros,C.teal,"✓")}
+      {list("Cons",d.cons,C.amber,"•")}
+      {list("Risks / red flags",d.risks,C.red,"⚠")}
+    </div>}
   </Card>;
 }
 // ── Listing link: compact Open + Edit (input only while editing) ──
@@ -1569,6 +1593,7 @@ export default function App(){
   const addUnit=()=>setState(p=>{const next=p.units.reduce((m,u)=>{const mm=/(\d+)\s*$/.exec(u.label||"");return Math.max(m,mm?parseInt(mm[1],10):0);},0)+1;return{...p,units:[...p.units,{id:uid(),label:"Unit "+next,rent:1400,beds:1,bath:1,sqft:700}]};});
   const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
   const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
+  const setInsights=v=>setState(p=>({...p,insights:v}));
   // Quick-fill: apply parsed listing fields / AI JSON estimate into the working deal.
   const applyListing=pl=>setState(p=>{const np={...p};if(pl.url)np.listingUrl=pl.url;if(pl.address)np.address=pl.address;if(num(pl.price)>0)np.price=num(pl.price);
     if(pl.units>=1){const cnt=Math.min(pl.units,16);np.units=Array.from({length:cnt},(_,i)=>{const ex=p.units[i]||{rent:0};return {...ex,id:ex.id||uid(),label:ex.label||("Unit "+(i+1)),beds:num(pl.beds)||ex.beds||0,bath:num(pl.bath)||ex.bath||0,sqft:num(pl.sqft)||ex.sqft||0,rent:ex.rent||0};});}
@@ -1588,6 +1613,14 @@ export default function App(){
       if(e.utilitiesAnnual!=null&&e.utilitiesAnnual!=="")ex.utilities=num(e.utilitiesAnnual);
       if(e.landscapingAnnual!=null&&e.landscapingAnnual!=="")ex.landscaping=num(e.landscapingAnnual);
       np.expenses=ex;}
+    if(o.financing&&typeof o.financing==="object"){const fz={...np.financing};if(num(o.financing.rate)>0)fz.rate=num(o.financing.rate);np.financing=fz;
+      if(num(o.financing.refiRate)>0)np.projection={...np.projection,refiRate:num(o.financing.refiRate)};}
+    if(num(o.closingPct)>0)np.closing={...np.closing,mode:"quick",quickPct:num(o.closingPct)};
+    if(o.projection&&typeof o.projection==="object"){const pz={...np.projection};const pp=o.projection;
+      if(pp.appreciationPct!=null&&pp.appreciationPct!=="")pz.appreciationPct=num(pp.appreciationPct);
+      if(pp.rentGrowthPct!=null&&pp.rentGrowthPct!=="")pz.rentGrowthPct=num(pp.rentGrowthPct);
+      if(num(pp.exitCapRate)>0)pz.exitCapRate=num(pp.exitCapRate);
+      np.projection=pz;}
     if(o.insights&&typeof o.insights==="object"){const x=o.insights,arr=v=>Array.isArray(v)?v.filter(s=>typeof s==="string"&&s.trim()).map(s=>s.trim()).slice(0,8):[];
       np.insights={neighborhoodGrade:String(x.neighborhoodGrade||"").trim().slice(0,2).toUpperCase(),schools:num(x.schools)||0,safety:String(x.safety||"").trim().slice(0,80),appreciation:String(x.appreciation||"").trim().slice(0,220),demand:String(x.demand||"").trim().slice(0,220),pros:arr(x.pros),cons:arr(x.cons),risks:arr(x.risks)};}
     if(typeof o.opinion==="string"&&o.opinion.trim())np.notes=(np.notes?np.notes+"\n\n":"")+"AI: "+o.opinion.trim();
@@ -1764,8 +1797,6 @@ export default function App(){
             </div>
           </Card>
 
-          <AreaInsights data={S.insights}/>
-
           {/* Units */}
           <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️">
             <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
@@ -1877,6 +1908,7 @@ export default function App(){
             </div>
           </Card>
 
+          <AreaInsights data={S.insights} onChange={setInsights}/>
           <ComparablesCard comps={S.comparables||[]} setComps={setComps} currentR={R}/>
         </div>
 
