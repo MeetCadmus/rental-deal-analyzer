@@ -168,9 +168,9 @@ function buildAIPrompt(s,listing){
 '    "pros": [string], "cons": [string], "risks": [string]   // short bullets; risks = flood zone, zoning/permits, insurance trend, deferred maintenance, etc.',
 '  },',
 '  "opinion": string,                                // 2–3 sentences: is it a sensible rental buy + key risks',
-'  "model": string                                   // name yourself: provider + model, e.g. "OpenAI GPT-4o" / "Anthropic Claude Opus" / "Google Gemini"',
+'  "model": string                                   // YOUR exact model name AND version, e.g. "GPT-4o (2024-08)" / "Claude Opus 4.1" / "Gemini 2.5 Pro". The company alone ("Google") is NOT acceptable.',
 "}",
-"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic CURRENT market rates: financing.rate = today's typical investment-property mortgage rate, financing.refiRate = today's refinance rate, closingPct ≈ 3, and area-based appreciation / rent-growth / exit cap. Also use sensible local expense rates (property-tax % of price, insurance, ~5–8% vacancy, ~8% management, maintenance & capex reserves). For insights, use your best local knowledge — flag growth catalysts (transit like the Atlanta BeltLine, new employers, development/rezoning) and red flags (crime, flood zone, permit/zoning issues, rising insurance).",
+"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic CURRENT market rates: financing.rate = today's typical investment-property mortgage rate, financing.refiRate = today's refinance rate, closingPct ≈ 3, and area-based appreciation / rent-growth / exit cap. Also use sensible local expense rates (property-tax % of price, insurance, ~5–8% vacancy, ~8% management, maintenance & capex reserves). For insights, use your best local knowledge — flag growth catalysts (transit like the Atlanta BeltLine, new employers, development/rezoning) and red flags (crime, flood zone, permit/zoning issues, rising insurance). For \"model\", state your specific model and version (e.g. \"Gemini 2.5 Pro\"), never just the provider name.",
 "",
 "Known so far:",
 "• Address: "+((s&&s.address)||"(unknown)"),
@@ -1507,7 +1507,7 @@ function ListingLink({url,onChange}){
   </div>;
 }
 // ── Quick fill (paste a listing / round-trip an AI estimate) ──
-function QuickFill({state,onListing,onAI}){
+function QuickFill({state,onListing,onAI,onSource}){
   const[open,setOpen]=useState(false);
   const[lt,setLt]=useState("");
   const[at,setAt]=useState("");
@@ -1532,6 +1532,11 @@ function QuickFill({state,onListing,onAI}){
       <div style={{display:"flex",gap:7,marginBottom:8,flexWrap:"wrap"}}><button onClick={copyPrompt} style={btn}>{copied?"✓ Copied":"📋 Copy AI prompt"}</button></div>
       <textarea value={at} onChange={e=>setAt(e.target.value)} rows={3} placeholder='Paste the AI&#39;s JSON answer here, e.g. {"price":620000,"units":[…],"expenses":{…},"opinion":"…"}' style={ta}/>
       <div style={{marginTop:6}}><button onClick={doAI} style={btn}>Apply AI estimate</button></div>
+      <div style={{marginTop:9,display:"flex",alignItems:"center",gap:7}}>
+        <span style={{fontSize:11,color:C.slate,whiteSpace:"nowrap"}}>AI source</span>
+        <input value={state.aiSource||""} onChange={e=>onSource(e.target.value)} placeholder="e.g. Gemini 2.5 Pro" style={{flex:1,minWidth:0,boxSizing:"border-box",padding:"6px 9px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white,outline:"none"}}/>
+      </div>
+      <div style={{fontSize:9,color:C.muted,marginTop:3}}>Auto-set from the AI's answer — correct it here if it was vague (models often misname their version).</div>
 
       {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?"#F7C1C1":"#9FE1CB")}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={5} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
     </div>}
@@ -1782,7 +1787,7 @@ export default function App(){
       <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:11,alignItems:"start"}}>
         {/* LEFT: Inputs */}
         <div>
-          <QuickFill state={S} onListing={applyListing} onAI={applyAI}/>
+          <QuickFill state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
           {/* Address + Notes */}
           <Card title="Property details" icon="📍">
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
