@@ -112,6 +112,57 @@ function downloadFile(name,text,type){
   document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),0);
 }
 
+// ── Quick fill: parse a pasted listing, build an AI prompt, parse the AI's JSON ──
+function parseListing(text){
+  const t=String(text||"");const out={};
+  const money=t.match(/\$\s?[\d,]{4,}/g);
+  if(money){for(const m of money){const n=num(m.replace(/[$\s]/g,""));if(n>=10000){out.price=n;break;}}}
+  let m;
+  if((m=t.match(/(\d+(?:\.\d+)?)\s*(?:bd|beds?|bedrooms?)\b/i)))out.beds=parseFloat(m[1]);
+  if((m=t.match(/(\d+(?:\.\d+)?)\s*(?:ba|baths?|bathrooms?)\b/i)))out.bath=parseFloat(m[1]);
+  if((m=t.match(/([\d,]{3,})\s*(?:sq\.?\s?ft|sqft|square\s?feet)/i)))out.sqft=num(m[1]);
+  if((m=t.match(/(\d+)\s*units?\b/i)))out.units=parseInt(m[1],10);
+  else if(/\b(fourplex|quadplex|4-?plex)\b/i.test(t))out.units=4;
+  else if(/\b(triplex|3-?plex)\b/i.test(t))out.units=3;
+  else if(/\b(duplex|2-?plex)\b/i.test(t))out.units=2;
+  if((m=t.match(/(\d{1,6}\s+[^,\n]+,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5})/)))out.address=m[1].replace(/\s+/g," ").trim();
+  return out;
+}
+function buildAIPrompt(s){
+  const u=(s&&s.units)||[];const rents=u.map(x=>x.rent).filter(Boolean).join(", ");
+  return [
+"You are a US rental-property underwriting assistant. Estimate realistic numbers for the property below and return ONLY a JSON object — no prose, no code fences — with exactly this shape:",
+"{",
+'  "address": string,',
+'  "price": number,                                  // purchase price, USD',
+'  "units": [ { "beds": number, "bath": number, "sqft": number, "rent": number } ],   // one per unit; rent = MARKET monthly rent',
+'  "expenses": {',
+'    "taxesAnnual": number, "insuranceAnnual": number,',
+'    "vacancyPct": number, "mgmtPct": number,',
+'    "maintenanceAnnual": number, "capexAnnual": number,',
+'    "utilitiesAnnual": number, "landscapingAnnual": number',
+'  },',
+'  "opinion": string                                 // 2–3 sentences: is it a sensible rental buy + key risks',
+"}",
+"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic local rates where unknown (area property-tax % of price, insurance, ~5–8% vacancy, ~8% management, sensible maintenance & capex reserves).",
+"",
+"Known so far:",
+"• Address: "+((s&&s.address)||"(unknown)"),
+"• Asking price: "+(s&&s.price?("$"+s.price):"(unknown)"),
+"• Units: "+u.length+(rents?(" · current rents/mo: "+rents):""),
+"",
+"Listing details (paste the Zillow text here; if blank, estimate from the address):",
+"<<paste listing text here>>"
+  ].join("\n");
+}
+function parseAIResult(text){
+  let t=String(text||"").trim();
+  t=t.replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+  const i=t.indexOf("{"),j=t.lastIndexOf("}");
+  if(i>=0&&j>i)t=t.slice(i,j+1);
+  try{const o=JSON.parse(t);return (o&&typeof o==="object")?o:null;}catch(e){return null;}
+}
+
 // ── Atoms ─────────────────────────────────────────────────────
 function MoneyInput({value,onChange,label,sub,small,hint}){
   const g=useGrouped(value,onChange,false,v=>v>0?fmtGroup(v,false):"");
@@ -1351,6 +1402,36 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
     </div>
   </div>;
 }
+// ── Quick fill (paste a listing / round-trip an AI estimate) ──
+function QuickFill({state,onListing,onAI}){
+  const[open,setOpen]=useState(false);
+  const[lt,setLt]=useState("");
+  const[at,setAt]=useState("");
+  const[msg,setMsg]=useState(null);
+  const[copied,setCopied]=useState(false);
+  const ta={width:"100%",boxSizing:"border-box",padding:"7px 9px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white,outline:"none",resize:"vertical",lineHeight:1.45};
+  const btn={padding:"6px 12px",borderRadius:8,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700};
+  const btn2={...btn,background:C.white,color:C.slate,border:"1px solid "+C.border,fontWeight:600};
+  const doListing=()=>{const pl=parseListing(lt);const f=[];if(pl.price)f.push("price "+fmtD(pl.price));if(pl.address)f.push("address");if(pl.units)f.push(pl.units+" units");if(pl.beds)f.push(pl.beds+"bd");if(pl.bath)f.push(pl.bath+"ba");if(pl.sqft)f.push(pl.sqft+" sqft");if(!f.length){setMsg({e:1,t:"Couldn't find price/beds/units in that text."});return;}onListing(pl);setMsg({t:"Filled from listing: "+f.join(" · ")});};
+  const copyPrompt=()=>{const txt=buildAIPrompt(state);try{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1600);},()=>setMsg({t:"Select the prompt below and copy manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported — here's the prompt to copy:",prompt:txt});}};
+  const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied AI estimate: "+(f.join(" · ")||"nothing recognized")});};
+  return <Card title="Quick fill — listing & AI" icon="⚡" right={<button onClick={()=>setOpen(o=>!o)} style={{fontSize:11,fontWeight:700,color:"#fff",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"2px 9px",cursor:"pointer",fontFamily:"inherit"}}>{open?"Hide":"Open"}</button>}>
+    {!open&&<div style={{fontSize:11,color:C.slate}}>Paste a Zillow listing to auto-fill the basics, or round-trip an AI for rent & expense estimates. <span style={{color:C.muted}}>Tip: hit ＋ New deal first to keep this as its own property.</span></div>}
+    {open&&<div>
+      <SecLabel text="1 · Paste listing → autofill"/>
+      <textarea value={lt} onChange={e=>setLt(e.target.value)} rows={3} placeholder="Paste the Zillow listing text (price, beds/baths, sq ft, units, address)…" style={ta}/>
+      <div style={{marginTop:6,marginBottom:14}}><button onClick={doListing} style={btn}>Fill from listing</button></div>
+
+      <SecLabel text="2 · AI estimate (rents, taxes, expenses)"/>
+      <div style={{fontSize:11,color:C.slate,marginBottom:6}}>Copy the prompt, paste it into your AI (with the listing text), then paste its JSON answer back here.</div>
+      <div style={{display:"flex",gap:7,marginBottom:8,flexWrap:"wrap"}}><button onClick={copyPrompt} style={btn}>{copied?"✓ Copied":"📋 Copy AI prompt"}</button></div>
+      <textarea value={at} onChange={e=>setAt(e.target.value)} rows={3} placeholder='Paste the AI&#39;s JSON answer here, e.g. {"price":620000,"units":[…],"expenses":{…},"opinion":"…"}' style={ta}/>
+      <div style={{marginTop:6}}><button onClick={doAI} style={btn}>Apply AI estimate</button></div>
+
+      {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?"#F7C1C1":"#9FE1CB")}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={4} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
+    </div>}
+  </Card>;
+}
 // ── App ────────────────────────────────────────────────────────
 export default function App(){
   const[boot]=useState(loadDealStore);
@@ -1409,6 +1490,27 @@ export default function App(){
   const addUnit=()=>setState(p=>{const next=p.units.reduce((m,u)=>{const mm=/(\d+)\s*$/.exec(u.label||"");return Math.max(m,mm?parseInt(mm[1],10):0);},0)+1;return{...p,units:[...p.units,{id:uid(),label:"Unit "+next,rent:1400,beds:1,bath:1,sqft:700}]};});
   const remUnit=i=>setState(p=>({...p,units:p.units.filter((_,j)=>j!==i)}));
   const setComps=useCallback(fn=>setState(p=>({...p,comparables:typeof fn==="function"?fn(p.comparables||[]):fn})),[]);
+  // Quick-fill: apply parsed listing fields / AI JSON estimate into the working deal.
+  const applyListing=pl=>setState(p=>{const np={...p};if(pl.address)np.address=pl.address;if(num(pl.price)>0)np.price=num(pl.price);
+    if(pl.units>=1){const cnt=Math.min(pl.units,16);np.units=Array.from({length:cnt},(_,i)=>{const ex=p.units[i]||{rent:0};return {...ex,id:ex.id||uid(),label:ex.label||("Unit "+(i+1)),beds:num(pl.beds)||ex.beds||0,bath:num(pl.bath)||ex.bath||0,sqft:num(pl.sqft)||ex.sqft||0,rent:ex.rent||0};});}
+    else if(pl.beds||pl.bath||pl.sqft){np.units=p.units.map((u,i)=>i===0?{...u,beds:num(pl.beds)||u.beds,bath:num(pl.bath)||u.bath,sqft:num(pl.sqft)||u.sqft}:u);}
+    return np;});
+  const applyAI=o=>setState(p=>{const np={...p};
+    if(typeof o.address==="string"&&o.address.trim())np.address=o.address.trim();
+    if(num(o.price)>0)np.price=num(o.price);
+    if(Array.isArray(o.units)&&o.units.length)np.units=o.units.slice(0,16).map((x,i)=>({id:uid(),label:"Unit "+(i+1),beds:num(x.beds)||0,bath:num(x.bath)||0,sqft:num(x.sqft)||0,rent:num(x.rent)||0}));
+    if(o.expenses&&typeof o.expenses==="object"){const e=o.expenses;const ex={...np.expenses,mode:"detailed",v:2};
+      if(num(e.taxesAnnual)>0){ex.taxes=num(e.taxesAnnual);ex.taxMode="fixed";}
+      if(num(e.insuranceAnnual)>0)ex.insurance=num(e.insuranceAnnual);
+      if(e.vacancyPct!=null&&e.vacancyPct!=="")ex.vacancyPct=num(e.vacancyPct);
+      if(e.mgmtPct!=null&&e.mgmtPct!=="")ex.mgmtPct=num(e.mgmtPct);
+      if(num(e.maintenanceAnnual)>0){ex.maintenance=num(e.maintenanceAnnual);ex.maintMode="fixed";}
+      if(num(e.capexAnnual)>0){ex.capex=num(e.capexAnnual);ex.capexMode="fixed";}
+      if(e.utilitiesAnnual!=null&&e.utilitiesAnnual!=="")ex.utilities=num(e.utilitiesAnnual);
+      if(e.landscapingAnnual!=null&&e.landscapingAnnual!=="")ex.landscaping=num(e.landscapingAnnual);
+      np.expenses=ex;}
+    if(typeof o.opinion==="string"&&o.opinion.trim())np.notes=(np.notes?np.notes+"\n\n":"")+"AI: "+o.opinion.trim();
+    return np;});
   // ── Deal portfolio actions ──────────────────────────────────
   const addDeal=(data,label)=>{touchRef.current=false;const d=makeDeal(data,label?{label}:{});setDeals(ds=>{const n=[...ds,d];persistDeals(n,d._id);return n;});setActiveId(d._id);setState(fullState(d));return d._id;};
   const switchDeal=id=>{if(id===activeId)return;const d=deals.find(x=>x._id===id);if(!d)return;touchRef.current=false;setActiveId(id);setState(fullState(d));setSelEx(null);};
@@ -1563,6 +1665,7 @@ export default function App(){
       <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:11,alignItems:"start"}}>
         {/* LEFT: Inputs */}
         <div>
+          <QuickFill state={S} onListing={applyListing} onAI={applyAI}/>
           {/* Address + Notes */}
           <Card title="Property details" icon="📍">
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
