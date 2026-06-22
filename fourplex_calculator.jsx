@@ -28,8 +28,19 @@ function fmtGroup(raw,decimals){
   if(dec!==null)out=(g===""?"0":g)+"."+dec;
   return out===""?(neg?"-":""):(neg?"-"+out:out);
 }
-// Shared editing logic: shows grouped value, preserves caret position across comma
-// insertion, and tolerates clearing/partials. Returns props to spread on <input>.
+// Pure editing step: given the raw input value + caret, return the grouped display,
+// the new caret (kept relative to *significant* chars — digits, "." and "-", so it
+// never lands on the wrong side of a decimal point), and the numeric value.
+const SIG=/[0-9.\-]/;
+function editNumber(raw,sel,decimals){
+  const leftSig=(String(raw).slice(0,sel).match(/[0-9.\-]/g)||[]).length;
+  const display=fmtGroup(raw,decimals);
+  let pos=0,seen=0;
+  while(pos<display.length&&seen<leftSig){if(SIG.test(display[pos]))seen++;pos++;}
+  return {display,caret:pos,value:num(display)};
+}
+// Shared editing logic: shows grouped value, preserves caret across comma insertion,
+// tolerates clearing/partials. Returns props to spread on <input>.
 function useGrouped(value,onChange,decimals,idle){
   const ref=useRef(null);
   const[buf,setBuf]=useState(null);
@@ -37,12 +48,9 @@ function useGrouped(value,onChange,decimals,idle){
   useLayoutEffect(()=>{if(caret.current!=null&&ref.current){try{ref.current.setSelectionRange(caret.current,caret.current);}catch(e){}caret.current=null;}});
   const display=buf!=null?buf:idle(value);
   const onInput=e=>{
-    const prev=e.target.value,sel=e.target.selectionStart||0;
-    const digitsLeft=prev.slice(0,sel).replace(/[^0-9]/g,"").length;
-    const g=fmtGroup(e.target.value,decimals);
-    let pos=0,seen=0;while(pos<g.length&&seen<digitsLeft){if(/[0-9]/.test(g[pos]))seen++;pos++;}
-    caret.current=pos;
-    setBuf(g);onChange(num(g));
+    const r=editNumber(e.target.value,e.target.selectionStart||0,decimals);
+    caret.current=r.caret;
+    setBuf(r.display);onChange(r.value);
   };
   return {ref,display,onInput,clearBuf:()=>setBuf(null)};
 }

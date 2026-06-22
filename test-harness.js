@@ -33,7 +33,7 @@ function loadModule() {
     "flattenState", "unflattenState", "coerceVal", "stateToCSV", "csvToState", "parseCSV",
     "fullState", "makeDeal", "dealTitle", "relTime", "mergeDealStores",
     "INIT", "DCC", "DEX", "CLASS_PRESETS", "EXAMPLES",
-    "fmt", "fmtD", "fmtP", "fmtX", "clamp", "num", "lv", "fmtGroup",
+    "fmt", "fmtD", "fmtP", "fmtX", "clamp", "num", "lv", "fmtGroup", "editNumber",
   ];
   const body = js + "\nreturn {" + exportNames.join(",") + "};";
 
