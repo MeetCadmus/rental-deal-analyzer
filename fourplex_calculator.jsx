@@ -1574,7 +1574,6 @@ export default function App(){
           <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️">
             <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
             <div style={{marginBottom:9}}><Tog checked={showUD} onChange={setShowUD} label="Show unit details (beds / bath / sq ft)"/></div>
-            <div style={{marginBottom:9,padding:"6px 9px",background:"#E6F1FB",borderRadius:7,border:"1px solid #B5D4F4",fontSize:10,color:"#185FA5"}}>📍 ATL 2026: avg rent $1,638/mo · B-class 2BR: $1,400–1,700 · vacancy ~5.9% · rent growth 4.1% forecast</div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
               {S.units.map((u,i)=><div key={u.id} style={{border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",background:C.bg}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showUD?8:0}}>
