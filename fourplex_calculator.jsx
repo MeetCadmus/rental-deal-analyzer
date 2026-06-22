@@ -156,9 +156,17 @@ function buildAIPrompt(s,listing){
 '    "maintenanceAnnual": number, "capexAnnual": number,',
 '    "utilitiesAnnual": number, "landscapingAnnual": number',
 '  },',
+'  "insights": {',
+'    "neighborhoodGrade": "A"|"B"|"C"|"D",          // overall area class',
+'    "schools": number,                              // 1–10 GreatSchools-style, 0 if n/a',
+'    "safety": string,                               // short, e.g. "low crime" / "moderate" / "higher crime"',
+'    "appreciation": string,                         // outlook + WHY, e.g. "high — near a future BeltLine segment, gentrifying"',
+'    "demand": string,                               // rental demand & tenant pool, e.g. "strong; students near KSU"',
+'    "pros": [string], "cons": [string], "risks": [string]   // short bullets; risks = flood zone, zoning/permits, insurance trend, deferred maintenance, etc.',
+'  },',
 '  "opinion": string                                 // 2–3 sentences: is it a sensible rental buy + key risks',
 "}",
-"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic local rates where unknown (area property-tax % of price, insurance, ~5–8% vacancy, ~8% management, sensible maintenance & capex reserves).",
+"Rules: all dollar amounts are ANNUAL except unit rent which is MONTHLY. Use realistic local rates where unknown (area property-tax % of price, insurance, ~5–8% vacancy, ~8% management, sensible maintenance & capex reserves). For insights, use your best local knowledge — flag growth catalysts (transit like the Atlanta BeltLine, new employers, development/rezoning) and red flags (crime, flood zone, permit/zoning issues, rising insurance).",
 "",
 "Known so far:",
 "• Address: "+((s&&s.address)||"(unknown)"),
@@ -1261,7 +1269,7 @@ function ComparablesCard({comps,setComps,currentR}){
 }
 // ── Init state & examples ──────────────────────────────────────
 const INIT={
-  address:"",notes:"",listingUrl:"",
+  address:"",notes:"",listingUrl:"",insights:null,
   price:620000,
   units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
   financing:{downPct:25,rate:7.25,loanYears:30,reserveMonths:0},
@@ -1423,6 +1431,35 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
     </div>
   </div>;
 }
+// ── Area insights (qualitative AI context for the invest/pass call) ──
+function AreaInsights({data}){
+  if(!data||typeof data!=="object")return null;
+  const has=data.neighborhoodGrade||data.schools||data.safety||data.appreciation||data.demand||(data.pros||[]).length||(data.cons||[]).length||(data.risks||[]).length;
+  if(!has)return null;
+  const gCol={A:C.teal,B:C.blueS,C:C.amber,D:C.red}[String(data.neighborhoodGrade||"").charAt(0)]||C.slate;
+  const Badge=({label,val,col})=>val?<div style={{textAlign:"center",padding:"6px 10px",borderRadius:8,background:C.bg,border:"1px solid "+C.border,minWidth:0}}>
+    <div style={{fontSize:9,color:C.muted,marginBottom:2}}>{label}</div>
+    <div style={{fontSize:13,fontWeight:700,color:col||C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{val}</div>
+  </div>:null;
+  const line=(label,val)=>val?<div style={{marginBottom:6}}><span style={{fontSize:10,fontWeight:700,color:C.slate}}>{label}: </span><span style={{fontSize:11,color:C.text}}>{val}</span></div>:null;
+  const list=(label,items,col,mark)=>(items&&items.length)?<div style={{marginTop:8}}>
+    <div style={{fontSize:10,fontWeight:700,color:col,marginBottom:3}}>{label}</div>
+    {items.map((s,i)=><div key={i} style={{fontSize:11,color:C.text,display:"flex",gap:6,marginBottom:2}}><span style={{color:col,flexShrink:0}}>{mark}</span><span>{s}</span></div>)}
+  </div>:null;
+  return <Card title="Area insights (AI)" icon="📍">
+    <div style={{fontSize:10,color:C.muted,marginBottom:9}}>AI-generated context — opinions, not facts. Verify schools (GreatSchools), crime maps, flood zone & permits independently before deciding.</div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7,marginBottom:11}}>
+      <Badge label="Neighborhood" val={data.neighborhoodGrade} col={gCol}/>
+      <Badge label="Schools" val={data.schools>0?data.schools+"/10":""}/>
+      <Badge label="Safety" val={data.safety}/>
+    </div>
+    {line("Appreciation",data.appreciation)}
+    {line("Rental demand",data.demand)}
+    {list("Pros",data.pros,C.teal,"✓")}
+    {list("Cons",data.cons,C.amber,"•")}
+    {list("Risks / red flags",data.risks,C.red,"⚠")}
+  </Card>;
+}
 // ── Quick fill (paste a listing / round-trip an AI estimate) ──
 function QuickFill({state,onListing,onAI}){
   const[open,setOpen]=useState(false);
@@ -1435,7 +1472,7 @@ function QuickFill({state,onListing,onAI}){
   const btn2={...btn,background:C.white,color:C.slate,border:"1px solid "+C.border,fontWeight:600};
   const doListing=()=>{const pl=parseListing(lt);const f=[];if(pl.address)f.push("address");if(pl.price)f.push("price "+fmtD(pl.price));if(pl.units)f.push(pl.units+" units");if(pl.beds)f.push(pl.beds+"bd");if(pl.bath)f.push(pl.bath+"ba");if(pl.sqft)f.push(pl.sqft+" sqft");if(!f.length){setMsg({e:1,t:"Couldn't read a Zillow link or price/beds from that. Paste the listing URL or some listing text."});return;}onListing(pl);setMsg({t:"Filled: "+f.join(" · ")});};
   const copyPrompt=()=>{const txt=buildAIPrompt(state,lt);try{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1600);},()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}};
-  const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied AI estimate: "+(f.join(" · ")||"nothing recognized")});};
+  const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.insights)f.push("area insights");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied AI estimate: "+(f.join(" · ")||"nothing recognized")});};
   return <Card title="Quick fill — listing & AI" icon="⚡" right={<button onClick={()=>setOpen(o=>!o)} style={{fontSize:11,fontWeight:700,color:"#fff",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"2px 9px",cursor:"pointer",fontFamily:"inherit"}}>{open?"Hide":"Open"}</button>}>
     {!open&&<div style={{fontSize:11,color:C.slate}}>Paste the Zillow <strong>link</strong> to grab the address, then round-trip your AI for rents & expenses. <span style={{color:C.muted}}>Tip: hit ＋ New deal first to keep this as its own property.</span></div>}
     {open&&<div>
@@ -1531,6 +1568,8 @@ export default function App(){
       if(e.utilitiesAnnual!=null&&e.utilitiesAnnual!=="")ex.utilities=num(e.utilitiesAnnual);
       if(e.landscapingAnnual!=null&&e.landscapingAnnual!=="")ex.landscaping=num(e.landscapingAnnual);
       np.expenses=ex;}
+    if(o.insights&&typeof o.insights==="object"){const x=o.insights,arr=v=>Array.isArray(v)?v.filter(s=>typeof s==="string"&&s.trim()).map(s=>s.trim()).slice(0,8):[];
+      np.insights={neighborhoodGrade:String(x.neighborhoodGrade||"").trim().slice(0,2).toUpperCase(),schools:num(x.schools)||0,safety:String(x.safety||"").trim().slice(0,80),appreciation:String(x.appreciation||"").trim().slice(0,220),demand:String(x.demand||"").trim().slice(0,220),pros:arr(x.pros),cons:arr(x.cons),risks:arr(x.risks)};}
     if(typeof o.opinion==="string"&&o.opinion.trim())np.notes=(np.notes?np.notes+"\n\n":"")+"AI: "+o.opinion.trim();
     return np;});
   // ── Deal portfolio actions ──────────────────────────────────
@@ -1711,6 +1750,8 @@ export default function App(){
               </div>
             </div>
           </Card>
+
+          <AreaInsights data={S.insights}/>
 
           {/* Units */}
           <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️">
