@@ -113,6 +113,18 @@ function downloadFile(name,text,type){
 }
 
 // ── Quick fill: parse a pasted listing, build an AI prompt, parse the AI's JSON ──
+// Pull a street address out of a Zillow (or similar) /homedetails/<slug>/ URL.
+function addressFromUrl(text){
+  const m=String(text||"").match(/\/homedetails\/([^/?#]+)/i);
+  if(!m)return null;
+  const parts=m[1].replace(/_zpid.*/i,"").split("-").filter(Boolean);
+  const zip=parts[parts.length-1],st=parts[parts.length-2];
+  if(/^\d{5}$/.test(zip)&&/^[A-Za-z]{2}$/.test(st)){
+    const rest=parts.slice(0,-2).join(" ");
+    return rest?rest+", "+st.toUpperCase()+" "+zip:st.toUpperCase()+" "+zip;
+  }
+  return null;
+}
 function parseListing(text){
   const t=String(text||"");const out={};
   const money=t.match(/\$\s?[\d,]{4,}/g);
@@ -126,9 +138,10 @@ function parseListing(text){
   else if(/\b(triplex|3-?plex)\b/i.test(t))out.units=3;
   else if(/\b(duplex|2-?plex)\b/i.test(t))out.units=2;
   if((m=t.match(/(\d{1,6}\s+[^,\n]+,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5})/)))out.address=m[1].replace(/\s+/g," ").trim();
+  else {const a=addressFromUrl(t);if(a)out.address=a;}
   return out;
 }
-function buildAIPrompt(s){
+function buildAIPrompt(s,listing){
   const u=(s&&s.units)||[];const rents=u.map(x=>x.rent).filter(Boolean).join(", ");
   return [
 "You are a US rental-property underwriting assistant. Estimate realistic numbers for the property below and return ONLY a JSON object — no prose, no code fences — with exactly this shape:",
@@ -151,8 +164,8 @@ function buildAIPrompt(s){
 "• Asking price: "+(s&&s.price?("$"+s.price):"(unknown)"),
 "• Units: "+u.length+(rents?(" · current rents/mo: "+rents):""),
 "",
-"Listing details (paste the Zillow text here; if blank, estimate from the address):",
-"<<paste listing text here>>"
+"Listing (open this link / use this text; if blank, estimate from the address):",
+(listing&&String(listing).trim())?String(listing).trim():"<<paste the Zillow link or listing text here>>"
   ].join("\n");
 }
 function parseAIResult(text){
@@ -1412,23 +1425,24 @@ function QuickFill({state,onListing,onAI}){
   const ta={width:"100%",boxSizing:"border-box",padding:"7px 9px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white,outline:"none",resize:"vertical",lineHeight:1.45};
   const btn={padding:"6px 12px",borderRadius:8,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700};
   const btn2={...btn,background:C.white,color:C.slate,border:"1px solid "+C.border,fontWeight:600};
-  const doListing=()=>{const pl=parseListing(lt);const f=[];if(pl.price)f.push("price "+fmtD(pl.price));if(pl.address)f.push("address");if(pl.units)f.push(pl.units+" units");if(pl.beds)f.push(pl.beds+"bd");if(pl.bath)f.push(pl.bath+"ba");if(pl.sqft)f.push(pl.sqft+" sqft");if(!f.length){setMsg({e:1,t:"Couldn't find price/beds/units in that text."});return;}onListing(pl);setMsg({t:"Filled from listing: "+f.join(" · ")});};
-  const copyPrompt=()=>{const txt=buildAIPrompt(state);try{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1600);},()=>setMsg({t:"Select the prompt below and copy manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported — here's the prompt to copy:",prompt:txt});}};
+  const doListing=()=>{const pl=parseListing(lt);const f=[];if(pl.address)f.push("address");if(pl.price)f.push("price "+fmtD(pl.price));if(pl.units)f.push(pl.units+" units");if(pl.beds)f.push(pl.beds+"bd");if(pl.bath)f.push(pl.bath+"ba");if(pl.sqft)f.push(pl.sqft+" sqft");if(!f.length){setMsg({e:1,t:"Couldn't read a Zillow link or price/beds from that. Paste the listing URL or some listing text."});return;}onListing(pl);setMsg({t:"Filled: "+f.join(" · ")});};
+  const copyPrompt=()=>{const txt=buildAIPrompt(state,lt);try{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1600);},()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}};
   const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied AI estimate: "+(f.join(" · ")||"nothing recognized")});};
   return <Card title="Quick fill — listing & AI" icon="⚡" right={<button onClick={()=>setOpen(o=>!o)} style={{fontSize:11,fontWeight:700,color:"#fff",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"2px 9px",cursor:"pointer",fontFamily:"inherit"}}>{open?"Hide":"Open"}</button>}>
-    {!open&&<div style={{fontSize:11,color:C.slate}}>Paste a Zillow listing to auto-fill the basics, or round-trip an AI for rent & expense estimates. <span style={{color:C.muted}}>Tip: hit ＋ New deal first to keep this as its own property.</span></div>}
+    {!open&&<div style={{fontSize:11,color:C.slate}}>Paste the Zillow <strong>link</strong> to grab the address, then round-trip your AI for rents & expenses. <span style={{color:C.muted}}>Tip: hit ＋ New deal first to keep this as its own property.</span></div>}
     {open&&<div>
-      <SecLabel text="1 · Paste listing → autofill"/>
-      <textarea value={lt} onChange={e=>setLt(e.target.value)} rows={3} placeholder="Paste the Zillow listing text (price, beds/baths, sq ft, units, address)…" style={ta}/>
-      <div style={{marginTop:6,marginBottom:14}}><button onClick={doListing} style={btn}>Fill from listing</button></div>
+      <SecLabel text="1 · Paste the Zillow link"/>
+      <div style={{fontSize:11,color:C.muted,marginBottom:6}}>No need to select text — just copy the page link. <span style={{color:C.slate}}>iPhone: in the Zillow app tap <strong>Share → Copy</strong>; in Safari tap the address bar → <strong>Copy</strong>.</span> (You can paste full listing text instead if you have it.)</div>
+      <textarea value={lt} onChange={e=>setLt(e.target.value)} rows={2} placeholder="https://www.zillow.com/homedetails/…  (or paste listing text)" style={ta}/>
+      <div style={{marginTop:6,marginBottom:14}}><button onClick={doListing} style={btn}>Fill from link</button></div>
 
       <SecLabel text="2 · AI estimate (rents, taxes, expenses)"/>
-      <div style={{fontSize:11,color:C.slate,marginBottom:6}}>Copy the prompt, paste it into your AI (with the listing text), then paste its JSON answer back here.</div>
+      <div style={{fontSize:11,color:C.slate,marginBottom:6}}>Copy the prompt (your link above is baked in), paste it into your AI, then paste its JSON answer back here.</div>
       <div style={{display:"flex",gap:7,marginBottom:8,flexWrap:"wrap"}}><button onClick={copyPrompt} style={btn}>{copied?"✓ Copied":"📋 Copy AI prompt"}</button></div>
       <textarea value={at} onChange={e=>setAt(e.target.value)} rows={3} placeholder='Paste the AI&#39;s JSON answer here, e.g. {"price":620000,"units":[…],"expenses":{…},"opinion":"…"}' style={ta}/>
       <div style={{marginTop:6}}><button onClick={doAI} style={btn}>Apply AI estimate</button></div>
 
-      {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?"#F7C1C1":"#9FE1CB")}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={4} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
+      {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?"#F7C1C1":"#9FE1CB")}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={5} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
     </div>}
   </Card>;
 }
