@@ -292,16 +292,22 @@ function SmBtn({active,onClick,label}){
 // Section card: gradient header with an emoji icon and an uppercase label. `right`
 // renders an action on the header. When `collapsible`, the whole header toggles the
 // body (with a chevron) so every section heading stays scannable while details hide.
-function Card({title,icon,children,right,sub,summary,collapsible,defaultOpen=true}){
+// Remember a collapsible card's open/closed state across reloads (a view preference,
+// app-wide — not per deal). Cards opt in by passing a stable `storeKey`.
+const CARDS_KEY="re_cards_v1";
+function loadCardState(){try{return JSON.parse(localStorage.getItem(CARDS_KEY))||{};}catch(e){return {};}}
+function saveCardState(k,v){try{const m=loadCardState();m[k]=v;localStorage.setItem(CARDS_KEY,JSON.stringify(m));}catch(e){}}
+function Card({title,icon,children,right,sub,summary,collapsible,defaultOpen=true,storeKey}){
   // Faithful original skin: gradient header + emoji icon. Optionally collapsible —
   // the gradient header becomes the toggle and a chevron shows open/closed state.
   // `summary` is an at-a-glance figure shown on the right of the header (light text
   // for contrast on the dark gradient); clicking it still toggles the card. `right`
   // is for interactive controls (it swallows the toggle click).
-  const[open,setOpen]=useState(defaultOpen);
+  const[open,setOpen]=useState(()=>{if(collapsible&&storeKey){const m=loadCardState();if(storeKey in m)return !!m[storeKey];}return defaultOpen;});
   const isOpen=collapsible?open:true;
+  const toggle=()=>setOpen(o=>{const n=!o;if(storeKey)saveCardState(storeKey,n);return n;});
   return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-    <div onClick={collapsible?()=>setOpen(o=>!o):undefined} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
+    <div onClick={collapsible?toggle:undefined} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
       <span style={{fontSize:14}}>{icon}</span>
       <span style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>{title}</span>
       {summary!=null&&<span style={{marginLeft:"auto",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.92)",whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{summary}</span>}
@@ -351,7 +357,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
   const addI=()=>setCC(p=>({...p,customItems:[...(p.customItems||[]),{name:"",amt:0}]}));
   const remI=i=>setCC(p=>({...p,customItems:p.customItems.filter((_,j)=>j!==i)}));
   const setI=(i,k,v)=>setCC(p=>{const a=[...p.customItems];a[i]={...a[i],[k]:v};return{...p,customItems:a};});
-  return <Card title="Closing costs" icon="📝" collapsible={collapsible} defaultOpen={defaultOpen} summary={collapsible?fmtD(total):undefined}>
+  return <Card title="Closing costs" icon="📝" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="closing" summary={collapsible?fmtD(total):undefined}>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
       {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
       <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(total)}</strong></span>
@@ -462,7 +468,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
   const addCE=()=>setEx(p=>({...p,customExpenses:[...(p.customExpenses||[]),{name:"",amt:0,period:"annual"}]}));
   const remCE=i=>setEx(p=>({...p,customExpenses:p.customExpenses.filter((_,j)=>j!==i)}));
   const setCE=(i,k,v)=>setEx(p=>{const a=[...p.customExpenses];a[i]={...a[i],[k]:v};return{...p,customExpenses:a};});
-  return <Card title="Vacancy & Expenses" icon="💸" collapsible={collapsible} defaultOpen={defaultOpen} summary={collapsible?fmtD(totExp)+"/yr":undefined}>
+  return <Card title="Vacancy & Expenses" icon="💸" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="expenses" summary={collapsible?fmtD(totExp)+"/yr":undefined}>
     {/* Property class preset (a starting point — clears to "Custom" once edited) */}
     <div style={{marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
@@ -1488,7 +1494,7 @@ function AreaInsights({data,onChange}){
   const lbl={fontSize:10,fontWeight:700,color:C.slate,marginBottom:3,display:"block"};
   const ta=t=>({...inp,resize:"vertical",lineHeight:1.4});
   const toggle=<button onClick={()=>setEdit(e=>!e)} style={{fontSize:11,fontWeight:700,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"4px 11px",cursor:"pointer",fontFamily:"inherit"}}>{edit?"Done":"Edit"}</button>;
-  return <Card title="Area & due-diligence" icon="📍" right={toggle} collapsible defaultOpen>
+  return <Card title="Area & due-diligence" icon="📍" right={toggle} collapsible defaultOpen storeKey="area">
     <div style={{fontSize:10,color:C.muted,marginBottom:9}}>Context only — does not affect the math. AI fills it via Quick-fill; edit anything. Verify schools/crime/flood independently.</div>
     {edit?<div style={{display:"flex",flexDirection:"column",gap:9}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
@@ -1545,7 +1551,7 @@ function QuickFill({state,onListing,onAI,onSource}){
   const doListing=()=>{const pl=parseListing(lt);const got=[pl.address,pl.price,pl.units,pl.beds,pl.bath,pl.sqft].filter(Boolean).length;if(!got){setMsg({e:1,t:"Couldn't read a Zillow link or price/beds from that. Paste the listing URL or some listing text."});return;}onListing(pl);flash("listing");};
   const copyPrompt=()=>{const txt=buildAIPrompt(state,lt);try{navigator.clipboard.writeText(txt).then(()=>flash("copy"),()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}};
   const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);flash("ai");};
-  return <Card title="Auto-fill — paste a listing & round-trip AI" icon="⚡" collapsible defaultOpen={false}>
+  return <Card title="Auto-fill — paste a listing & round-trip AI" icon="⚡" collapsible defaultOpen={false} storeKey="quickfill">
     <div>
       <div style={{fontSize:11,color:C.muted,marginBottom:10}}>Paste a Zillow link to grab the address, then let any chat AI estimate rents, taxes &amp; expenses. Tip: hit <strong>＋ New deal</strong> first to keep this as its own saved property.</div>
       <SecLabel text="1 · Paste the Zillow link"/>
@@ -1607,7 +1613,8 @@ export default function App(){
   const[showEx,setShowEx]=useState(false);
   const[showUD,setShowUD]=useState(false);
   const[selEx,setSelEx]=useState(null);
-  const[tab,setTab]=useState("overview");
+  const[tab,setTab]=useState(()=>{try{return localStorage.getItem("re_tab")||"overview";}catch(e){return "overview";}});
+  useEffect(()=>{try{localStorage.setItem("re_tab",tab);}catch(e){}},[tab]);
   const[isPrinting,setIsPrinting]=useState(false);
   const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
@@ -1843,7 +1850,7 @@ export default function App(){
         <div id="inputs-panel">
           <QuickFill key={activeId} state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
           {/* Address + Notes */}
-          <Card title="Property details" icon="📍" collapsible defaultOpen>
+          <Card title="Property details" icon="📍" collapsible defaultOpen storeKey="prop">
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               <div style={{display:"flex",flexDirection:"column",gap:2}}>
                 <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Address / MLS #</label>
@@ -1860,7 +1867,7 @@ export default function App(){
           </Card>
 
           {/* Units */}
-          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️" collapsible defaultOpen summary={fmtD(totalRent)+"/mo"}>
+          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️" collapsible defaultOpen storeKey="units" summary={fmtD(totalRent)+"/mo"}>
             <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
             <div style={{marginBottom:9}}><Tog checked={showUD} onChange={setShowUD} label="Show unit details (beds / bath / sq ft)"/></div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -1885,7 +1892,7 @@ export default function App(){
           </Card>
 
           {/* Financing */}
-          <Card title="Financing" icon="🏦" collapsible defaultOpen summary={fmtD(R.pmt)+"/mo"}>
+          <Card title="Financing" icon="🏦" collapsible defaultOpen storeKey="fin" summary={fmtD(R.pmt)+"/mo"}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
               <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
               <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
@@ -1914,7 +1921,7 @@ export default function App(){
           <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price} collapsible defaultOpen/>
 
           {/* Repairs */}
-          <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen summary={S.repairs.include?(S.repairs.unknown?"TBD":fmtD(S.repairs.amount)):undefined}>
+          <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen storeKey="repairs" summary={S.repairs.include?(S.repairs.unknown?"TBD":fmtD(S.repairs.amount)):undefined}>
             <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
             {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:9,alignItems:"end"}}>
               <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
@@ -1927,7 +1934,7 @@ export default function App(){
           </Card>
 
           {/* Projection */}
-          <Card title="Projection & Growth" icon="📈" collapsible defaultOpen summary={S.projection.holdYears+"yr · "+fmtP(S.projection.appreciationPct)}>
+          <Card title="Projection & Growth" icon="📈" collapsible defaultOpen storeKey="proj" summary={S.projection.holdYears+"yr · "+fmtP(S.projection.appreciationPct)}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
               <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
               <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
