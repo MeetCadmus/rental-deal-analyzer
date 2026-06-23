@@ -1616,6 +1616,8 @@ export default function App(){
   const[tab,setTab]=useState(()=>{try{return localStorage.getItem("re_tab")||"overview";}catch(e){return "overview";}});
   useEffect(()=>{try{localStorage.setItem("re_tab",tab);}catch(e){}},[tab]);
   const[isPrinting,setIsPrinting]=useState(false);
+  const[toast,setToast]=useState("");   // transient bottom confirmation (e.g. "Link copied")
+  useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),2600);return ()=>clearTimeout(t);},[toast]);
   const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
 
@@ -1734,6 +1736,27 @@ export default function App(){
       rd.readAsText(f);};
     inp.click();
   };
+  // Shareable link — encodes this deal into the URL (no account needed). The
+  // recipient opens it and gets the deal added to their own library.
+  const copyShareLink=()=>{
+    try{
+      const url=location.origin+location.pathname+"#deal="+encodeURIComponent(stateToCSV(S));
+      const ok=()=>setToast("🔗 Link copied — anyone who opens it gets this deal");
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(ok,()=>window.prompt("Copy this link:",url));
+      else window.prompt("Copy this link:",url);
+    }catch(e){alert("Couldn't build a share link for this deal.");}
+  };
+  // Open a shared link once on load: #deal=<csv> -> add it as a new deal, then
+  // strip the hash so a refresh doesn't re-import. (OAuth uses #access_token, skipped.)
+  useEffect(()=>{
+    try{
+      const m=(location.hash||"").match(/^#deal=([\s\S]*)$/);
+      if(!m)return;
+      const st=csvToState(decodeURIComponent(m[1]));
+      if(st&&Object.keys(st).length){addDeal(mergeImported(st),st.address||"Shared deal");setSelEx(null);setToast("Loaded a shared deal into your library");}
+    }catch(e){alert("That shared link couldn't be read.");}
+    try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+  },[]);
   // Whole-portfolio backup (JSON) — export/import every deal at once
   const exportAllDeals=()=>{
     const stamp=new Date().toISOString().slice(0,10);
@@ -1813,6 +1836,7 @@ export default function App(){
               <HeaderMenu btnStyle={hb} items={[
                 {label:dark?"☀  Light mode":"🌙  Dark mode",onClick:()=>setDark(d=>!d)},
                 {label:"🖨  Print / Save PDF",onClick:handlePrint},
+                {label:"🔗  Copy share link",onClick:copyShareLink},
                 {label:"⬇  Export this deal (CSV)",onClick:exportCSV},
                 {label:"⬆  Import a deal (CSV)",onClick:importCSV},
                 cloudCfg?{node:(user
@@ -2013,6 +2037,8 @@ export default function App(){
         <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Deleted “{dealTitle(undo.deal)}”</span>
         <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩ Undo</button>
       </div>}
+
+      {toast&&<div className="no-print" onClick={()=>setToast("")} style={{position:"fixed",left:"50%",bottom:110,transform:"translateX(-50%)",zIndex:1100,background:C.teal,color:"#fff",padding:"10px 16px",borderRadius:10,fontSize:12,fontWeight:600,boxShadow:"0 6px 24px rgba(0,0,0,0.35)",maxWidth:"92vw",textAlign:"center",cursor:"pointer"}}>{toast}</div>}
 
       <div className="mobile-bar" onClick={()=>{try{const el=document.getElementById("results-panel");if(el.getBoundingClientRect().top>80){el.scrollIntoView({behavior:"smooth",block:"start"});}else{(document.getElementById("inputs-panel")||document.body).scrollIntoView({behavior:"smooth",block:"start"});}}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
         {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
