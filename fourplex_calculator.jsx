@@ -271,13 +271,18 @@ function Info({lines,tint}){
   const[s,setS]=useState(false);
   const[pos,setPos]=useState(null);   // fixed coords, clamped to viewport so it never clips
   const ref=useRef(null);
-  const show=()=>{const el=ref.current;try{const r=el.getBoundingClientRect();const vw=window.innerWidth;const W=Math.min(240,vw-16);let left=r.left+r.width/2-W/2;left=Math.max(8,Math.min(left,vw-W-8));const arrow=Math.max(12,Math.min(W-12,r.left+r.width/2-left));setPos({left,top:r.top-8,W,arrow});}catch(e){setPos(null);}setS(true);};
+  const show=()=>{const el=ref.current;try{const r=el.getBoundingClientRect();const vw=window.innerWidth;const W=Math.min(240,vw-16);let left=r.left+r.width/2-W/2;left=Math.max(8,Math.min(left,vw-W-8));const arrow=Math.max(12,Math.min(W-12,r.left+r.width/2-left));
+    // Flip below the icon when there isn't room above (otherwise it clips off the top).
+    const below=r.top<150;setPos({left,top:below?r.bottom+8:r.top-8,W,arrow,below});}catch(e){setPos(null);}setS(true);};
   const hide=()=>setS(false);
+  // After a tap-to-open (touch), dismiss on any outside click or scroll — the panel
+  // is position:fixed so it won't follow the page.
+  useEffect(()=>{if(!s)return;const h=()=>setS(false);document.addEventListener("click",h);document.addEventListener("scroll",h,true);return ()=>{document.removeEventListener("click",h);document.removeEventListener("scroll",h,true);};},[s]);
   return <span style={{position:"relative",display:"inline-block",marginLeft:4}}>
-    <span ref={ref} onMouseEnter={show} onMouseLeave={hide} onClick={e=>{e.stopPropagation();s?hide():show();}} style={{cursor:"pointer",color:tint||C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
-    {s&&pos&&<div style={{position:"fixed",left:pos.left,top:pos.top,transform:"translateY(-100%)",width:pos.W,background:"#0B1220",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:1200,boxShadow:"0 10px 30px rgba(0,0,0,0.6)",border:"1px solid rgba(255,255,255,0.22)",whiteSpace:"normal",pointerEvents:"none"}}>
+    <span ref={ref} role="button" tabIndex={0} aria-label="More info" onMouseEnter={show} onMouseLeave={hide} onClick={e=>{e.stopPropagation();s?hide():show();}} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();e.stopPropagation();s?hide():show();}else if(e.key==="Escape")hide();}} style={{cursor:"pointer",color:tint||C.muted,fontSize:13,fontWeight:700,userSelect:"none",padding:"0 2px"}}>ⓘ</span>
+    {s&&pos&&<div role="tooltip" style={{position:"fixed",left:pos.left,top:pos.top,transform:pos.below?"none":"translateY(-100%)",width:pos.W,background:"#0B1220",color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:11,zIndex:1200,boxShadow:"0 10px 30px rgba(0,0,0,0.6)",border:"1px solid rgba(255,255,255,0.22)",whiteSpace:"normal",pointerEvents:"none"}}>
       {lines.map((l,i)=><div key={i} style={{lineHeight:1.6,color:l.startsWith("=")?"#68D391":l.startsWith("·")?"#C2CCDA":"#fff",fontWeight:l.startsWith("=")?"700":"400"}}>{l}</div>)}
-      <div style={{position:"absolute",bottom:-6,left:pos.arrow,transform:"translateX(-50%)",width:11,height:11,background:"#0B1220",borderRight:"1px solid rgba(255,255,255,0.22)",borderBottom:"1px solid rgba(255,255,255,0.22)",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
+      <div style={{position:"absolute",...(pos.below?{top:-6}:{bottom:-6}),left:pos.arrow,transform:"translateX(-50%)",width:11,height:11,background:"#0B1220",...(pos.below?{borderLeft:"1px solid rgba(255,255,255,0.22)",borderTop:"1px solid rgba(255,255,255,0.22)",clipPath:"polygon(0 100%,100% 100%,50% 0)"}:{borderRight:"1px solid rgba(255,255,255,0.22)",borderBottom:"1px solid rgba(255,255,255,0.22)",clipPath:"polygon(0 0,100% 0,50% 100%)"})}}/>
     </div>}
   </span>;
 }
@@ -396,7 +401,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
       {(cc.customItems||[]).map((item,i)=><div key={i} className="del-row-cc" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Description</label>}<input value={item.name||""} onChange={e=>setI(i,"name",e.target.value)} placeholder="e.g. HOA fee" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={item.amt||0} onChange={x=>setI(i,"amt",x)} min={0} step={10} xs/>
-        <button className="tap-sm" onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+        <button className="tap-sm" aria-label="Remove item" onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
       </div>)}
       <button onClick={addI} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add item</button>
       <div style={{background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderRadius:9,padding:"10px 14px",color:"#fff",marginTop:12}}>
@@ -538,7 +543,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Name</label>}<input value={e.name||""} onChange={ev=>setCE(i,"name",ev.target.value)} placeholder="e.g. pest control" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={e.amt||0} onChange={x=>setCE(i,"amt",x)} min={0} step={10} xs/>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Period</label>}<select value={e.period||"annual"} onChange={ev=>setCE(i,"period",ev.target.value)} style={{padding:"6px 7px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,background:C.white}}><option value="annual">/yr</option><option value="monthly">/mo</option></select></div>
-        <button className="tap-sm" onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+        <button className="tap-sm" aria-label="Remove expense" onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
       </div>)}
       <button onClick={addCE} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add expense</button>
 
@@ -1863,7 +1868,7 @@ export default function App(){
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showUD?8:0}}>
                   <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"0 1 72px",minWidth:0}}/>
                   <RentInput value={u.rent} onChange={v=>setUnit(i,"rent",v)}/>
-                  {numU>1&&<button className="tap-sm" onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
+                  {numU>1&&<button className="tap-sm" aria-label={"Remove "+(u.label||"unit")} onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
                 </div>
                 {showUD&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:6}}>
                   <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
@@ -1972,8 +1977,8 @@ export default function App(){
         {/* RIGHT: Results */}
         <div id="results-panel" className="sticky-col" style={{position:"sticky",top:8}}>
           {/* Tab bar */}
-          {!isPrinting&&<div className="no-print" style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
-            {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.heading:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
+          {!isPrinting&&<div role="tablist" aria-label="Results" className="no-print" onKeyDown={e=>{const i=TABS.findIndex(([id])=>id===tab);if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();const n=(i+(e.key==="ArrowRight"?1:TABS.length-1))%TABS.length;setTab(TABS[n][0]);}}} style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
+            {TABS.map(([id,lbl])=><button key={id} role="tab" aria-selected={tab===id} tabIndex={tab===id?0:-1} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.heading:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
           </div>}
           {isPrinting?(
             <div>
