@@ -1,10 +1,15 @@
-import { useState, useMemo, useCallback, useEffect, useRef, useLayoutEffect, createContext, useContext } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 
 const C={navy:"var(--c-navy)",navyM:"var(--c-navyM)",gold:"var(--c-gold)",goldL:"var(--c-goldL)",teal:"var(--c-teal)",tealL:"var(--c-tealL)",red:"var(--c-red)",redL:"var(--c-redL)",amber:"var(--c-amber)",amberL:"var(--c-amberL)",slate:"var(--c-slate)",border:"var(--c-border)",bg:"var(--c-bg)",white:"var(--c-white)",text:"var(--c-text)",heading:"var(--c-heading)",rowline:"var(--c-rowline)",grid:"var(--c-grid)",hl:"var(--c-hl)",tealS:"var(--c-tealS)",redS:"var(--c-redS)",amberS:"var(--c-amberS)",blueS:"var(--c-blueS)",muted:"var(--c-muted)"};
 const THEME_CSS=`
 :root{--c-navy:#0D1F3C;--c-navyM:#1e3a6e;--c-gold:#C8922A;--c-goldL:#FDF3E3;--c-teal:#14705A;--c-tealL:#DFF2EC;--c-red:#9B2335;--c-redL:#FCEAEC;--c-amber:#8C5A0A;--c-amberL:#FDF3E3;--c-slate:#4A5568;--c-border:#E2E8F0;--c-bg:#F7F8FA;--c-white:#ffffff;--c-text:#1A202C;--c-heading:#0D1F3C;--c-page:#F7F8FA;--c-rowline:#F7FAFC;--c-grid:#EDF1F6;--c-hl:#EEF2FF;--c-tealS:#14705A;--c-redS:#9B2335;--c-amberS:#8C5A0A;--c-blueS:#185FA5;--c-muted:#718096;color-scheme:light;}
 :root[data-theme="dark"]{--c-navy:#16325C;--c-navyM:#244a86;--c-gold:#E0A93C;--c-goldL:#33280F;--c-teal:#3FD0AE;--c-tealL:#123A30;--c-red:#F08699;--c-redL:#3A1A20;--c-amber:#E6B454;--c-amberL:#33280F;--c-slate:#9AA7BC;--c-border:#2C3A53;--c-bg:#161F33;--c-white:#1C2740;--c-text:#E6EAF2;--c-heading:#9CC0F2;--c-page:#0F1624;--c-rowline:#222C42;--c-grid:#222C42;--c-hl:#1B2A47;--c-tealS:#0E7A5F;--c-redS:#B53049;--c-amberS:#8A5A0E;--c-blueS:#2A63A6;--c-muted:#8593A8;color-scheme:dark;}
 body{background:var(--c-page)!important;color:var(--c-text);transition:background .2s ease,color .2s ease;}
+@media (pointer:coarse){
+  .tap-sm{min-height:44px!important;min-width:44px!important}
+  .del-row-cc{grid-template-columns:minmax(0,1fr) 110px 44px!important}
+  .del-row-ex{grid-template-columns:minmax(0,1fr) 92px 86px 44px!important}
+}
 `;
 const fmt =n=>new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(n||0);
 const fmtD=n=>(n<0?"−$":"$")+fmt(Math.abs(Math.round(n||0)));
@@ -13,9 +18,6 @@ const fmtX=n=>isFinite(n)?n.toFixed(1)+"×":"—";
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const num =v=>parseFloat((v+"").replace(/,/g,""))||0;
 function lv(v,g,w,inv=false){return !inv?(v>=g?"good":v>=w?"warn":"bad"):(v<=w?"good":v<=g?"warn":"bad");}
-// View mode: "focused" (the redesign) vs "classic" (faithful original). Card reads this
-// so the same card components render in either skin without threading a prop everywhere.
-const ViewCtx=createContext("focused");
 
 // Live thousands-grouping for number inputs, tolerant of partial typing ("", "1,", "7.").
 function fmtGroup(raw,decimals){
@@ -276,38 +278,25 @@ function Info({lines,tint}){
   </span>;
 }
 function SmBtn({active,onClick,label}){
-  return <button onClick={onClick} style={{padding:"2px 8px",borderRadius:5,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,border:"1px solid "+(active?C.navy:C.border),background:active?C.navy:C.white,color:active?"#fff":C.slate}}>{label}</button>;
+  return <button className="tap-sm" onClick={onClick} style={{padding:"2px 8px",borderRadius:5,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,border:"1px solid "+(active?C.navy:C.border),background:active?C.navy:C.white,color:active?"#fff":C.slate}}>{label}</button>;
 }
-// Quiet, premium card: a hairline-bordered white surface with a soft shadow and a
-// restrained uppercase label (no gradient bar, no emoji). `right` renders an action
-// on the header; `sub` a one-line caption. When `collapsible`, the whole header
-// toggles the body so every section heading stays scannable while details hide.
+// Section card: gradient header with an emoji icon and an uppercase label. `right`
+// renders an action on the header. When `collapsible`, the whole header toggles the
+// body (with a chevron) so every section heading stays scannable while details hide.
 function Card({title,icon,children,right,sub,collapsible,defaultOpen=true}){
-  const view=useContext(ViewCtx);
+  // Faithful original skin: gradient header + emoji icon. Optionally collapsible —
+  // the gradient header becomes the toggle and a chevron shows open/closed state.
   const[open,setOpen]=useState(defaultOpen);
-  if(view==="classic"){
-    // Faithful original skin: gradient header + emoji icon, always open.
-    return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-      <div style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:"1px solid "+C.border}}>
-        <span style={{fontSize:14}}>{icon}</span>
-        <span style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>{title}</span>
-        {right&&<div style={{marginLeft:"auto"}}>{right}</div>}
-      </div>
-      <div style={{padding:"12px 13px",background:C.white}}>{children}</div>
-    </div>;
-  }
   const isOpen=collapsible?open:true;
-  return <section style={{background:C.white,border:"1px solid "+C.border,borderRadius:14,boxShadow:"0 1px 2px rgba(16,24,40,0.04)",overflow:"hidden",marginBottom:14}}>
-    <div onClick={collapsible?()=>setOpen(o=>!o):undefined} style={{display:"flex",alignItems:"center",gap:10,padding:isOpen?"14px 18px 12px":"13px 18px",borderBottom:isOpen?"1px solid "+C.grid:"none",cursor:collapsible?"pointer":"default"}}>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:11,fontWeight:700,color:C.heading,letterSpacing:"0.08em",textTransform:"uppercase"}}>{title}</div>
-        {sub&&isOpen&&<div style={{fontSize:11,color:C.muted,marginTop:3,lineHeight:1.45}}>{sub}</div>}
-      </div>
-      {right&&<div onClick={e=>e.stopPropagation()} style={{flexShrink:0}}>{right}</div>}
-      {collapsible&&<span style={{flexShrink:0,fontSize:13,color:C.slate,transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>}
+  return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
+    <div onClick={collapsible?()=>setOpen(o=>!o):undefined} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
+      <span style={{fontSize:14}}>{icon}</span>
+      <span style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>{title}</span>
+      {right&&<div onClick={collapsible?e=>e.stopPropagation():undefined} style={{marginLeft:"auto"}}>{right}</div>}
+      {collapsible&&<span style={{marginLeft:right?10:"auto",flexShrink:0,fontSize:13,color:"rgba(255,255,255,0.85)",transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>}
     </div>
-    {isOpen&&<div style={{padding:"16px 18px"}}>{children}</div>}
-  </section>;
+    {isOpen&&<div style={{padding:"12px 13px",background:C.white}}>{children}</div>}
+  </div>;
 }
 function SecLabel({text,right}){
   return <div style={{display:"flex",justifyContent:"space-between",fontSize:10,fontWeight:700,color:C.heading,letterSpacing:"0.07em",textTransform:"uppercase",borderBottom:"1px solid "+C.border,paddingBottom:4,marginBottom:8}}>
@@ -396,10 +385,10 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
         <Field label="Environmental" prefix="$" value={cc.enviro||0} onChange={x=>sf("enviro",x)} min={0} step={100} xs/>
       </div>
       {(cc.customItems||[]).length>0&&<SecLabel text="Other"/>}
-      {(cc.customItems||[]).map((item,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
+      {(cc.customItems||[]).map((item,i)=><div key={i} className="del-row-cc" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Description</label>}<input value={item.name||""} onChange={e=>setI(i,"name",e.target.value)} placeholder="e.g. HOA fee" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={item.amt||0} onChange={x=>setI(i,"amt",x)} min={0} step={10} xs/>
-        <button onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+        <button className="tap-sm" onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
       </div>)}
       <button onClick={addI} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add item</button>
       <div style={{background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderRadius:9,padding:"10px 14px",color:"#fff",marginTop:12}}>
@@ -537,11 +526,11 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
       </div>
 
       <SecLabel text="Custom line items" right={(ex.customExpenses||[]).length?("= "+fmtD(items.custom)+"/yr"):undefined}/>
-      {(ex.customExpenses||[]).map((e,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 92px 86px 26px",gap:6,marginBottom:6,alignItems:"end"}}>
+      {(ex.customExpenses||[]).map((e,i)=><div key={i} className="del-row-ex" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 92px 86px 26px",gap:6,marginBottom:6,alignItems:"end"}}>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Name</label>}<input value={e.name||""} onChange={ev=>setCE(i,"name",ev.target.value)} placeholder="e.g. pest control" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={e.amt||0} onChange={x=>setCE(i,"amt",x)} min={0} step={10} xs/>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Period</label>}<select value={e.period||"annual"} onChange={ev=>setCE(i,"period",ev.target.value)} style={{padding:"6px 7px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,background:C.white}}><option value="annual">/yr</option><option value="monthly">/mo</option></select></div>
-        <button onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+        <button className="tap-sm" onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
       </div>)}
       <button onClick={addCE} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add expense</button>
 
@@ -1566,60 +1555,6 @@ function QuickFill({state,onListing,onAI,onSource}){
     </div>}
   </Card>;
 }
-// ── Verdict hero: the always-visible "is this worth it?" instrument cluster ──
-// One plain-English call + the five numbers an investor decides on, on a single
-// signature dark surface (sticky on desktop). Updates live as inputs change.
-function dealVerdict(R,score,pct1Pass){
-  const cfMo=R.cf/12,pos=cfMo>=0;
-  const cfTxt=pos?("cash-flows "+fmtD(cfMo)+"/mo"):("loses "+fmtD(-cfMo)+"/mo");
-  const ruleTxt=pct1Pass?"clears the 1% rule":"misses the 1% rule";
-  const tail={A:"Strong on every key metric — worth pursuing.",B:"Solid fundamentals, with a little room to improve.",C:"Marginal — it needs a lower price or higher rents to make sense.",D:"The numbers don't work as priced — renegotiate hard or walk away."}[score.grade]||"";
-  return "This deal "+cfTxt+" and "+ruleTxt+". "+tail;
-}
-function VerdictHero({R,Y,S,score}){
-  const pct1Pass=R.pct1>=R.adjThresh;
-  const line=dealVerdict(R,score,pct1Pass);
-  const chips=[
-    {l:"Cash flow / mo",v:fmtD(R.cf/12),c:R.cf>=0?"#7CE0C0":"#F3A6B2"},
-    {l:"Cap rate",v:fmtP(R.capRate)},
-    {l:"Cash-on-cash",v:fmtP(R.coc)},
-    {l:"DSCR",v:R.dscr.toFixed(2)},
-    {l:"1% rule",v:fmtP(R.pct1)},
-  ];
-  return <div className="verdict-hero no-print" style={{zIndex:40,marginBottom:14}}>
-    <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:16,padding:"16px 18px",boxShadow:"0 10px 34px rgba(13,31,60,0.30)",overflow:"hidden"}}>
-      <div style={{display:"flex",alignItems:"center",gap:14}}>
-        <div style={{flexShrink:0,width:62,height:62,borderRadius:14,background:score.color,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.18)"}}>
-          <span style={{fontSize:34,fontWeight:800,color:"#fff",lineHeight:1}}>{score.grade}</span>
-        </div>
-        <div style={{minWidth:0}}>
-          <div style={{fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.gold,fontWeight:700,marginBottom:3}}>{score.label} · {Math.round(score.pct*100)}%</div>
-          <div style={{fontSize:13,color:"rgba(255,255,255,0.92)",lineHeight:1.45}}>{line}</div>
-        </div>
-      </div>
-      <div className="hero-metrics" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:8,marginTop:14}}>
-        {chips.map(ch=><div key={ch.l} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"8px 10px"}}>
-          <div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:"0.03em",marginBottom:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{ch.l}</div>
-          <div style={{fontSize:16,fontWeight:700,color:ch.c||"#fff",fontVariantNumeric:"tabular-nums"}}>{ch.v}</div>
-        </div>)}
-      </div>
-    </div>
-  </div>;
-}
-// Slim full-width collapsible for advanced tiers — keeps the first screen calm.
-function Disclosure({title,sub,defaultOpen,children}){
-  const[open,setOpen]=useState(!!defaultOpen);
-  return <div className="no-print" style={{marginBottom:14}}>
-    <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",background:open?C.white:"transparent",border:"1px solid "+C.border,borderRadius:14,cursor:"pointer",fontFamily:"inherit",textAlign:"left",boxShadow:open?"0 1px 2px rgba(16,24,40,0.04)":"none"}}>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:12,fontWeight:700,color:C.heading,letterSpacing:"0.05em",textTransform:"uppercase"}}>{title}</div>
-        {sub&&<div style={{fontSize:11,color:C.muted,marginTop:3}}>{sub}</div>}
-      </div>
-      <span style={{flexShrink:0,fontSize:13,color:C.slate,transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
-    </button>
-    {open&&<div style={{marginTop:12}}>{children}</div>}
-  </div>;
-}
 // Header overflow menu — keeps the top bar to a couple of primary actions.
 // The panel is rendered position:fixed (anchored to the trigger) so the header's
 // overflow:hidden / stacking context can't clip it.
@@ -1646,10 +1581,6 @@ function HeaderMenu({btnStyle,items}){
   </div>;
 }
 // Segmented Classic/Focused switch for the (dark) header bar.
-function ViewToggle({mode,setMode}){
-  const seg=(id,lbl)=>{const on=mode===id;return <button key={id} onClick={()=>setMode(id)} title={id==="classic"?"The original layout":"The new layout"} style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",fontFamily:"inherit",background:on?"#fff":"transparent",color:on?C.navy:"rgba(255,255,255,0.8)"}}>{lbl}</button>;};
-  return <div style={{display:"inline-flex",gap:2,padding:2,borderRadius:8,background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.22)"}}>{seg("focused","Focused")}{seg("classic","Classic")}</div>;
-}
 // ── App ────────────────────────────────────────────────────────
 export default function App(){
   const[boot]=useState(loadDealStore);
@@ -1667,8 +1598,6 @@ export default function App(){
   const[isPrinting,setIsPrinting]=useState(false);
   const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
-  const[viewMode,setViewMode]=useState(()=>{try{return localStorage.getItem("re_view")==="classic"?"classic":"focused";}catch{return "focused";}});
-  useEffect(()=>{try{localStorage.setItem("re_view",viewMode);}catch{}},[viewMode]);
 
   // ── Cloud sync (Supabase) — dormant unless config.js + the CDN client exist ──
   const cloudCfg=(typeof window!=="undefined"&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY&&window.supabase)?{url:window.SUPABASE_URL,key:window.SUPABASE_ANON_KEY}:null;
@@ -1828,7 +1757,7 @@ export default function App(){
   const activeTitle=(activeDeal&&activeDeal._label&&activeDeal._label.trim())||(S.address&&S.address.trim())||"Untitled deal";
 
   const renderClassic=()=>(
-    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:860,margin:"0 auto",padding:"0.5rem 0"}}>
+    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:1040,margin:"0 auto",padding:"0.5rem 0"}}>
       <style>{THEME_CSS}</style>
       <style>{`
         .ytable-scroll.cap{max-height:340px;overflow-y:auto}
@@ -1858,17 +1787,18 @@ export default function App(){
               <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:"rgba(200,146,42,0.22)",border:"1px solid "+C.gold,fontWeight:700,maxWidth:210,overflow:"hidden",textOverflow:"ellipsis"}}>📁 {activeTitle} <span style={{opacity:0.7,fontWeight:400}}>({deals.length})</span></button>
               <button onClick={newDeal} style={hb} title="Start a new blank deal">＋ New deal</button>
               <ScenarioCompare deals={deals} activeId={activeId} currentState={S}/>
-              <ViewToggle mode={viewMode} setMode={setViewMode}/>
-              <button onClick={()=>setDark(d=>!d)} style={hb} title="Toggle dark mode">{dark?"☀ Light":"🌙 Dark"}</button>
-              <button onClick={exportCSV} style={hb} title="Download this deal as a CSV (opens in Excel)">⬇ Export CSV</button>
-              <button onClick={importCSV} style={hb} title="Import a deal from CSV as a new deal">⬆ Import CSV</button>
-              <button onClick={handlePrint} style={hb}>🖨 Print / PDF</button>
-              {cloudCfg&&(user
-                ?<span style={{display:"inline-flex",alignItems:"center",gap:6}}>
-                   <span title={"Signed in"+(user.email?" as "+user.email:"")+" · "+(sync==="syncing"?"saving…":sync==="error"?"sync error":"synced")} style={{fontSize:10,color:"#fff",opacity:0.85,whiteSpace:"nowrap"}}>{sync==="syncing"?"⟳ Saving…":sync==="error"?"⚠ Sync error":"✓ Synced"}</span>
-                   <button onClick={signOut} style={hb} title={user.email||"Sign out"}>Sign out</button>
-                 </span>
-                :<button onClick={signIn} style={{...hb,background:"rgba(255,255,255,0.2)",fontWeight:700}} title="Sign in to sync your deals across devices">🔑 Sign in with Google</button>)}
+              <HeaderMenu btnStyle={hb} items={[
+                {label:dark?"☀  Light mode":"🌙  Dark mode",onClick:()=>setDark(d=>!d)},
+                {label:"🖨  Print / Save PDF",onClick:handlePrint},
+                {label:"⬇  Export this deal (CSV)",onClick:exportCSV},
+                {label:"⬆  Import a deal (CSV)",onClick:importCSV},
+                cloudCfg?{node:(user
+                  ?<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                     <span style={{fontSize:11,color:C.slate}}>{sync==="syncing"?"⟳ Saving…":sync==="error"?"⚠ Sync error":"✓ Synced"}</span>
+                     <button onClick={signOut} style={{fontSize:12,fontWeight:600,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}} title={user.email||"Sign out"}>Sign out</button>
+                   </div>
+                  :<button onClick={signIn} style={{width:"100%",fontSize:12,fontWeight:700,color:"#fff",background:C.navy,border:"none",borderRadius:8,padding:"8px 10px",cursor:"pointer",fontFamily:"inherit"}}>🔑 Sign in with Google</button>)}:null,
+              ]}/>
             </>;})()}
           </div>
         </div>
@@ -1895,12 +1825,12 @@ export default function App(){
         </div>}
       </div>
 
-      <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:11,alignItems:"start"}}>
+      <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,0.92fr) minmax(0,1.08fr)",gap:11,alignItems:"start"}}>
         {/* LEFT: Inputs */}
         <div>
           <QuickFill key={activeId} state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
           {/* Address + Notes */}
-          <Card title="Property details" icon="📍">
+          <Card title="Property details" icon="📍" collapsible defaultOpen>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               <div style={{display:"flex",flexDirection:"column",gap:2}}>
                 <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Address / MLS #</label>
@@ -1917,7 +1847,7 @@ export default function App(){
           </Card>
 
           {/* Units */}
-          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️">
+          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️" collapsible defaultOpen>
             <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
             <div style={{marginBottom:9}}><Tog checked={showUD} onChange={setShowUD} label="Show unit details (beds / bath / sq ft)"/></div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -1925,7 +1855,7 @@ export default function App(){
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showUD?8:0}}>
                   <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"0 1 72px",minWidth:0}}/>
                   <RentInput value={u.rent} onChange={v=>setUnit(i,"rent",v)}/>
-                  {numU>1&&<button onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
+                  {numU>1&&<button className="tap-sm" onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
                 </div>
                 {showUD&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:6}}>
                   <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
@@ -1942,7 +1872,7 @@ export default function App(){
           </Card>
 
           {/* Financing */}
-          <Card title="Financing" icon="🏦">
+          <Card title="Financing" icon="🏦" collapsible defaultOpen>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
               <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
               <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
@@ -1967,11 +1897,11 @@ export default function App(){
             </div>
           </Card>
 
-          <ClosingCosts cc={S.closing} setCC={setCC} price={S.price} loan={R.loan} annTax={S.expenses.taxes||0} annIns={S.expenses.insurance||0} rate={S.financing.rate}/>
-          <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price}/>
+          <ClosingCosts cc={S.closing} setCC={setCC} price={S.price} loan={R.loan} annTax={S.expenses.taxes||0} annIns={S.expenses.insurance||0} rate={S.financing.rate} collapsible defaultOpen/>
+          <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price} collapsible defaultOpen/>
 
           {/* Repairs */}
-          <Card title="Repairs & Rehab" icon="🔧">
+          <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen>
             <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
             {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:9,alignItems:"end"}}>
               <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
@@ -1984,7 +1914,7 @@ export default function App(){
           </Card>
 
           {/* Projection */}
-          <Card title="Projection & Growth" icon="📈">
+          <Card title="Projection & Growth" icon="📈" collapsible defaultOpen>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
               <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
               <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
@@ -2061,12 +1991,12 @@ export default function App(){
         <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩ Undo</button>
       </div>}
 
-      <div className="mobile-bar" onClick={()=>{try{document.getElementById("results-panel").scrollIntoView({behavior:"smooth",block:"start"});}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
+      <div className="mobile-bar" onClick={()=>{try{const el=document.getElementById("results-panel");if(el.getBoundingClientRect().top>80){el.scrollIntoView({behavior:"smooth",block:"start"});}else{window.scrollTo({top:0,behavior:"smooth"});}}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
         {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
           <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
           <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{v2}</div>
         </div>)}
-        <div style={{fontSize:9,color:"rgba(255,255,255,0.7)",alignSelf:"center"}}>tap ↑</div>
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.7)",alignSelf:"center"}}>tap ↕</div>
       </div>
 
       <div style={{marginTop:10,fontSize:9,color:C.muted,borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
@@ -2075,287 +2005,5 @@ export default function App(){
     </div>
   );
 
-  const hb={fontSize:11,padding:"6px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,0.28)",background:"rgba(255,255,255,0.10)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"};
-
-  return(
-    <ViewCtx.Provider value={viewMode}>
-    {viewMode==="classic"?renderClassic():(
-    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:920,margin:"0 auto",padding:"0.5rem 0"}}>
-      <style>{THEME_CSS}</style>
-      <style>{`
-        .ytable-scroll.cap{max-height:340px;overflow-y:auto}
-        .verdict-hero{position:sticky;top:6px}
-        .tier2-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10}
-        .rent-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8}
-        @media print{.no-print{display:none!important}.ytable-scroll{max-height:none!important;overflow:visible!important}body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}:root{color-scheme:light}}
-        @media (max-width:680px){
-          html,body{overflow-x:hidden;max-width:100%}
-          .verdict-hero{position:static}
-          .hero-metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-          .layout{grid-template-columns:1fr!important}
-          .layout,.layout>div,.sticky-col{min-width:0!important}
-          .sticky-col{position:static!important}
-          .col2{grid-template-columns:1fr!important}
-          .tier2-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-          .rent-grid{grid-template-columns:1fr!important}
-          .preset-grid{grid-template-columns:repeat(3,1fr)!important}
-          .mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
-          input,select,textarea{font-size:16px!important}}
-        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(30,58,110,0.25)}
-      `}</style>
-
-      {/* Header — brand + the two primary actions; everything else folds into More */}
-      <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:14,padding:"13px 16px",marginBottom:12,overflow:"hidden",position:"relative"}} className="no-print">
-        <div style={{position:"absolute",right:-12,top:-12,width:74,height:74,border:"2px solid rgba(200,146,42,0.18)",borderRadius:"50%",pointerEvents:"none"}}/>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-          <div style={{minWidth:0}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.14em",color:C.gold,textTransform:"uppercase"}}>Atlanta · Georgia · Multifamily</div>
-            <div style={{fontSize:17,fontWeight:700,color:"#fff",marginTop:1}}>Investment Property Analyzer</div>
-          </div>
-          <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-            <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:"rgba(200,146,42,0.22)",border:"1px solid "+C.gold,fontWeight:700,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>📁 {activeTitle} <span style={{opacity:0.7,fontWeight:400}}>({deals.length})</span></button>
-            <button onClick={newDeal} style={{...hb,background:"rgba(255,255,255,0.16)",fontWeight:700}} title="Start a new blank deal">＋ New</button>
-            <ScenarioCompare deals={deals} activeId={activeId} currentState={S}/>
-            <ViewToggle mode={viewMode} setMode={setViewMode}/>
-            <HeaderMenu btnStyle={hb} items={[
-              {label:dark?"☀  Light mode":"🌙  Dark mode",onClick:()=>setDark(d=>!d)},
-              {label:"🖨  Print / Save PDF",onClick:handlePrint},
-              {label:"⬇  Export this deal (CSV)",onClick:exportCSV},
-              {label:"⬆  Import a deal (CSV)",onClick:importCSV},
-              cloudCfg?{node:(user
-                ?<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                   <span style={{fontSize:11,color:C.slate}}>{sync==="syncing"?"⟳ Saving…":sync==="error"?"⚠ Sync error":"✓ Synced"}</span>
-                   <button onClick={signOut} style={{fontSize:12,fontWeight:600,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}} title={user.email||"Sign out"}>Sign out</button>
-                 </div>
-                :<button onClick={signIn} style={{width:"100%",fontSize:12,fontWeight:700,color:"#fff",background:C.navy,border:"none",borderRadius:8,padding:"8px 10px",cursor:"pointer",fontFamily:"inherit"}}>🔑 Sign in with Google</button>)}:null,
-            ]}/>
-          </div>
-        </div>
-      </div>
-
-      <DealsDrawer open={dealsOpen} onClose={()=>setDealsOpen(false)} deals={deals} activeId={activeId} liveTitle={activeTitle}
-        onSelect={switchDeal} onNew={newDeal} onRename={renameDeal} onDelete={deleteDeal} onDuplicate={duplicateDeal}
-        onExportAll={exportAllDeals} onImportAll={importAllDeals}/>
-
-      {/* Verdict hero — full-width on top so the verdict reads first (esp. on mobile) */}
-      {!isPrinting&&<VerdictHero R={R} Y={Y} S={S} score={score}/>}
-
-      {isPrinting?(
-        <div>
-          <OverviewTab R={R} Y={Y} S={S}/>
-          <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><IncomeTab R={R} S={S}/></div>
-          <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><ProjectionTab R={R} Y={Y} S={S}/></div>
-          <div style={{borderTop:"2px solid "+C.border,marginTop:16,paddingTop:16}}><AnalysisTab SEN={SEN} R={R} S={S} Y={Y}/></div>
-        </div>
-      ):(
-        <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:14,alignItems:"start"}}>
-          {/* ── LEFT: what you change (every heading visible; details open on demand) ── */}
-          <div>
-            <QuickFill key={activeId} state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
-
-            {/* The deal — always open (the essentials) */}
-            <Card title="The deal" sub="Price, address & rents — the essentials. Everything else has smart defaults.">
-              <div className="col2" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:12,marginBottom:13}}>
-                <MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down "+fmtD(S.price*S.financing.downPct/100)}/>
-                <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                  <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Address / MLS #</label>
-                  <input value={S.address||""} onChange={e=>set("address",e.target.value)} placeholder="123 Maple St, Atlanta, GA 30308"
-                    style={{padding:"7px 10px",fontSize:13,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white,outline:"none"}}/>
-                </div>
-              </div>
-              <SecLabel text={"Monthly rent · "+numU+" unit"+(numU!==1?"s":"")} right={fmtD(totalRent)+"/mo"}/>
-              <div className="rent-grid">
-                {S.units.map((u,i)=><div key={u.id} style={{display:"flex",alignItems:"center",gap:8,border:"1px solid "+C.border,borderRadius:10,padding:"7px 9px",background:C.bg}}>
-                  <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"0 1 70px",minWidth:0}}/>
-                  <RentInput value={u.rent} onChange={v=>setUnit(i,"rent",v)}/>
-                  {numU>1&&<button onClick={()=>remUnit(i)} title="Remove unit" style={{padding:"6px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
-                </div>)}
-              </div>
-              <button onClick={addUnit} style={{marginTop:9,width:"100%",padding:"8px",borderRadius:9,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",fontSize:12,fontWeight:600,color:C.slate,fontFamily:"inherit"}}>+ Add unit</button>
-            </Card>
-
-            {/* Key assumptions — always open (the four levers that move it most) */}
-            <Card title="Key assumptions" sub="The few levers that move the result most. Use Auto-fill above to replace them with real numbers, or nudge them here.">
-              <div className="tier2-grid">
-                <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
-                <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} sub={fmtD(R.pmt)+"/mo"} showZero/>
-                <Field label="Vacancy" suffix="%" value={S.expenses.vacancyPct||0} onChange={x=>setEx(p=>({...p,vacancyPct:x}))} min={0} max={30} step={0.5} sub="ATL avg ~5.9%"/>
-                {S.expenses.mode==="quick"
-                  ? <Field label="Expense ratio" suffix="% inc" value={S.expenses.ratio||45} onChange={x=>setEx(p=>({...p,ratio:x}))} min={20} max={70} step={1} sub={fmtD(R.totExp)+"/yr"}/>
-                  : <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Expenses <span style={{color:C.teal,fontWeight:700}}>· itemized</span></label>
-                      <div style={{padding:"6px 10px",border:"1px solid "+C.border,borderRadius:8,background:C.bg}}>
-                        <div style={{fontSize:13,fontWeight:700,color:C.heading,fontVariantNumeric:"tabular-nums"}}>{fmtD(R.totExp)}/yr</div>
-                        <div style={{fontSize:10,color:C.muted}}>{fmtP(R.expRatio)} of income · edit below ↓</div>
-                      </div>
-                    </div>}
-              </div>
-            </Card>
-
-            {/* Financing — collapsible (heading always visible) */}
-            <Card title="Financing" icon="🏦" collapsible defaultOpen={false}>
-              <div className="col2" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
-                <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
-                <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
-                <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={x=>setFin("loanYears",x)} min={1} max={40}/>
-                <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
-                  <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Monthly payment</div>
-                  <div style={{fontSize:14,fontWeight:700,color:C.heading}}>{fmtD(R.pmt)}/mo</div>
-                  <div style={{fontSize:10,color:C.muted}}>Loan: {fmtD(R.loan)}</div>
-                </div>
-              </div>
-              <div style={{marginTop:9}}>
-                <Field label="Cash reserves" suffix="mo PITI" value={S.financing.reserveMonths||0} onChange={x=>setFin("reserveMonths",x)} min={0} max={24} step={1}
-                  tip={["Liquid cash a lender wants you to keep AFTER closing — months of PITI (principal+interest+taxes+insurance).","· Investment / multifamily: often 6 months","· DSCR loans: ~3–12 months","· Owner-occupied: 0–2 months","· You keep this money — it's not spent, so it's not counted in cash-on-cash."]}
-                  sub={(S.financing.reserveMonths||0)>0?("= "+fmtD(R.reserves)+" to keep on hand · PITI ≈ "+fmtD(R.pitiMo)+"/mo"):"0 = none. Investment loans often require ~6."}/>
-              </div>
-              <div style={{marginTop:11,paddingTop:11,borderTop:"1px solid "+C.border}}>
-                <Tog checked={S.partnership?.enabled||false} onChange={x=>setPart("enabled",x)} label="Partnership purchase" sub="Calculate my share of returns"/>
-                {S.partnership?.enabled&&<div style={{marginTop:9}}>
-                  <Field label="My equity share" suffix="%" value={S.partnership.myPct||60} onChange={x=>setPart("myPct",x)} min={1} max={99} step={1} sub={"Partner: "+(100-(S.partnership.myPct||60))+"%"}/>
-                </div>}
-              </div>
-            </Card>
-
-            <ClosingCosts cc={S.closing} setCC={setCC} price={S.price} loan={R.loan} annTax={S.expenses.taxes||0} annIns={S.expenses.insurance||0} rate={S.financing.rate} collapsible defaultOpen={false}/>
-            <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price} collapsible defaultOpen={false}/>
-
-            {/* Repairs — collapsible */}
-            <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen={false}>
-              <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
-              {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:9,alignItems:"end"}}>
-                <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
-                <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                  <label style={{fontSize:10,color:C.slate,fontWeight:600}}>Unknown?</label>
-                  <button onClick={()=>setRep("unknown",!S.repairs.unknown)} style={{padding:"6px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1px solid "+(S.repairs.unknown?C.amber:C.border),background:S.repairs.unknown?C.amberL:C.white,color:S.repairs.unknown?C.amber:C.slate}}>? TBD</button>
-                </div>
-              </div>}
-              {S.repairs.include&&S.repairs.unknown&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>⚠ Get inspection quotes. Budget 5–15% of price for older buildings.</div>}
-            </Card>
-
-            {/* Projection — collapsible */}
-            <Card title="Projection & Growth" icon="📈" collapsible defaultOpen={false}>
-              <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
-                <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30} sub="5–10 yrs typical; longer = more guesswork"/>
-                <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
-                <Field label="Rent growth/yr" suffix="%" value={S.projection.rentGrowthPct||0} onChange={x=>setProj("rentGrowthPct",x)} min={0} max={10} step={0.25} sub="Applied to all units each year"/>
-                <div style={{padding:"7px 10px",background:C.tealL,borderRadius:8,border:"1px solid #9FE1CB",fontSize:11}}>
-                  <div style={{color:C.teal,fontWeight:700,marginBottom:2}}>Rent in year {S.projection.holdYears}</div>
-                  <div style={{fontWeight:700,color:C.teal,fontSize:14}}>{fmtD(Math.round((totalRent/numU)*Math.pow(1+(S.projection.rentGrowthPct||0)/100,(S.projection.holdYears||5)-1)))}/unit/mo</div>
-                </div>
-              </div>
-              <SecLabel text="Exit assumptions"/>
-              <div style={{marginBottom:12}}>
-                <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:9}}>
-                  <Field label="Selling costs" suffix="%" value={S.projection.sellingCostPct} onChange={x=>setProj("sellingCostPct",x)} min={0} max={12} step={0.5} sub="agent + closing at sale" showZero/>
-                  <div style={{padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border}}>
-                    <div style={{fontSize:10,color:C.slate,marginBottom:2}}>Net sale proceeds (yr {S.projection.holdYears})</div>
-                    <div style={{fontSize:14,fontWeight:700,color:C.heading}}>{fmtD(Y.exitVal*(1-(S.projection.sellingCostPct??6)/100)-(Y.yearly[Y.yearly.length-1]||{}).balance)}</div>
-                  </div>
-                </div>
-                <div style={{marginBottom:8}}><Tog checked={S.projection.exitCapEnabled||false} onChange={x=>setProj("exitCapEnabled",x)} label="Value the exit on a cap rate" sub="Sale price = final-year NOI ÷ exit cap (instead of appreciation %)"/></div>
-                {S.projection.exitCapEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
-                  <Field label="Exit cap rate" suffix="%" value={S.projection.exitCapRate} onChange={x=>setProj("exitCapRate",x)} min={1} max={15} step={0.1} sub={"vs entry cap "+fmtP(R.capRate)}/>
-                  <div style={{padding:"7px 10px",background:C.goldL,borderRadius:8,border:"1px solid #EDCF8A",fontSize:10,color:C.amber}}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
-                </div>}
-              </div>
-              <SecLabel text="Value-add scenario"/>
-              <div style={{marginBottom:12}}>
-                <div style={{marginBottom:8}}><Tog checked={S.projection.vaEnabled||false} onChange={x=>setProj("vaEnabled",x)} label="Below-market rents — value-add potential" sub="Show metrics at stabilized market rents"/></div>
-                {S.projection.vaEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
-                  <Field label="Market rent / unit" prefix="$" value={S.projection.vaMarketRentPerUnit||1700} onChange={x=>setProj("vaMarketRentPerUnit",x)} min={0} step={25} sub={"current: "+fmtD(totalRent/numU)+"/unit"}/>
-                  <Field label="Stabilized by year" value={S.projection.vaYear||2} onChange={x=>setProj("vaYear",x)} min={1} max={10}/>
-                </div>}
-              </div>
-              <SecLabel text="Refinance scenario"/>
-              <div>
-                <div style={{marginBottom:8}}><Tog checked={S.projection.refiEnabled||false} onChange={x=>setProj("refiEnabled",x)} label="Model a refinance in projection" sub="New rate applies from refi year onward"/></div>
-                {S.projection.refiEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
-                  <Field label="Refi year" value={S.projection.refiYear||3} onChange={x=>setProj("refiYear",x)} min={1} max={S.projection.holdYears||5}/>
-                  <Field label="New rate" suffix="%" value={S.projection.refiRate||6.5} onChange={x=>setProj("refiRate",x)} min={1} max={15} step={0.125}/>
-                </div>}
-              </div>
-            </Card>
-
-            {/* Listing link & notes — collapsible */}
-            <Card title="Listing link & notes" icon="📍" collapsible defaultOpen={false}>
-              <div style={{display:"flex",flexDirection:"column",gap:9}}>
-                <ListingLink url={S.listingUrl} onChange={v=>set("listingUrl",v)}/>
-                <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                  <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Notes / assumptions</label>
-                  <textarea value={S.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Seller motivated, rents below market, new roof 2022..."
-                    rows={2} style={{padding:"7px 10px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white,outline:"none",resize:"vertical",lineHeight:1.5}}/>
-                </div>
-              </div>
-            </Card>
-
-            {/* Unit details — optional, non-math; slim collapsed disclosure */}
-            <Disclosure title="Unit details" sub="Beds · baths · sq ft per unit — optional context, doesn't affect the math">
-              <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:14}}>
-                {S.units.map((u,i)=><div key={u.id} style={{border:"1px solid "+C.border,borderRadius:10,padding:"9px 11px",background:C.white}}>
-                  <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",marginBottom:7,width:"100%"}}/>
-                  <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:7}}>
-                    <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
-                    <Field label="Baths" value={u.bath||0} onChange={x=>setUnit(i,"bath",x)} min={0} max={6} step={0.5} xs/>
-                    <Field label="Sq ft" value={u.sqft||0} onChange={x=>setUnit(i,"sqft",x)} min={0} step={50} xs/>
-                  </div>
-                </div>)}
-              </div>
-            </Disclosure>
-
-            <AreaInsights data={S.insights} onChange={setInsights}/>
-            <ComparablesCard comps={S.comparables||[]} setComps={setComps} currentR={R}/>
-
-            {/* Examples loader (slim) */}
-            <div style={{marginTop:2}} className="no-print">
-              <button onClick={()=>setShowEx(!showEx)} style={{fontSize:11,fontWeight:700,color:C.slate,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"0 0 6px",display:"flex",alignItems:"center",gap:5}}>
-                <span>Load an Atlanta example deal</span><span style={{transition:"transform 0.2s",display:"inline-block",transform:showEx?"rotate(180deg)":"none"}}>▾</span>
-              </button>
-              {showEx&&<div>
-                <div className="preset-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:5}}>
-                  {EXAMPLES.map(ex=>{const on=selEx===ex.id;return <button key={ex.id} onClick={()=>loadEx(ex)} style={{padding:"7px 5px",borderRadius:9,border:"1.5px solid "+(on?ex.col:C.border),background:on?ex.col:C.white,cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all 0.15s"}}>
-                    <div style={{fontSize:10,fontWeight:700,color:on?"#fff":C.text}}>{ex.label}</div>
-                    <div style={{fontSize:9,color:on?"rgba(255,255,255,0.7)":C.slate,lineHeight:1.3}}>{ex.sub}</div>
-                    <div style={{marginTop:3,fontSize:9,fontWeight:700,color:on?"rgba(255,255,255,0.85)":ex.col}}>{ex.tag}</div>
-                  </button>;})}
-                </div>
-                <div style={{fontSize:9,color:C.muted,marginTop:5}}>Loads into the current deal. Click <strong>＋ New</strong> first to keep it as a separate saved deal.</div>
-              </div>}
-            </div>
-          </div>
-
-          {/* ── RIGHT: what you read — the report in one place, sticky on desktop ── */}
-          <div id="results-panel" className="sticky-col" style={{position:"sticky",top:8}}>
-            <div className="no-print" style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:12}}>
-              {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} style={{padding:"8px 13px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.heading:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
-            </div>
-            <div style={{display:tab==="overview"?"block":"none"}}><OverviewTab R={R} Y={Y} S={S} compact/></div>
-            <div style={{display:tab==="income"?"block":"none"}}><IncomeTab R={R} S={S}/></div>
-            <div style={{display:tab==="projection"?"block":"none"}}><ProjectionTab R={R} Y={Y} S={S}/></div>
-            <div style={{display:tab==="analysis"?"block":"none"}}><AnalysisTab SEN={SEN} R={R} S={S} Y={Y}/></div>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile floating bar */}
-      {undo&&<div className="no-print" style={{position:"fixed",left:"50%",bottom:70,transform:"translateX(-50%)",zIndex:1100,background:C.navy,color:"#fff",padding:"10px 16px",borderRadius:10,display:"flex",gap:16,alignItems:"center",boxShadow:"0 6px 24px rgba(0,0,0,0.35)",maxWidth:"92vw"}}>
-        <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Deleted “{dealTitle(undo.deal)}”</span>
-        <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩ Undo</button>
-      </div>}
-
-      <div className="mobile-bar" onClick={()=>{try{document.getElementById("results-panel").scrollIntoView({behavior:"smooth",block:"start"});}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
-        {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
-          <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
-          <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{v2}</div>
-        </div>)}
-        <div style={{fontSize:9,color:"rgba(255,255,255,0.7)",alignSelf:"center"}}>tap ↑</div>
-      </div>
-
-      <div style={{marginTop:10,fontSize:9,color:C.muted,borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
-        Built by <a href="https://www.linkedin.com/in/maksym--andreiev/" target="_blank" rel="noopener noreferrer" style={{color:C.heading,fontWeight:600,textDecoration:"none"}}>Maksym Andreiev</a> · Educational only — not financial, legal, or tax advice.
-      </div>
-    </div>
-    )}
-    </ViewCtx.Provider>
-  );
+  return renderClassic();
 }
