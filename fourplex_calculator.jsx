@@ -1525,7 +1525,6 @@ function ListingLink({url,onChange}){
 }
 // ── Quick fill (paste a listing / round-trip an AI estimate) ──
 function QuickFill({state,onListing,onAI,onSource}){
-  const[open,setOpen]=useState(false);
   const[lt,setLt]=useState("");
   const[at,setAt]=useState("");
   const[msg,setMsg]=useState(null);
@@ -1536,9 +1535,9 @@ function QuickFill({state,onListing,onAI,onSource}){
   const doListing=()=>{const pl=parseListing(lt);const f=[];if(pl.address)f.push("address");if(pl.price)f.push("price "+fmtD(pl.price));if(pl.units)f.push(pl.units+" units");if(pl.beds)f.push(pl.beds+"bd");if(pl.bath)f.push(pl.bath+"ba");if(pl.sqft)f.push(pl.sqft+" sqft");if(!f.length){setMsg({e:1,t:"Couldn't read a Zillow link or price/beds from that. Paste the listing URL or some listing text."});return;}onListing(pl);setMsg({t:"Filled: "+f.join(" · ")});};
   const copyPrompt=()=>{const txt=buildAIPrompt(state,lt);try{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1600);},()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}};
   const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);const f=[];if(o.price)f.push("price");if(Array.isArray(o.units)&&o.units.length)f.push(o.units.length+" units + rents");if(o.expenses)f.push("expenses");if(o.financing||o.projection||o.closingPct)f.push("financing/projection");if(o.insights)f.push("area insights");if(o.opinion)f.push("opinion → notes");setMsg({t:"Applied"+(o.model?" "+String(o.model).trim().slice(0,40)+" estimate":" AI estimate")+": "+(f.join(" · ")||"nothing recognized")});};
-  return <Card title="Auto-fill — paste a listing & round-trip AI" icon="⚡" sub={!open?"Paste a Zillow link to grab the address, then let any chat AI estimate rents, taxes & expenses.":undefined} right={<button onClick={()=>setOpen(o=>!o)} style={{fontSize:11,fontWeight:700,color:open?"#fff":C.slate,background:open?C.navy:C.bg,border:"1px solid "+(open?C.navy:C.border),borderRadius:7,padding:"4px 11px",cursor:"pointer",fontFamily:"inherit"}}>{open?"Hide":"Open"}</button>}>
-    {!open&&<div style={{fontSize:11,color:C.muted}}>Tip: hit <strong>＋ New deal</strong> first to keep this as its own saved property.</div>}
-    {open&&<div>
+  return <Card title="Auto-fill — paste a listing & round-trip AI" icon="⚡" collapsible defaultOpen={false}>
+    <div>
+      <div style={{fontSize:11,color:C.muted,marginBottom:10}}>Paste a Zillow link to grab the address, then let any chat AI estimate rents, taxes &amp; expenses. Tip: hit <strong>＋ New deal</strong> first to keep this as its own saved property.</div>
       <SecLabel text="1 · Paste the Zillow link"/>
       <div style={{fontSize:11,color:C.muted,marginBottom:6}}>No need to select text — just copy the page link. <span style={{color:C.slate}}>iPhone: in the Zillow app tap <strong>Share → Copy</strong>; in Safari tap the address bar → <strong>Copy</strong>.</span> (You can paste full listing text instead if you have it.)</div>
       <textarea value={lt} onChange={e=>setLt(e.target.value)} rows={2} placeholder="https://www.zillow.com/homedetails/…  (or paste listing text)" style={ta}/>
@@ -1556,7 +1555,7 @@ function QuickFill({state,onListing,onAI,onSource}){
       <div style={{fontSize:9,color:C.muted,marginTop:3}}>Auto-set from the AI's answer — correct it here if it was vague (models often misname their version).</div>
 
       {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?"#F7C1C1":"#9FE1CB")}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={5} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
-    </div>}
+    </div>
   </Card>;
 }
 // Header overflow menu — keeps the top bar to a couple of primary actions.
@@ -1782,7 +1781,7 @@ export default function App(){
         <div style={{position:"absolute",right:-10,top:-10,width:70,height:70,border:"2px solid rgba(200,146,42,0.2)",borderRadius:"50%",pointerEvents:"none"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
           <div>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",color:C.gold,marginBottom:3,textTransform:"uppercase"}}>Atlanta · Georgia · Multifamily</div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",color:C.gold,marginBottom:3,textTransform:"uppercase"}}>Rental Property · Deal Analyzer</div>
             <div style={{fontSize:18,fontWeight:700,color:"#fff"}}>Investment Property Analyzer</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Unlimited deals · every change auto-saves · switch & compare anytime</div>
           </div>
