@@ -52,6 +52,16 @@ test("deleting a digit inside a grouped number keeps the caret sane", () => {
   assert.equal(f.value, 0);                 // "000000" -> 0
 });
 
+test("Bug 3: editing 7.5 -> delete the 7 -> type 6 yields 6.5 (not 60.5)", () => {
+  const f = field("7.5", 1, true);   // caret right after the "7"
+  f.back();                          // delete the 7 -> ".5" (no injected leading 0)
+  assert.equal(f.display, ".5");
+  assert.equal(f.value, 0.5);
+  f.type("6");                       // caret sits before the dot -> "6.5"
+  assert.equal(f.display, "6.5");
+  assert.equal(f.value, 6.5);
+});
+
 test("editNumber: caret counts the decimal point as significant", () => {
   // "6" + "." at end: caret must be after the dot (index 2), not before it
   const r = M.editNumber("6.", 2, true);

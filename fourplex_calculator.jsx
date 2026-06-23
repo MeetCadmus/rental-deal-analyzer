@@ -30,7 +30,11 @@ function fmtGroup(raw,decimals){
   intp=intp.replace(/^0+(?=\d)/,"");
   const g=intp===""?"":Number(intp).toLocaleString("en-US");
   let out=g;
-  if(dec!==null)out=(g===""?"0":g)+"."+dec;
+  // While editing, keep a bare ".5" as ".5" — don't inject a leading "0". Injecting
+  // it surprised users mid-edit and dropped the caret in front of the synthetic 0,
+  // so pasting a digit produced e.g. "60.5". Committed values stringify with the 0
+  // ("0.5"), and onBlur re-renders from the committed value, so it normalizes then.
+  if(dec!==null)out=g+"."+dec;
   return out===""?(neg?"-":""):(neg?"-"+out:out);
 }
 // Pure editing step: given the raw input value + caret, return the grouped display,
