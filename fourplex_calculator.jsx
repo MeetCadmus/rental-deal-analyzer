@@ -283,17 +283,21 @@ function SmBtn({active,onClick,label}){
 // Section card: gradient header with an emoji icon and an uppercase label. `right`
 // renders an action on the header. When `collapsible`, the whole header toggles the
 // body (with a chevron) so every section heading stays scannable while details hide.
-function Card({title,icon,children,right,sub,collapsible,defaultOpen=true}){
+function Card({title,icon,children,right,sub,summary,collapsible,defaultOpen=true}){
   // Faithful original skin: gradient header + emoji icon. Optionally collapsible —
   // the gradient header becomes the toggle and a chevron shows open/closed state.
+  // `summary` is an at-a-glance figure shown on the right of the header (light text
+  // for contrast on the dark gradient); clicking it still toggles the card. `right`
+  // is for interactive controls (it swallows the toggle click).
   const[open,setOpen]=useState(defaultOpen);
   const isOpen=collapsible?open:true;
   return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
     <div onClick={collapsible?()=>setOpen(o=>!o):undefined} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
       <span style={{fontSize:14}}>{icon}</span>
       <span style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>{title}</span>
-      {right&&<div onClick={collapsible?e=>e.stopPropagation():undefined} style={{marginLeft:"auto"}}>{right}</div>}
-      {collapsible&&<span style={{marginLeft:right?10:"auto",flexShrink:0,fontSize:13,color:"rgba(255,255,255,0.85)",transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>}
+      {summary!=null&&<span style={{marginLeft:"auto",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.92)",whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{summary}</span>}
+      {right&&<div onClick={collapsible?e=>e.stopPropagation():undefined} style={{marginLeft:summary!=null?10:"auto"}}>{right}</div>}
+      {collapsible&&<span style={{marginLeft:(summary!=null||right)?10:"auto",flexShrink:0,fontSize:13,color:"rgba(255,255,255,0.85)",transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>}
     </div>
     {isOpen&&<div style={{padding:"12px 13px",background:C.white}}>{children}</div>}
   </div>;
@@ -338,7 +342,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
   const addI=()=>setCC(p=>({...p,customItems:[...(p.customItems||[]),{name:"",amt:0}]}));
   const remI=i=>setCC(p=>({...p,customItems:p.customItems.filter((_,j)=>j!==i)}));
   const setI=(i,k,v)=>setCC(p=>{const a=[...p.customItems];a[i]={...a[i],[k]:v};return{...p,customItems:a};});
-  return <Card title="Closing costs" icon="📝" collapsible={collapsible} defaultOpen={defaultOpen} right={collapsible?<span style={{fontSize:11,fontWeight:700,color:C.slate}}>{fmtD(total)}</span>:undefined}>
+  return <Card title="Closing costs" icon="📝" collapsible={collapsible} defaultOpen={defaultOpen} summary={collapsible?fmtD(total):undefined}>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
       {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
       <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(total)}</strong></span>
@@ -449,7 +453,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
   const addCE=()=>setEx(p=>({...p,customExpenses:[...(p.customExpenses||[]),{name:"",amt:0,period:"annual"}]}));
   const remCE=i=>setEx(p=>({...p,customExpenses:p.customExpenses.filter((_,j)=>j!==i)}));
   const setCE=(i,k,v)=>setEx(p=>{const a=[...p.customExpenses];a[i]={...a[i],[k]:v};return{...p,customExpenses:a};});
-  return <Card title="Vacancy & Expenses" icon="💸" collapsible={collapsible} defaultOpen={defaultOpen} right={collapsible?<span style={{fontSize:11,fontWeight:700,color:C.slate}}>{fmtD(totExp)}/yr</span>:undefined}>
+  return <Card title="Vacancy & Expenses" icon="💸" collapsible={collapsible} defaultOpen={defaultOpen} summary={collapsible?fmtD(totExp)+"/yr":undefined}>
     {/* Property class preset (a starting point — clears to "Custom" once edited) */}
     <div style={{marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
@@ -1475,7 +1479,7 @@ function AreaInsights({data,onChange}){
   const lbl={fontSize:10,fontWeight:700,color:C.slate,marginBottom:3,display:"block"};
   const ta=t=>({...inp,resize:"vertical",lineHeight:1.4});
   const toggle=<button onClick={()=>setEdit(e=>!e)} style={{fontSize:11,fontWeight:700,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"4px 11px",cursor:"pointer",fontFamily:"inherit"}}>{edit?"Done":"Edit"}</button>;
-  return <Card title="Area & due-diligence" icon="📍" right={toggle}>
+  return <Card title="Area & due-diligence" icon="📍" right={toggle} collapsible defaultOpen>
     <div style={{fontSize:10,color:C.muted,marginBottom:9}}>Context only — does not affect the math. AI fills it via Quick-fill; edit anything. Verify schools/crime/flood independently.</div>
     {edit?<div style={{display:"flex",flexDirection:"column",gap:9}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
@@ -1827,7 +1831,7 @@ export default function App(){
 
       <div className="layout" style={{display:"grid",gridTemplateColumns:"minmax(0,0.92fr) minmax(0,1.08fr)",gap:11,alignItems:"start"}}>
         {/* LEFT: Inputs */}
-        <div>
+        <div id="inputs-panel">
           <QuickFill key={activeId} state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
           {/* Address + Notes */}
           <Card title="Property details" icon="📍" collapsible defaultOpen>
@@ -1847,7 +1851,7 @@ export default function App(){
           </Card>
 
           {/* Units */}
-          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️" collapsible defaultOpen>
+          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️" collapsible defaultOpen summary={fmtD(totalRent)+"/mo"}>
             <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
             <div style={{marginBottom:9}}><Tog checked={showUD} onChange={setShowUD} label="Show unit details (beds / bath / sq ft)"/></div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -1872,7 +1876,7 @@ export default function App(){
           </Card>
 
           {/* Financing */}
-          <Card title="Financing" icon="🏦" collapsible defaultOpen>
+          <Card title="Financing" icon="🏦" collapsible defaultOpen summary={fmtD(R.pmt)+"/mo"}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
               <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
               <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
@@ -1901,7 +1905,7 @@ export default function App(){
           <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price} collapsible defaultOpen/>
 
           {/* Repairs */}
-          <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen>
+          <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen summary={S.repairs.include?(S.repairs.unknown?"TBD":fmtD(S.repairs.amount)):undefined}>
             <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
             {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:9,alignItems:"end"}}>
               <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
@@ -1914,7 +1918,7 @@ export default function App(){
           </Card>
 
           {/* Projection */}
-          <Card title="Projection & Growth" icon="📈" collapsible defaultOpen>
+          <Card title="Projection & Growth" icon="📈" collapsible defaultOpen summary={S.projection.holdYears+"yr · "+fmtP(S.projection.appreciationPct)}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
               <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
               <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
@@ -1991,7 +1995,7 @@ export default function App(){
         <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩ Undo</button>
       </div>}
 
-      <div className="mobile-bar" onClick={()=>{try{const el=document.getElementById("results-panel");if(el.getBoundingClientRect().top>80){el.scrollIntoView({behavior:"smooth",block:"start"});}else{window.scrollTo({top:0,behavior:"smooth"});}}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
+      <div className="mobile-bar" onClick={()=>{try{const el=document.getElementById("results-panel");if(el.getBoundingClientRect().top>80){el.scrollIntoView({behavior:"smooth",block:"start"});}else{(document.getElementById("inputs-panel")||document.body).scrollIntoView({behavior:"smooth",block:"start"});}}catch{}}} style={{display:"none",position:"fixed",bottom:0,left:0,right:0,background:score.color,padding:"8px 16px",zIndex:200,alignItems:"center",justifyContent:"space-around",cursor:"pointer"}}>
         {[["Deal score",score.grade],["CF/mo",fmtD(R.cf/12)],["Cap rate",fmtP(R.capRate)],["DSCR",R.dscr.toFixed(2)]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}>
           <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
           <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{v2}</div>
