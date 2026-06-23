@@ -1812,9 +1812,6 @@ export default function App(){
           .sticky-col{position:static!important}
           .mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
           .preset-grid{grid-template-columns:repeat(3,1fr)!important}
-          .results-tabs{display:none!important}
-          .tab-pane{display:block!important}
-          .tab-pane+.tab-pane{border-top:2px solid var(--c-border);margin-top:16px;padding-top:16px}
           input,select,textarea{font-size:16px!important}}
         input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(30,58,110,0.25)}
       `}</style>
@@ -2011,7 +2008,7 @@ export default function App(){
         {/* RIGHT: Results */}
         <div id="results-panel" className="sticky-col" style={{position:"sticky",top:8}}>
           {/* Tab bar */}
-          {!isPrinting&&<div role="tablist" aria-label="Results" className="no-print results-tabs" onKeyDown={e=>{const i=TABS.findIndex(([id])=>id===tab);if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();const n=(i+(e.key==="ArrowRight"?1:TABS.length-1))%TABS.length;setTab(TABS[n][0]);}}} style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
+          {!isPrinting&&<div role="tablist" aria-label="Results" className="no-print" onKeyDown={e=>{const i=TABS.findIndex(([id])=>id===tab);if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();const n=(i+(e.key==="ArrowRight"?1:TABS.length-1))%TABS.length;setTab(TABS[n][0]);}}} style={{display:"flex",gap:0,borderBottom:"2px solid "+C.border,marginBottom:11}}>
             {TABS.map(([id,lbl])=><button key={id} role="tab" aria-selected={tab===id} tabIndex={tab===id?0:-1} onClick={()=>setTab(id)} style={{padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"none",color:tab===id?C.heading:C.slate,borderBottom:tab===id?"2px solid "+C.gold:"2px solid transparent",marginBottom:-2,fontFamily:"inherit",letterSpacing:"0.01em"}}>{lbl}</button>)}
           </div>}
           {isPrinting?(
@@ -2023,10 +2020,10 @@ export default function App(){
             </div>
           ):(
             <div>
-              <div className="tab-pane" style={{display:tab==="overview"?"block":"none"}}><OverviewTab R={R} Y={Y} S={S}/></div>
-              <div className="tab-pane" style={{display:tab==="income"?"block":"none"}}><IncomeTab R={R} S={S}/></div>
-              <div className="tab-pane" style={{display:tab==="projection"?"block":"none"}}><ProjectionTab R={R} Y={Y} S={S}/></div>
-              <div className="tab-pane" style={{display:tab==="analysis"?"block":"none"}}><AnalysisTab SEN={SEN} R={R} S={S} Y={Y}/></div>
+              <div style={{display:tab==="overview"?"block":"none"}}><OverviewTab R={R} Y={Y} S={S}/></div>
+              <div style={{display:tab==="income"?"block":"none"}}><IncomeTab R={R} S={S}/></div>
+              <div style={{display:tab==="projection"?"block":"none"}}><ProjectionTab R={R} Y={Y} S={S}/></div>
+              <div style={{display:tab==="analysis"?"block":"none"}}><AnalysisTab SEN={SEN} R={R} S={S} Y={Y}/></div>
             </div>
           )}
         </div>
