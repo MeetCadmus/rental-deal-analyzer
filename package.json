@@ -14,14 +14,15 @@
     "test:legacy": "node --test test/*.test.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@supabase/supabase-js": "^2.45.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@babel/standalone": "^7.24.0",
-    "@testing-library/react": "^16.0.0",
     "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/node": "^20.19.43",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
