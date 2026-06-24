@@ -51,6 +51,12 @@ test("buildAIPrompt: embeds known fields and the JSON schema", () => {
   assert.match(prompt, /MARKET monthly rent/);
 });
 
+test("buildAIPrompt: asks the model to self-report its active name + tier", () => {
+  const prompt = M.buildAIPrompt({ units: [] });
+  assert.match(prompt, /current active model name and tier/i);
+  assert.doesNotMatch(prompt, /blank model is correct/i);   // old "leave it blank" guidance is gone
+});
+
 test("parseAIResult: parses plain JSON", () => {
   const o = M.parseAIResult('{"price":620000,"units":[{"rent":1800}],"opinion":"ok"}');
   assert.equal(o.price, 620000);
