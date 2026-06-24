@@ -1503,7 +1503,7 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
               <button onClick={()=>startEdit(d)} style={xbtn}>✎ Rename</button>
               <button onClick={()=>onDuplicate(d._id)} style={xbtn}>⧉ Duplicate</button>
               <button onClick={()=>onDelete(d._id)} style={{...xbtn,color:C.red,borderColor:C.redL}}>Delete</button>
-              {/^https?:\/\//i.test(d.listingUrl||"")&&<a href={d.listingUrl} target="_blank" rel="noopener noreferrer" style={{...xbtn,color:C.heading,textDecoration:"none",marginLeft:"auto"}}>↗ Listing</a>}
+              {/^https?:\/\//i.test(d.listingUrl||"")&&<a href={d.listingUrl} target="_blank" rel="noopener noreferrer" style={{...xbtn,color:C.heading,textDecoration:"none",marginLeft:"auto"}}>↗︎ Listing</a>}
             </div>
           </div>;
         })}
@@ -1564,7 +1564,7 @@ function AreaInsights({data,onChange}){
       {line("Rental demand",d.demand)}
       {list("Pros",d.pros,C.teal,"✓")}
       {list("Cons",d.cons,C.amber,"•")}
-      {list("Risks / red flags",d.risks,C.red,"⚠")}
+      {list("Risks / red flags",d.risks,C.red,"⚠︎")}
     </div>}
   </Card>;
 }
@@ -1577,7 +1577,7 @@ function ListingLink({url,onChange}){
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Listing</label>
       <div style={{marginLeft:"auto",display:"flex",gap:6}}>
-        {valid&&<a href={url} target="_blank" rel="noopener noreferrer" style={{...b,background:C.navy,color:"#fff",border:"1px solid "+C.navy,textDecoration:"none"}}>↗ Open</a>}
+        {valid&&<a href={url} target="_blank" rel="noopener noreferrer" style={{...b,background:C.navy,color:"#fff",border:"1px solid "+C.navy,textDecoration:"none"}}>↗︎ Open</a>}
         <button onClick={()=>setEdit(e=>!e)} style={{...b,background:C.white,color:C.slate,border:"1px solid "+C.border}}>{edit?"Done":(valid?"✎ Edit":"+ Add link")}</button>
       </div>
     </div>
@@ -2019,7 +2019,7 @@ export default function App(){
                 <button onClick={()=>setRep("unknown",!S.repairs.unknown)} style={{padding:"6px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1px solid "+(S.repairs.unknown?C.amber:C.border),background:S.repairs.unknown?C.amberL:C.white,color:S.repairs.unknown?C.amber:C.slate}}>? TBD</button>
               </div>
             </div>}
-            {S.repairs.include&&S.repairs.unknown&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>⚠ Get inspection quotes. Budget 5–15% of price for older buildings.</div>}
+            {S.repairs.include&&S.repairs.unknown&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>⚠︎ Get inspection quotes. Budget 5–15% of price for older buildings.</div>}
           </Card>
 
           {/* Projection */}
@@ -2097,7 +2097,7 @@ export default function App(){
       {/* Mobile floating bar */}
       {undo&&<div className="no-print" style={{position:"fixed",left:"50%",bottom:70,transform:"translateX(-50%)",zIndex:1100,background:C.navy,color:"#fff",padding:"10px 16px",borderRadius:10,display:"flex",gap:16,alignItems:"center",boxShadow:"0 6px 24px rgba(0,0,0,0.35)",maxWidth:"92vw"}}>
         <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Deleted “{dealTitle(undo.deal)}”</span>
-        <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩ Undo</button>
+        <button onClick={undoDelete} style={{fontSize:12,fontWeight:700,color:C.gold,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>↩︎ Undo</button>
       </div>}
 
       {toast&&<div className="no-print" onClick={()=>setToast("")} style={{position:"fixed",left:"50%",bottom:110,transform:"translateX(-50%)",zIndex:1100,background:C.teal,color:"#fff",padding:"10px 16px",borderRadius:10,fontSize:12,fontWeight:600,boxShadow:"0 6px 24px rgba(0,0,0,0.35)",maxWidth:"92vw",textAlign:"center",cursor:"pointer"}}>{toast}</div>}
@@ -2107,7 +2107,7 @@ export default function App(){
           <div style={{fontSize:9,color:"rgba(255,255,255,0.7)"}}>{l2}</div>
           <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{v2}</div>
         </div>)}
-        <div style={{fontSize:9,color:"rgba(255,255,255,0.7)",alignSelf:"center"}}>tap ↕</div>
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.7)",alignSelf:"center"}}>tap ↕︎</div>
       </div>
 
       <div style={{marginTop:10,fontSize:9,color:C.muted,borderTop:"1px solid "+C.border,paddingTop:8,marginBottom:60}}>
