@@ -386,21 +386,21 @@ function MBox({label,value,sub,lvl,bar,bMax,bGood,bWarn,bInv,tip}){
   </div>;
 }
 // ── Closing costs ─────────────────────────────────────────────
-const DCC={mode:"quick",quickPct:3,origPct:0.5,pointsPct:0,appraisal:800,creditReport:30,underwriting:750,attyFee:1200,titleSearch:275,lenderTitle:900,ownerTitle:1200,recordingFees:75,firstYearInsurance:1500,prepaidDays:15,taxEscrowMonths:3,insEscrowMonths:2,inspection:550,termite:100,survey:600,enviro:0,customItems:[]};
+const DCC={mode:"quick",quickPct:3,origPct:0.5,pointsPct:0,appraisal:800,creditReport:30,underwriting:750,transferTaxPct:0,attyFee:1200,titleSearch:275,lenderTitle:900,ownerTitle:1200,recordingFees:75,firstYearInsurance:1500,prepaidDays:15,taxEscrowMonths:3,insEscrowMonths:2,inspection:550,termite:100,survey:600,enviro:0,customItems:[]};
 function calcCC(cc,price,loan,annTax,annIns,rate){
   if(!cc||cc.mode==="quick")return(price||0)*((cc?.quickPct||3)/100);
   const r=rate??7.25,l=loan||0,p=price||0;
-  return l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0)+Math.ceil(l/500)*1.5+Math.round(p/1000)+10+(cc.recordingFees||0)+(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0)+(cc.firstYearInsurance||0)+(cc.prepaidDays||0)*(l*r/100/365)+((annTax||0)/12)*(cc.taxEscrowMonths||0)+((annIns||0)/12)*(cc.insEscrowMonths||0)+(cc.inspection||0)+(cc.termite||0)+(cc.survey||0)+(cc.enviro||0)+(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0);
+  return l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0)+p*(cc.transferTaxPct||0)/100+(cc.recordingFees||0)+(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0)+(cc.firstYearInsurance||0)+(cc.prepaidDays||0)*(l*r/100/365)+((annTax||0)/12)*(cc.taxEscrowMonths||0)+((annIns||0)/12)*(cc.insEscrowMonths||0)+(cc.inspection||0)+(cc.termite||0)+(cc.survey||0)+(cc.enviro||0)+(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0);
 }
 function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaultOpen}){
   const sf=(k,v)=>setCC(p=>({...p,[k]:v}));
   const l=loan||0,p=price||0,r=rate??7.25,aT=annTax||0,aI=annIns||0;
-  const intangible=Math.ceil(l/500)*1.5,transfer=Math.round(p/1000),prepInt=(cc.prepaidDays||0)*(l*r/100/365);
+  const transferTax=p*(cc.transferTaxPct||0)/100,prepInt=(cc.prepaidDays||0)*(l*r/100/365);
   const taxEsc=(aT/12)*(cc.taxEscrowMonths||0),insEsc=(aI/12)*(cc.insEscrowMonths||0);
   const lT=l*(cc.origPct||0)/100+l*(cc.pointsPct||0)/100+(cc.appraisal||0)+(cc.creditReport||0)+(cc.underwriting||0);
-  const gaT=intangible+transfer+10,titleT=(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0)+(cc.recordingFees||0);
+  const taxT=transferTax+(cc.recordingFees||0),titleT=(cc.attyFee||0)+(cc.titleSearch||0)+(cc.lenderTitle||0)+(cc.ownerTitle||0);
   const prepT=(cc.firstYearInsurance||0)+prepInt+taxEsc+insEsc,ddT=(cc.inspection||0)+(cc.termite||0)+(cc.survey||0)+(cc.enviro||0);
-  const custT=(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0),grand=lT+gaT+titleT+prepT+ddT+custT;
+  const custT=(cc.customItems||[]).reduce((s,x)=>s+num(x.amt),0),grand=lT+taxT+titleT+prepT+ddT+custT;
   const total=cc.mode==="quick"?p*(cc.quickPct||3)/100:grand;
   const addI=()=>setCC(p=>({...p,customItems:[...(p.customItems||[]),{name:"",amt:0}]}));
   const remI=i=>setCC(p=>({...p,customItems:p.customItems.filter((_,j)=>j!==i)}));
@@ -413,7 +413,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
     {cc.mode==="quick"&&<div>
       <Field label="Closing cost %" suffix="%" value={cc.quickPct||3} onChange={x=>sf("quickPct",x)} min={1} max={8} step={0.1} sub={fmtD(p*(cc.quickPct||3)/100)+" estimated"}/>
       <div style={{marginTop:9,background:C.bg,borderRadius:8,padding:"9px 12px",border:"1px solid "+C.border,fontSize:11}}>
-        <div style={{fontWeight:700,color:C.heading,marginBottom:4}}>Atlanta buyer ranges</div>
+        <div style={{fontWeight:700,color:C.heading,marginBottom:4}}>Typical buyer ranges</div>
         {[["Cash, no inspection","1.5–2%"],["Standard (financed)","2.5–3.5%"],["With inspection + survey","3–4%"],["Investment / multifamily","3–4.5%"]].map(([l2,r2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",color:C.slate,marginBottom:2}}><span>{l2}</span><span style={{fontWeight:600,color:C.text}}>{r2}</span></div>)}
       </div>
     </div>}
@@ -425,10 +425,10 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
         <Field label="Appraisal" prefix="$" value={cc.appraisal||0} onChange={x=>sf("appraisal",x)} min={0} step={50} sub="$600–1,200" xs/>
         <Field label="Underwriting" prefix="$" value={cc.underwriting||0} onChange={x=>sf("underwriting",x)} min={0} step={50} sub="$500–1,500" xs/>
       </div>
-      <SecLabel text="Georgia taxes (auto)" right={"= "+fmtD(gaT)}/>
-      <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:12}}>
-        {[["GA Intangible Tax",intangible,"$1.50/$500 of loan"],["GA Transfer Tax",transfer,"$1/$1,000 price"],["GA Mortgage Fee",10,"Flat $10"]].map(([l2,v2,n2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",background:C.bg,padding:"5px 9px",borderRadius:7,border:"1px solid "+C.border,fontSize:11}}><span style={{color:C.slate,fontWeight:600}}>{l2} <span style={{fontSize:9,background:C.goldL,color:C.amber,borderRadius:3,padding:"1px 4px",fontWeight:700}}>AUTO</span> · <span style={{color:C.muted,fontWeight:400}}>{n2}</span></span><span style={{color:C.heading,fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmtD(v2)}</span></div>)}
-        <Field label="Recording fees" prefix="$" value={cc.recordingFees||0} onChange={x=>sf("recordingFees",x)} min={0} step={5} sub="~$75–100" xs/>
+      <SecLabel text="Transfer & recording tax" right={"= "+fmtD(taxT)}/>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:12}}>
+        <Field label="Transfer/deed tax" suffix="% of price" value={cc.transferTaxPct||0} onChange={x=>sf("transferTaxPct",x)} min={0} max={5} step={0.05} sub={fmtD(transferTax)+" · varies by state/county"} xs/>
+        <Field label="Recording fees" prefix="$" value={cc.recordingFees||0} onChange={x=>sf("recordingFees",x)} min={0} step={5} sub="flat county fees" xs/>
       </div>
       <SecLabel text="Title & attorney" right={"= "+fmtD(titleT)}/>
       <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:12}}>
@@ -538,7 +538,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
       <span style={{marginLeft:"auto",fontSize:11,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(totExp)}/yr</strong></span>
     </div>
     <div style={{marginBottom:ex.mode==="quick"?10:12}}>
-      <Field label="Vacancy rate" suffix="%" value={ex.vacancyPct||0} onChange={x=>sf("vacancyPct",x)} min={0} max={30} step={0.5} sub="ATL avg ~5.9%"/>
+      <Field label="Vacancy rate" suffix="%" value={ex.vacancyPct||0} onChange={x=>sf("vacancyPct",x)} min={0} max={30} step={0.5} sub="typically 5–8%"/>
     </div>
     {ex.mode==="quick"&&<div>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
@@ -546,7 +546,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
         <span style={{fontSize:14,fontWeight:700,color:C.heading}}>{ex.ratio||45}% = {fmtD(egi*(ex.ratio||45)/100)}/yr</span>
       </div>
       <input type="range" min={30} max={60} step={1} value={ex.ratio||45} onChange={e=>sf("ratio",parseInt(e.target.value))} style={{width:"100%",accentColor:C.navy,cursor:"pointer"}}/>
-      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.slate,marginTop:2}}><span>30% new/stable</span><span>45% typical ATL</span><span>60% old/C-class</span></div>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.slate,marginTop:2}}><span>30% new/stable</span><span>45% typical</span><span>60% old/C-class</span></div>
       <div style={{marginTop:8,padding:"7px 10px",background:C.goldL,borderRadius:7,border:"1px solid "+C.border,fontSize:10,color:C.amber}}>Covers all costs: taxes, insurance, management, repairs, CapEx, utilities. Switch to Itemized for full control.</div>
     </div>}
     {ex.mode==="detailed"&&items&&(()=>{
@@ -563,7 +563,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
           <div style={{display:"flex",alignItems:"center",gap:5}}><label style={{fontSize:10,color:C.slate,fontWeight:600,display:"flex",alignItems:"center"}}>Property taxes<Info lines={["Annual property tax bill.","· GA est ≈ 1.0–1.5% of price/yr","· Check the county assessor for the real figure"]}/></label><SmBtn active={ex.taxMode!=="pct"} onClick={()=>sf("taxMode","fixed")} label="$/yr"/><SmBtn active={ex.taxMode==="pct"} onClick={()=>sf("taxMode","pct")} label="% price"/></div>
           {ex.taxMode==="pct"?<Field suffix="% of price" value={ex.taxPct||1.2} onChange={x=>sf("taxPct",x)} min={0} max={5} step={0.05} sub={"= "+fmtD(items.taxes)+"/yr"} xs/>:<Field prefix="$" suffix="/yr" value={ex.taxes||0} onChange={x=>sf("taxes",x)} min={0} step={100} sub={"auto est "+fmtD(Math.round((price||0)*1.2/100))} xs/>}
         </div>
-        <Field label="Insurance" prefix="$" suffix="/yr" value={ex.insurance||0} onChange={x=>sf("insurance",x)} min={0} step={100} sub={perMo(items.insurance)} tip={["Landlord / hazard insurance per year.","· Small multifamily ≈ $1,000–2,000/unit/yr","· ATL premiums rising — get a real quote"]} xs/>
+        <Field label="Insurance" prefix="$" suffix="/yr" value={ex.insurance||0} onChange={x=>sf("insurance",x)} min={0} step={100} sub={perMo(items.insurance)} tip={["Landlord / hazard insurance per year.","· Small multifamily ≈ $1,000–2,000/unit/yr","· get a real quote for your market"]} xs/>
       </div>
 
       <SecLabel text="Management" right={"= "+fmtD(items.mgmt)+"/yr"}/>
@@ -2026,7 +2026,7 @@ export default function App(){
           <Card title="Projection & Growth" icon="trend" collapsible defaultOpen storeKey="proj" summary={S.projection.holdYears+"yr · "+fmtP(S.projection.appreciationPct)}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
               <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
-              <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
+              <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="set your market's forecast"/>
               <Field label="Rent growth/yr" suffix="%" value={S.projection.rentGrowthPct||0} onChange={x=>setProj("rentGrowthPct",x)} min={0} max={10} step={0.25} sub="Applied to all units each year"/>
               <div style={{padding:"7px 10px",background:C.tealL,borderRadius:8,border:"1px solid "+C.border,fontSize:11}}>
                 <div style={{color:C.teal,fontWeight:700,marginBottom:2}}>Rent in year {S.projection.holdYears}</div>
