@@ -1,10 +1,38 @@
 import { useState, useMemo, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 
 const C={navy:"var(--c-navy)",navyM:"var(--c-navyM)",gold:"var(--c-gold)",goldL:"var(--c-goldL)",teal:"var(--c-teal)",tealL:"var(--c-tealL)",red:"var(--c-red)",redL:"var(--c-redL)",amber:"var(--c-amber)",amberL:"var(--c-amberL)",slate:"var(--c-slate)",border:"var(--c-border)",bg:"var(--c-bg)",white:"var(--c-white)",text:"var(--c-text)",heading:"var(--c-heading)",rowline:"var(--c-rowline)",grid:"var(--c-grid)",hl:"var(--c-hl)",tealS:"var(--c-tealS)",redS:"var(--c-redS)",amberS:"var(--c-amberS)",blueS:"var(--c-blueS)",muted:"var(--c-muted)"};
+// ── Skins ──────────────────────────────────────────────────────────────────
+// Four selectable looks. Each sets the colour tokens (light + dark) PLUS a few
+// "treatment" vars (header background, corner radius, fonts, accent style) so the
+// whole app re-skins from an html[data-skin] attribute. The bare :root is the
+// "Classic" skin; the other three override via [data-skin="…"]. Treatment vars
+// live in the light block and reference colour tokens, so they adapt to dark too.
+const SKINS=[["classic","Classic"],["ink","Ink"],["graphite","Graphite"],["heritage","Heritage"]];
 const THEME_CSS=`
-:root{--c-navy:#0D1F3C;--c-navyM:#1e3a6e;--c-gold:#C8922A;--c-goldL:#FDF3E3;--c-teal:#14705A;--c-tealL:#DFF2EC;--c-red:#9B2335;--c-redL:#FCEAEC;--c-amber:#8C5A0A;--c-amberL:#FDF3E3;--c-slate:#4A5568;--c-border:#E2E8F0;--c-bg:#F7F8FA;--c-white:#ffffff;--c-text:#1A202C;--c-heading:#0D1F3C;--c-page:#F7F8FA;--c-rowline:#F7FAFC;--c-grid:#EDF1F6;--c-hl:#EEF2FF;--c-tealS:#14705A;--c-redS:#9B2335;--c-amberS:#8C5A0A;--c-blueS:#185FA5;--c-muted:#718096;color-scheme:light;}
+/* Classic — the original navy + gold (default) */
+:root{--c-navy:#0D1F3C;--c-navyM:#1e3a6e;--c-gold:#C8922A;--c-goldL:#FDF3E3;--c-teal:#14705A;--c-tealL:#DFF2EC;--c-red:#9B2335;--c-redL:#FCEAEC;--c-amber:#8C5A0A;--c-amberL:#FDF3E3;--c-slate:#4A5568;--c-border:#E2E8F0;--c-bg:#F7F8FA;--c-white:#ffffff;--c-text:#1A202C;--c-heading:#0D1F3C;--c-page:#F7F8FA;--c-rowline:#F7FAFC;--c-grid:#EDF1F6;--c-hl:#EEF2FF;--c-tealS:#14705A;--c-redS:#9B2335;--c-amberS:#8C5A0A;--c-blueS:#185FA5;--c-muted:#718096;color-scheme:light;
+  --c-rad:11px;--c-head:linear-gradient(90deg,var(--c-navy),var(--c-navyM));--c-fdisp:system-ui,-apple-system,sans-serif;--c-fui:system-ui,-apple-system,sans-serif;--c-headfg:#ffffff;--c-ring:rgba(30,58,110,0.25);--c-emoji:inline;--c-bar:none;--c-deco:block;}
 :root[data-theme="dark"]{--c-navy:#16325C;--c-navyM:#244a86;--c-gold:#E0A93C;--c-goldL:#33280F;--c-teal:#3FD0AE;--c-tealL:#123A30;--c-red:#F08699;--c-redL:#3A1A20;--c-amber:#E6B454;--c-amberL:#33280F;--c-slate:#9AA7BC;--c-border:#2C3A53;--c-bg:#161F33;--c-white:#1C2740;--c-text:#E6EAF2;--c-heading:#9CC0F2;--c-page:#0F1624;--c-rowline:#222C42;--c-grid:#222C42;--c-hl:#1B2A47;--c-tealS:#0E7A5F;--c-redS:#B53049;--c-amberS:#8A5A0E;--c-blueS:#2A63A6;--c-muted:#8593A8;color-scheme:dark;}
-body{background:var(--c-page)!important;color:var(--c-text);transition:background .2s ease,color .2s ease;}
+
+/* Ink & Ivory — editorial luxury (near-black ink on ivory, champagne accent) */
+:root[data-skin="ink"]{--c-navy:#15120E;--c-navyM:#2A251D;--c-gold:#A6803F;--c-goldL:#F1E9D8;--c-teal:#4C6B55;--c-tealL:#E8EDE6;--c-red:#8C3A33;--c-redL:#F3E6E1;--c-amber:#8C6526;--c-amberL:#F1E8D6;--c-slate:#6B6258;--c-border:#E6DECF;--c-bg:#F2EBDD;--c-white:#FFFEFB;--c-text:#211C15;--c-heading:#15120E;--c-page:#F6F2EA;--c-rowline:#FBF8F1;--c-grid:#EFE8D9;--c-hl:#F3EDDF;--c-tealS:#4C6B55;--c-redS:#8C3A33;--c-amberS:#8C6526;--c-blueS:#3F5168;--c-muted:#9B9081;
+  --c-rad:4px;--c-head:var(--c-navy);--c-fdisp:'Playfair Display',Georgia,serif;--c-fui:'Inter',system-ui,sans-serif;--c-headfg:#F6F2EA;--c-ring:rgba(166,128,63,0.35);--c-emoji:none;--c-bar:inline-block;--c-deco:none;}
+:root[data-skin="ink"][data-theme="dark"]{--c-navy:#211C15;--c-navyM:#2E281F;--c-gold:#C9A45F;--c-goldL:#2E2616;--c-teal:#8AB492;--c-tealL:#1E2A21;--c-red:#E0998F;--c-redL:#2E1D19;--c-amber:#D2A458;--c-amberL:#2E2616;--c-slate:#A89E8E;--c-border:#373025;--c-bg:#1B1711;--c-white:#221D16;--c-text:#ECE5D7;--c-heading:#EAE0CF;--c-page:#16130E;--c-rowline:#221D16;--c-grid:#2A241C;--c-hl:#241F16;--c-tealS:#7CA585;--c-redS:#CC8077;--c-amberS:#C49A55;--c-blueS:#8195AE;--c-muted:#8C8270;}
+
+/* Graphite Precision — BMW: cool graphite + steel-blue accent, crisp sans */
+:root[data-skin="graphite"]{--c-navy:#1B1E23;--c-navyM:#2A2E35;--c-gold:#2C6FB3;--c-goldL:#E7EEF6;--c-teal:#2E7D74;--c-tealL:#E4EFEC;--c-red:#A23B36;--c-redL:#F3E5E3;--c-amber:#8A6D3B;--c-amberL:#EFE9DD;--c-slate:#5A636E;--c-border:#E3E7EC;--c-bg:#F4F6F8;--c-white:#FFFFFF;--c-text:#1B1E23;--c-heading:#1B1E23;--c-page:#F4F6F8;--c-rowline:#FAFBFC;--c-grid:#EDF1F5;--c-hl:#EAF1F8;--c-tealS:#2E7D74;--c-redS:#A23B36;--c-amberS:#8A6D3B;--c-blueS:#2C6FB3;--c-muted:#8A929C;
+  --c-rad:6px;--c-head:var(--c-navy);--c-fdisp:'Inter',system-ui,sans-serif;--c-fui:'Inter',system-ui,sans-serif;--c-headfg:#FFFFFF;--c-ring:rgba(44,111,179,0.30);--c-emoji:none;--c-bar:inline-block;--c-deco:none;}
+:root[data-skin="graphite"][data-theme="dark"]{--c-navy:#23272E;--c-navyM:#2E333B;--c-gold:#5B9BD8;--c-goldL:#16202B;--c-teal:#5FB3A8;--c-tealL:#142824;--c-red:#D98A84;--c-redL:#2B1A18;--c-amber:#C9A35E;--c-amberL:#262017;--c-slate:#A2ABB6;--c-border:#333A43;--c-bg:#15181C;--c-white:#1E2227;--c-text:#E6EAEF;--c-heading:#DCE6F2;--c-page:#101316;--c-rowline:#1E2227;--c-grid:#262C33;--c-hl:#1A222B;--c-tealS:#5FB3A8;--c-redS:#D98A84;--c-amberS:#C9A35E;--c-blueS:#5B9BD8;--c-muted:#8893A0;}
+
+/* Heritage — Rolex: deep racing green + gold, classic serif */
+:root[data-skin="heritage"]{--c-navy:#14342A;--c-navyM:#1E4A3B;--c-gold:#C2A24A;--c-goldL:#F4ECD6;--c-teal:#1F6B4F;--c-tealL:#E2EEE7;--c-red:#8A2E2E;--c-redL:#F1E3E1;--c-amber:#9A7B2E;--c-amberL:#F2EBD7;--c-slate:#5C5A4E;--c-border:#E2D9C5;--c-bg:#F1EBDD;--c-white:#FCFAF3;--c-text:#23271F;--c-heading:#14342A;--c-page:#F4EFE3;--c-rowline:#FAF6EC;--c-grid:#EBE3D2;--c-hl:#EFEAD9;--c-tealS:#1F6B4F;--c-redS:#8A2E2E;--c-amberS:#9A7B2E;--c-blueS:#2F6E5E;--c-muted:#928C7C;
+  --c-rad:8px;--c-head:linear-gradient(90deg,var(--c-navy),var(--c-navyM));--c-fdisp:'Playfair Display',Georgia,serif;--c-fui:'Inter',system-ui,sans-serif;--c-headfg:#F4EFE3;--c-ring:rgba(194,162,74,0.35);--c-emoji:none;--c-bar:inline-block;--c-deco:none;}
+:root[data-skin="heritage"][data-theme="dark"]{--c-navy:#143228;--c-navyM:#1C4435;--c-gold:#D4B45C;--c-goldL:#2C2614;--c-teal:#6FB58F;--c-tealL:#16271E;--c-red:#D98A86;--c-redL:#2C1B19;--c-amber:#CDA85A;--c-amberL:#2C2614;--c-slate:#A39E8C;--c-border:#313A30;--c-bg:#121A14;--c-white:#182019;--c-text:#E9E6D6;--c-heading:#E6DFC8;--c-page:#0E140E;--c-rowline:#182019;--c-grid:#212A22;--c-hl:#1A241B;--c-tealS:#6FB58F;--c-redS:#D98A86;--c-amberS:#CDA85A;--c-blueS:#7FA892;--c-muted:#8E8A78;}
+
+body{background:var(--c-page)!important;color:var(--c-text);font-family:var(--c-fui);transition:background .2s ease,color .2s ease;}
+.skin-emoji{display:var(--c-emoji,inline)}
+.skin-bar{display:var(--c-bar,none)}
+.skin-deco{display:var(--c-deco,block)}
 @media (pointer:coarse){
   .tap-sm{min-height:44px!important;min-width:44px!important}
   .del-row-cc{grid-template-columns:minmax(0,1fr) 110px 44px!important}
@@ -298,23 +326,23 @@ const CARDS_KEY="re_cards_v1";
 function loadCardState(){try{return JSON.parse(localStorage.getItem(CARDS_KEY))||{};}catch(e){return {};}}
 function saveCardState(k,v){try{const m=loadCardState();m[k]=v;localStorage.setItem(CARDS_KEY,JSON.stringify(m));}catch(e){}}
 function Card({title,icon,children,right,sub,summary,collapsible,defaultOpen=true,storeKey}){
-  // Faithful original skin: gradient header + emoji icon. Optionally collapsible —
-  // the gradient header becomes the toggle and a chevron shows open/closed state.
-  // `summary` is an at-a-glance figure shown on the right of the header (light text
-  // for contrast on the dark gradient); clicking it still toggles the card. `right`
-  // is for interactive controls (it swallows the toggle click).
+  // Ink & Ivory skin: flat ink header with a champagne accent rule (no emoji),
+  // hairline border. Optionally collapsible — the header toggles, a chevron shows
+  // state. `summary` is an at-a-glance figure on the right (champagne); clicking it
+  // still toggles. `right` is for interactive controls (it swallows the toggle click).
   const[open,setOpen]=useState(()=>{if(collapsible&&storeKey){const m=loadCardState();if(storeKey in m)return !!m[storeKey];}return defaultOpen;});
   const isOpen=collapsible?open:true;
   const toggle=()=>setOpen(o=>{const n=!o;if(storeKey)saveCardState(storeKey,n);return n;});
-  return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-    <div onClick={collapsible?toggle:undefined} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
-      <span style={{fontSize:14}}>{icon}</span>
-      <span style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>{title}</span>
-      {summary!=null&&<span style={{marginLeft:"auto",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.92)",whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{summary}</span>}
+  return <div style={{border:"1px solid "+C.border,borderRadius:"var(--c-rad)",overflow:"hidden",marginBottom:12,background:C.white}}>
+    <div onClick={collapsible?toggle:undefined} style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",background:"var(--c-head)",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
+      <span className="skin-bar" style={{width:2,height:13,background:C.gold,flexShrink:0,borderRadius:1}}/>
+      <span className="skin-emoji" style={{fontSize:14}}>{icon}</span>
+      <span style={{fontSize:11,fontWeight:600,color:"var(--c-headfg)",letterSpacing:"0.1em",textTransform:"uppercase"}}>{title}</span>
+      {summary!=null&&<span style={{marginLeft:"auto",fontSize:11.5,fontWeight:600,color:C.gold,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums",letterSpacing:"0.02em"}}>{summary}</span>}
       {right&&<div onClick={collapsible?e=>e.stopPropagation():undefined} style={{marginLeft:summary!=null?10:"auto"}}>{right}</div>}
-      {collapsible&&<span style={{marginLeft:(summary!=null||right)?10:"auto",flexShrink:0,fontSize:13,color:"rgba(255,255,255,0.85)",transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>}
+      {collapsible&&<span style={{marginLeft:(summary!=null||right)?10:"auto",flexShrink:0,fontSize:11,color:"var(--c-headfg)",opacity:0.7,transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>}
     </div>
-    {isOpen&&<div style={{padding:"12px 13px",background:C.white}}>{children}</div>}
+    {isOpen&&<div style={{padding:"15px",background:C.white}}>{children}</div>}
   </div>;
 }
 function SecLabel({text,right}){
@@ -1605,7 +1633,12 @@ function HeaderMenu({btnStyle,items}){
     </>}
   </div>;
 }
-// Segmented Classic/Focused switch for the (dark) header bar.
+// Segmented style picker for the (dark) header bar — switches the whole skin.
+function SkinToggle({skin,setSkin}){
+  return <div style={{display:"inline-flex",gap:2,padding:2,borderRadius:"var(--c-rad)",background:"rgba(255,255,255,0.10)",border:"1px solid rgba(255,255,255,0.22)"}}>
+    {SKINS.map(([id,lbl])=>{const on=skin===id;return <button key={id} onClick={()=>setSkin(id)} title={"Style: "+lbl} style={{fontSize:10,fontWeight:700,padding:"4px 9px",borderRadius:"calc(var(--c-rad) - 2px)",border:"none",cursor:"pointer",fontFamily:"inherit",background:on?C.gold:"transparent",color:on?C.navy:"var(--c-headfg)",letterSpacing:"0.02em",whiteSpace:"nowrap"}}>{lbl}</button>;})}
+  </div>;
+}
 // ── App ────────────────────────────────────────────────────────
 export default function App(){
   const[boot]=useState(loadDealStore);
@@ -1626,6 +1659,8 @@ export default function App(){
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),2600);return ()=>clearTimeout(t);},[toast]);
   const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
+  const[skin,setSkin]=useState(()=>{try{return localStorage.getItem("re_skin")||"classic";}catch(e){return "classic";}});
+  useEffect(()=>{try{document.documentElement.setAttribute("data-skin",skin);localStorage.setItem("re_skin",skin);}catch(e){}},[skin]);
 
   // ── Cloud sync (Supabase) — dormant unless config.js + the CDN client exist ──
   const cloudCfg=(typeof window!=="undefined"&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY&&window.supabase)?{url:window.SUPABASE_URL,key:window.SUPABASE_ANON_KEY}:null;
@@ -1810,7 +1845,7 @@ export default function App(){
   const activeTitle=(activeDeal&&activeDeal._label&&activeDeal._label.trim())||(S.address&&S.address.trim())||"Untitled deal";
 
   const renderClassic=()=>(
-    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:1040,margin:"0 auto",padding:"0.5rem 0"}}>
+    <div style={{fontFamily:"'Inter',system-ui,-apple-system,sans-serif",maxWidth:1040,margin:"0 auto",padding:"0.5rem 0"}}>
       <style>{THEME_CSS}</style>
       <style>{`
         .ytable-scroll.cap{max-height:340px;overflow-y:auto}
@@ -1823,35 +1858,36 @@ export default function App(){
           .mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
           .preset-grid{grid-template-columns:repeat(3,1fr)!important}
           input,select,textarea{font-size:16px!important}}
-        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(30,58,110,0.25)}
+        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(166,128,63,0.35)}
       `}</style>
 
       {/* Header */}
-      <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:13,padding:"14px 18px",marginBottom:11,overflow:"hidden",position:"relative"}} className="no-print">
-        <div style={{position:"absolute",right:-10,top:-10,width:70,height:70,border:"2px solid rgba(200,146,42,0.2)",borderRadius:"50%",pointerEvents:"none"}}/>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+      <div style={{background:"var(--c-head)",borderRadius:"var(--c-rad)",padding:"20px 22px",marginBottom:14,overflow:"hidden",position:"relative",borderTop:"2px solid "+C.gold}} className="no-print">
+        <div className="skin-deco" style={{position:"absolute",right:-12,top:-12,width:74,height:74,border:"2px solid rgba(200,146,42,0.22)",borderRadius:"50%",pointerEvents:"none"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
           <div>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",color:C.gold,marginBottom:3,textTransform:"uppercase"}}>Rental Property · Deal Analyzer</div>
-            <div style={{fontSize:18,fontWeight:700,color:"#fff"}}>Investment Property Analyzer</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Unlimited deals · every change auto-saves · switch & compare anytime</div>
+            <div style={{fontSize:9,fontWeight:600,letterSpacing:"0.26em",color:C.gold,marginBottom:7,textTransform:"uppercase"}}>Rental Property · Deal Analyzer</div>
+            <div style={{fontFamily:"var(--c-fdisp)",fontSize:24,fontWeight:600,color:"var(--c-headfg)",letterSpacing:"0.01em",lineHeight:1.12}}>Investment Property Analyzer</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.55)",marginTop:6,letterSpacing:"0.02em"}}>Unlimited deals · every change auto-saves · switch &amp; compare anytime</div>
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-            {(() => {const hb={fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"};return <>
-              <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:"rgba(200,146,42,0.22)",border:"1px solid "+C.gold,fontWeight:700,maxWidth:210,overflow:"hidden",textOverflow:"ellipsis"}}>📁 {activeTitle} <span style={{opacity:0.7,fontWeight:400}}>({deals.length})</span></button>
+            {(() => {const hb={fontSize:11,fontWeight:500,padding:"7px 13px",borderRadius:"var(--c-rad)",border:"1px solid rgba(255,255,255,0.28)",background:"transparent",color:"var(--c-headfg)",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.02em"};return <>
+              <SkinToggle skin={skin} setSkin={setSkin}/>
+              <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:C.gold,border:"1px solid "+C.gold,color:C.navy,fontWeight:600,maxWidth:230,overflow:"hidden",textOverflow:"ellipsis"}}>{activeTitle} <span style={{opacity:0.65,fontWeight:500}}>({deals.length})</span></button>
               <button onClick={newDeal} style={hb} title="Start a new blank deal">＋ New deal</button>
               <ScenarioCompare deals={deals} activeId={activeId} currentState={S}/>
               <HeaderMenu btnStyle={hb} items={[
-                {label:dark?"☀  Light mode":"🌙  Dark mode",onClick:()=>setDark(d=>!d)},
-                {label:"🖨  Print / Save PDF",onClick:handlePrint},
-                {label:"🔗  Copy share link",onClick:copyShareLink},
-                {label:"⬇  Export this deal (CSV)",onClick:exportCSV},
-                {label:"⬆  Import a deal (CSV)",onClick:importCSV},
+                {label:dark?"Light mode":"Dark mode",onClick:()=>setDark(d=>!d)},
+                {label:"Print / Save PDF",onClick:handlePrint},
+                {label:"Copy share link",onClick:copyShareLink},
+                {label:"Export this deal (CSV)",onClick:exportCSV},
+                {label:"Import a deal (CSV)",onClick:importCSV},
                 cloudCfg?{node:(user
                   ?<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                     <span style={{fontSize:11,color:C.slate}}>{sync==="syncing"?"⟳ Saving…":sync==="error"?"⚠ Sync error":"✓ Synced"}</span>
-                     <button onClick={signOut} style={{fontSize:12,fontWeight:600,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}} title={user.email||"Sign out"}>Sign out</button>
+                     <span style={{fontSize:11,color:C.slate}}>{sync==="syncing"?"Saving…":sync==="error"?"Sync error":"Synced"}</span>
+                     <button onClick={signOut} style={{fontSize:12,fontWeight:600,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:4,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}} title={user.email||"Sign out"}>Sign out</button>
                    </div>
-                  :<button onClick={signIn} style={{width:"100%",fontSize:12,fontWeight:700,color:"#fff",background:C.navy,border:"none",borderRadius:8,padding:"8px 10px",cursor:"pointer",fontFamily:"inherit"}}>🔑 Sign in with Google</button>)}:null,
+                  :<button onClick={signIn} style={{width:"100%",fontSize:12,fontWeight:700,color:C.navy,background:C.gold,border:"none",borderRadius:4,padding:"9px 10px",cursor:"pointer",fontFamily:"inherit",letterSpacing:"0.02em"}}>Sign in with Google</button>)}:null,
               ]}/>
             </>;})()}
           </div>
