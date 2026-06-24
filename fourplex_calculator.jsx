@@ -1547,21 +1547,27 @@ function QuickFill({state,onListing,onAI,onSource}){
   const flash=k=>{setMsg(null);setDone(k);setTimeout(()=>setDone(d=>d===k?"":d),1600);};
   const ta={width:"100%",boxSizing:"border-box",padding:"7px 9px",fontSize:12,border:"1px solid "+C.border,borderRadius:8,fontFamily:"inherit",color:C.text,background:C.white,outline:"none",resize:"vertical",lineHeight:1.45};
   const btn={padding:"6px 12px",borderRadius:8,background:C.navy,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700};
-  const btn2={...btn,background:C.white,color:C.slate,border:"1px solid "+C.border,fontWeight:600};
-  const doListing=()=>{const pl=parseListing(lt);const got=[pl.address,pl.price,pl.units,pl.beds,pl.bath,pl.sqft].filter(Boolean).length;if(!got){setMsg({e:1,t:"Couldn't read a Zillow link or price/beds from that. Paste the listing URL or some listing text."});return;}onListing(pl);flash("listing");};
-  const copyPrompt=()=>{const txt=buildAIPrompt(state,lt);try{navigator.clipboard.writeText(txt).then(()=>flash("copy"),()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}};
+  // One step: grab what we can from the link to fill the form, then copy the prompt
+  // (the link is baked into it) to paste into any chat AI. No separate "fill" button.
+  const copyPrompt=()=>{
+    const pl=parseListing(lt)||{};
+    if(pl.address||num(pl.price)>0||pl.units||pl.url)onListing(pl);
+    const merged={...state};if(pl.address)merged.address=pl.address;if(num(pl.price)>0)merged.price=num(pl.price);
+    const txt=buildAIPrompt(merged,lt);
+    try{navigator.clipboard.writeText(txt).then(()=>flash("copy"),()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}
+  };
   const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);flash("ai");};
   return <Card title="Auto-fill — paste a listing & round-trip AI" icon="⚡" collapsible defaultOpen={false} storeKey="quickfill">
     <div>
       <div style={{fontSize:11,color:C.muted,marginBottom:10}}>Paste a Zillow link to grab the address, then let any chat AI estimate rents, taxes &amp; expenses. Tip: hit <strong>＋ New deal</strong> first to keep this as its own saved property.</div>
-      <SecLabel text="1 · Paste the Zillow link"/>
+      <SecLabel text="1 · Paste the Zillow link & copy the prompt"/>
       <div style={{fontSize:11,color:C.muted,marginBottom:6}}>No need to select text — just copy the page link. <span style={{color:C.slate}}>iPhone: in the Zillow app tap <strong>Share → Copy</strong>; in Safari tap the address bar → <strong>Copy</strong>.</span> (You can paste full listing text instead if you have it.)</div>
       <textarea value={lt} onChange={e=>setLt(e.target.value)} rows={2} placeholder="https://www.zillow.com/homedetails/…  (or paste listing text)" style={ta}/>
-      <div style={{marginTop:6,marginBottom:14}}><button onClick={doListing} style={btn}>{done==="listing"?"✓ Filled":"Fill from link"}</button></div>
+      <div style={{fontSize:11,color:C.slate,margin:"6px 0"}}>One click grabs the address &amp; price from the link <em>and</em> copies a prompt with the link baked in — paste it into any chat AI.</div>
+      <div style={{marginBottom:14}}><button onClick={copyPrompt} style={btn}>{done==="copy"?"✓ Copied":"📋 Copy AI prompt"}</button></div>
 
-      <SecLabel text="2 · AI estimate (rents, taxes, expenses)"/>
-      <div style={{fontSize:11,color:C.slate,marginBottom:6}}>Copy the prompt (your link above is baked in), paste it into your AI, then paste its JSON answer back here.</div>
-      <div style={{display:"flex",gap:7,marginBottom:8,flexWrap:"wrap"}}><button onClick={copyPrompt} style={btn}>{done==="copy"?"✓ Copied":"📋 Copy AI prompt"}</button></div>
+      <SecLabel text="2 · Paste the AI's answer"/>
+      <div style={{fontSize:11,color:C.slate,marginBottom:6}}>Run that prompt in your AI, then paste its JSON answer back here.</div>
       <textarea value={at} onChange={e=>setAt(e.target.value)} rows={3} placeholder='Paste the AI&#39;s JSON answer here, e.g. {"price":620000,"units":[…],"expenses":{…},"opinion":"…"}' style={ta}/>
       <div style={{marginTop:6}}><button onClick={doAI} style={btn}>{done==="ai"?"✓ Applied":"Apply AI estimate"}</button></div>
       <div style={{marginTop:9,display:"flex",alignItems:"center",gap:7}}>
