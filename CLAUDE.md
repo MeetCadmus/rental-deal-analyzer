@@ -65,7 +65,8 @@ repairs{…}, partnership{…}, comparables[]`.
   embeds the link) → run in any chat AI → paste its JSON → `parseAIResult` (tolerant of smart
   quotes / NBSP / code fences / trailing commas) → `applyAI` fills units+rents, itemized
   expenses, financing rate/refi, closing %, projection (appreciation/rent-growth/exit cap),
-  `insights`, the opinion (→ notes), and `aiSource` (the model names itself; blank if unsure).
+  `insights`, the opinion (→ notes), and `aiSource` (the model self-reports its active
+  name + tier; user-editable since models can misname their version).
 - `parseListing` / `addressFromUrl` / `buildAIPrompt` / `parseAIResult` are pure and **tested**.
 - **Area & due-diligence** (`insights`) is editable and **non-math** (informational only);
   collapses to a slim "add" bar when empty.
