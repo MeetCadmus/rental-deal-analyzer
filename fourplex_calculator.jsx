@@ -294,10 +294,25 @@ function Pill({text,lvl}){
   const[bg,fg]=m[lvl]||m.n;
   return <span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:bg,color:fg,fontWeight:700,whiteSpace:"nowrap"}}>{text}</span>;
 }
+// Minimal line-icon set (Lucide-style, stroke=currentColor) — replaces emoji so the
+// chrome stays monochrome/refined and tints with the active accent.
+const ICONS={
+  pin:'<path d="M20 10c0 6-8 11-8 11s-8-5-8-11a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.4"/>',
+  home:'<path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 10h5a1 1 0 0 1 1 1v10"/><path d="M3 21h18"/><path d="M7.5 8h2M7.5 12h2M7.5 16h2"/>',
+  bank:'<path d="M3 21h18"/><path d="M5 21V10M9 21V10M15 21V10M19 21V10"/><path d="M12 3l8 5H4z"/>',
+  file:'<path d="M13 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/><path d="M13 3v5h5"/><path d="M9 13h6M9 17h5"/>',
+  percent:'<path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.2"/><circle cx="16.5" cy="16.5" r="2.2"/>',
+  wrench:'<path d="M14.6 6.4a3.6 3.6 0 0 0-4.9 4.9L3 18v3h3l6.7-6.7a3.6 3.6 0 0 0 4.9-4.9l-2.3 2.3-2.2-.5-.5-2.2 2.5-2.2Z"/>',
+  trend:'<path d="M3 17 9 11l4 4 8-8"/><path d="M16 7h5v5"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 15v-3M12 15V8M17 15v-5"/>',
+  bolt:'<path d="M13 2 4 13h6l-1 9 9-11h-6l1-8Z"/>',
+  scale:'<path d="M12 4v17M7 21h10M5 7h14"/><path d="M5 7 2.6 12.5a3 3 0 0 0 4.8 0L5 7Z"/><path d="M19 7l-2.4 5.5a3 3 0 0 0 4.8 0L19 7Z"/>',
+};
+function Icon({name,size=15,style}){const p=ICONS[name];if(!p)return null;return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,display:"block",...style}} dangerouslySetInnerHTML={{__html:p}}/>;}
 function Bar({val,max,good,warn,inv=false}){
   const pct=clamp((val/(max||1))*100,0,100);
   const col=!inv?(val>=good?C.teal:val>=warn?C.gold:C.red):(val<=warn?C.teal:val<=good?C.gold:C.red);
-  return <div style={{height:4,background:"#E2E8F0",borderRadius:3,overflow:"hidden",marginTop:4}}>
+  return <div style={{height:4,background:C.grid,borderRadius:3,overflow:"hidden",marginTop:4}}>
     <div style={{width:pct+"%",height:"100%",background:col,transition:"width 0.4s"}}/>
   </div>;
 }
@@ -341,8 +356,7 @@ function Card({title,icon,children,right,sub,summary,collapsible,defaultOpen=tru
   const toggle=()=>setOpen(o=>{const n=!o;if(storeKey)saveCardState(storeKey,n);return n;});
   return <div style={{border:"1px solid "+C.border,borderRadius:"var(--c-rad)",overflow:"hidden",marginBottom:12,background:C.white}}>
     <div onClick={collapsible?toggle:undefined} style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",background:"var(--c-head)",borderBottom:isOpen?"1px solid "+C.border:"none",cursor:collapsible?"pointer":"default"}}>
-      <span className="skin-bar" style={{width:2,height:13,background:C.gold,flexShrink:0,borderRadius:1}}/>
-      <span className="skin-emoji" style={{fontSize:14}}>{icon}</span>
+      {icon&&<Icon name={icon} size={15} style={{color:C.gold}}/>}
       <span style={{fontSize:11,fontWeight:600,color:"var(--c-headfg)",letterSpacing:"0.1em",textTransform:"uppercase"}}>{title}</span>
       {summary!=null&&<span style={{marginLeft:"auto",fontSize:11.5,fontWeight:600,color:C.gold,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums",letterSpacing:"0.02em"}}>{summary}</span>}
       {right&&<div onClick={collapsible?e=>e.stopPropagation():undefined} style={{marginLeft:summary!=null?10:"auto"}}>{right}</div>}
@@ -391,7 +405,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
   const addI=()=>setCC(p=>({...p,customItems:[...(p.customItems||[]),{name:"",amt:0}]}));
   const remI=i=>setCC(p=>({...p,customItems:p.customItems.filter((_,j)=>j!==i)}));
   const setI=(i,k,v)=>setCC(p=>{const a=[...p.customItems];a[i]={...a[i],[k]:v};return{...p,customItems:a};});
-  return <Card title="Closing costs" icon="📝" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="closing" summary={collapsible?fmtD(total):undefined}>
+  return <Card title="Closing costs" icon="file" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="closing" summary={collapsible?fmtD(total):undefined}>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
       {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
       <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(total)}</strong></span>
@@ -413,7 +427,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
       </div>
       <SecLabel text="Georgia taxes (auto)" right={"= "+fmtD(gaT)}/>
       <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:12}}>
-        {[["GA Intangible Tax",intangible,"$1.50/$500 of loan"],["GA Transfer Tax",transfer,"$1/$1,000 price"],["GA Mortgage Fee",10,"Flat $10"]].map(([l2,v2,n2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",background:"#EEF4FF",padding:"5px 9px",borderRadius:7,border:"1px solid #BFDBFE",fontSize:11}}><span style={{color:"#1D4ED8",fontWeight:600}}>{l2} <span style={{fontSize:9,background:"#BFDBFE",borderRadius:3,padding:"1px 4px"}}>AUTO</span> · <span style={{color:"#93C5FD",fontWeight:400}}>{n2}</span></span><span style={{color:"#1E40AF",fontWeight:700}}>{fmtD(v2)}</span></div>)}
+        {[["GA Intangible Tax",intangible,"$1.50/$500 of loan"],["GA Transfer Tax",transfer,"$1/$1,000 price"],["GA Mortgage Fee",10,"Flat $10"]].map(([l2,v2,n2])=><div key={l2} style={{display:"flex",justifyContent:"space-between",background:C.bg,padding:"5px 9px",borderRadius:7,border:"1px solid "+C.border,fontSize:11}}><span style={{color:C.slate,fontWeight:600}}>{l2} <span style={{fontSize:9,background:C.goldL,color:C.amber,borderRadius:3,padding:"1px 4px",fontWeight:700}}>AUTO</span> · <span style={{color:C.muted,fontWeight:400}}>{n2}</span></span><span style={{color:C.heading,fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmtD(v2)}</span></div>)}
         <Field label="Recording fees" prefix="$" value={cc.recordingFees||0} onChange={x=>sf("recordingFees",x)} min={0} step={5} sub="~$75–100" xs/>
       </div>
       <SecLabel text="Title & attorney" right={"= "+fmtD(titleT)}/>
@@ -441,7 +455,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
       {(cc.customItems||[]).map((item,i)=><div key={i} className="del-row-cc" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 110px 28px",gap:7,marginBottom:7,alignItems:"end"}}>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Description</label>}<input value={item.name||""} onChange={e=>setI(i,"name",e.target.value)} placeholder="e.g. HOA fee" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={item.amt||0} onChange={x=>setI(i,"amt",x)} min={0} step={10} xs/>
-        <button className="tap-sm" aria-label="Remove item" onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+        <button className="tap-sm" aria-label="Remove item" onClick={()=>remI(i)} style={{padding:"6px",background:C.redL,border:"1px solid "+C.border,borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
       </div>)}
       <button onClick={addI} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add item</button>
       <div style={{background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",borderRadius:9,padding:"10px 14px",color:"#fff",marginTop:12}}>
@@ -502,7 +516,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
   const addCE=()=>setEx(p=>({...p,customExpenses:[...(p.customExpenses||[]),{name:"",amt:0,period:"annual"}]}));
   const remCE=i=>setEx(p=>({...p,customExpenses:p.customExpenses.filter((_,j)=>j!==i)}));
   const setCE=(i,k,v)=>setEx(p=>{const a=[...p.customExpenses];a[i]={...a[i],[k]:v};return{...p,customExpenses:a};});
-  return <Card title="Vacancy & Expenses" icon="💸" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="expenses" summary={collapsible?fmtD(totExp)+"/yr":undefined}>
+  return <Card title="Vacancy & Expenses" icon="percent" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="expenses" summary={collapsible?fmtD(totExp)+"/yr":undefined}>
     {/* Property class preset (a starting point — clears to "Custom" once edited) */}
     <div style={{marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
@@ -533,7 +547,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
       </div>
       <input type="range" min={30} max={60} step={1} value={ex.ratio||45} onChange={e=>sf("ratio",parseInt(e.target.value))} style={{width:"100%",accentColor:C.navy,cursor:"pointer"}}/>
       <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.slate,marginTop:2}}><span>30% new/stable</span><span>45% typical ATL</span><span>60% old/C-class</span></div>
-      <div style={{marginTop:8,padding:"7px 10px",background:C.goldL,borderRadius:7,border:"1px solid #EDCF8A",fontSize:10,color:C.amber}}>Covers all costs: taxes, insurance, management, repairs, CapEx, utilities. Switch to Itemized for full control.</div>
+      <div style={{marginTop:8,padding:"7px 10px",background:C.goldL,borderRadius:7,border:"1px solid "+C.border,fontSize:10,color:C.amber}}>Covers all costs: taxes, insurance, management, repairs, CapEx, utilities. Switch to Itemized for full control.</div>
     </div>}
     {ex.mode==="detailed"&&items&&(()=>{
       const perMo=v=>"≈ "+fmtD(v/12)+"/mo";
@@ -583,7 +597,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Name</label>}<input value={e.name||""} onChange={ev=>setCE(i,"name",ev.target.value)} placeholder="e.g. pest control" style={{padding:"6px 8px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,outline:"none"}}/></div>
         <Field label={i===0?"Amount":undefined} prefix="$" value={e.amt||0} onChange={x=>setCE(i,"amt",x)} min={0} step={10} xs/>
         <div style={{display:"flex",flexDirection:"column",gap:2}}>{i===0&&<label style={{fontSize:10,color:C.slate,fontWeight:600}}>Period</label>}<select value={e.period||"annual"} onChange={ev=>setCE(i,"period",ev.target.value)} style={{padding:"6px 7px",fontSize:12,border:"1px solid "+C.border,borderRadius:7,fontFamily:"inherit",color:C.text,background:C.white}}><option value="annual">/yr</option><option value="monthly">/mo</option></select></div>
-        <button className="tap-sm" aria-label="Remove expense" onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
+        <button className="tap-sm" aria-label="Remove expense" onClick={()=>remCE(i)} style={{padding:"6px",background:C.redL,border:"1px solid "+C.border,borderRadius:7,cursor:"pointer",fontSize:12,color:C.red,marginTop:i===0?17:0}}>✕</button>
       </div>)}
       <button onClick={addCE} style={{fontSize:11,padding:"5px 11px",borderRadius:7,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add expense</button>
 
@@ -749,9 +763,9 @@ function CalcTrace({R,S}){
   const[open,setOpen]=useState(false);
   const numU=S.units.length||1;
   const rows=[
-    {l:"Gross potential income",v:fmtD(R.gpi)+"/yr",f:"= "+fmtD(R.monRent)+"/mo × 12 = "+fmtD(R.gpi)+"/yr",c:"#2563EB",b:true},
+    {l:"Gross potential income",v:fmtD(R.gpi)+"/yr",f:"= "+fmtD(R.monRent)+"/mo × 12 = "+fmtD(R.gpi)+"/yr",c:C.blueS,b:true},
     {l:"(−) Vacancy ("+S.expenses.vacancyPct+"%)",v:"−"+fmtD(R.vacAmt)+"/yr",f:"= GPI × "+S.expenses.vacancyPct+"%",c:C.red},
-    {l:"= Effective gross income",v:fmtD(Math.round(R.egi))+"/yr",f:"= GPI − vacancy",c:"#2563EB",b:true},
+    {l:"= Effective gross income",v:fmtD(Math.round(R.egi))+"/yr",f:"= GPI − vacancy",c:C.blueS,b:true},
     {l:"(−) Total expenses",v:"−"+fmtD(R.totExp)+"/yr",f:S.expenses.mode==="quick"?S.expenses.ratio+"% of EGI":"sum of itemized expenses",c:C.red},
     {l:"= Net operating income (NOI)",v:fmtD(Math.round(R.noi))+"/yr",f:"= EGI − expenses",c:C.teal,b:true},
     {l:"(−) Debt service",v:"−"+fmtD(Math.round(R.annPmt))+"/yr",f:fmtD(R.pmt)+"/mo × 12",c:C.red},
@@ -761,18 +775,18 @@ function CalcTrace({R,S}){
   ];
   return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginTop:8}}>
     <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",background:open?"var(--c-hl)":C.bg,border:"none",cursor:"pointer",fontFamily:"inherit",borderBottom:open?"1px solid "+C.border:"none"}}>
-      <span style={{fontSize:12,fontWeight:700,color:C.heading}}>🧮 How cashflow is calculated — step by step</span>
+      <span style={{fontSize:12,fontWeight:700,color:C.heading}}>How cashflow is calculated — step by step</span>
       <span style={{fontSize:14,color:C.slate,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s"}}>▾</span>
     </button>
     {open&&<div style={{padding:"10px 13px",background:C.white}}>
-      {rows.map((row,i)=><div key={i} style={{marginBottom:8,borderLeft:"3px solid "+(row.b?row.c:"#E2E8F0"),paddingLeft:8}}>
+      {rows.map((row,i)=><div key={i} style={{marginBottom:8,borderLeft:"3px solid "+(row.b?row.c:C.grid),paddingLeft:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
           <span style={{fontSize:12,fontWeight:row.b?600:400,color:row.b?row.c:C.slate}}>{row.l}</span>
           <span style={{fontSize:13,fontWeight:700,color:row.c,marginLeft:8,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{row.v}</span>
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:1}}>{row.f}</div>
       </div>)}
-      <div style={{padding:"7px 9px",background:C.goldL,borderRadius:7,fontSize:10,color:C.amber,border:"1px solid #EDCF8A",marginTop:6}}>
+      <div style={{padding:"7px 9px",background:C.goldL,borderRadius:7,fontSize:10,color:C.amber,border:"1px solid "+C.border,marginTop:6}}>
         Cap rate: {fmtD(R.noi)} ÷ ${fmt(S.price)} = <strong>{fmtP(R.capRate)}</strong> &nbsp;·&nbsp; CoC: {fmtD(R.cf)} ÷ {fmtD(R.cashIn)} = <strong>{fmtP(R.coc)}</strong> &nbsp;·&nbsp; DSCR: {fmtD(R.noi)} ÷ {fmtD(R.annPmt)} = <strong>{R.dscr.toFixed(2)}</strong> &nbsp;·&nbsp; Break-even rent: <strong>{fmtD(R.beRent)}/unit/mo</strong>
       </div>
     </div>}
@@ -813,18 +827,18 @@ function OverviewTab({R,Y,S,compact}){
       })}
     </div>}
     {/* Verdict banner (compact hero shows the same headline CF up top) */}
-    {!compact&&<div style={{borderRadius:11,padding:"12px 15px",marginBottom:11,background:score.color,color:"#fff"}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7}}>
-        {[["Monthly CF",fmtD(R.cf/12)+"/mo"],["Per unit",fmtD(R.cf/R.numU/12)+"/unit/mo"],["Annual CF",fmtD(R.cf)+"/yr"],["Cash needed",fmtD(R.cashIn)]].map(([l2,val])=><div key={l2} style={{background:"rgba(255,255,255,0.15)",borderRadius:7,padding:"6px 9px"}}>
-          <div style={{fontSize:9,opacity:0.75}}>{l2}</div><div style={{fontSize:12,fontWeight:700}}>{val}</div>
+    {!compact&&<div style={{borderRadius:"var(--c-rad)",padding:"4px 0 0",marginBottom:11}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+        {[["Monthly CF",fmtD(R.cf/12)+"/mo",R.cf>=0],["Per unit",fmtD(R.cf/R.numU/12)+"/unit/mo",R.cf>=0],["Annual CF",fmtD(R.cf)+"/yr",R.cf>=0],["Cash needed",fmtD(R.cashIn),true]].map(([l2,val,pos])=><div key={l2} style={{background:C.white,border:"1px solid "+C.border,borderRadius:"calc(var(--c-rad) - 2px)",padding:"9px 11px"}}>
+          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.04em",textTransform:"uppercase"}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:pos?C.heading:C.red,fontVariantNumeric:"tabular-nums",marginTop:2}}>{val}</div>
         </div>)}
       </div>
     </div>}
     {/* Partnership split */}
-    {partnerEnabled&&<div style={{padding:"9px 11px",background:"#EEF4FF",border:"1px solid #BFDBFE",borderRadius:10,marginBottom:11}}>
-      <div style={{fontSize:10,fontWeight:700,color:"#185FA5",marginBottom:5}}>MY SHARE ({S.partnership.myPct}%)</div>
+    {partnerEnabled&&<div style={{padding:"9px 11px",background:C.hl,border:"1px solid "+C.border,borderRadius:"var(--c-rad)",marginBottom:11}}>
+      <div style={{fontSize:10,fontWeight:700,color:C.blueS,marginBottom:5,letterSpacing:"0.04em"}}>MY SHARE ({S.partnership.myPct}%)</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
-        {[["My CF/mo",fmtD(R.myCF/12)+"/mo"],["My CoC",fmtP(R.myCoc)],["Invested",fmtD(R.cashIn*(S.partnership.myPct/100))]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:"#185FA5"}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:"#185FA5"}}>{v2}</div></div>)}
+        {[["My CF/mo",fmtD(R.myCF/12)+"/mo"],["My CoC",fmtP(R.myCoc)],["Invested",fmtD(R.cashIn*(S.partnership.myPct/100))]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:C.slate}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:C.blueS,fontVariantNumeric:"tabular-nums"}}>{v2}</div></div>)}
       </div>
     </div>}
     {/* Cash required */}
@@ -846,7 +860,7 @@ function OverviewTab({R,Y,S,compact}){
       <MBox label="Break-even occ." value={fmtP(R.beOcc)} sub="Lower = safer" lvl={lv(R.beOcc,70,85,true)} bar={R.beOcc} bMax={110} bGood={70} bWarn={85} bInv tip={["Break-even = (Exp+Debt) ÷ GPI","= "+fmtP(R.beOcc),"·","<70% = comfortable buffer"]}/>
     </div>
     {/* Break-even rent */}
-    <div style={{padding:"9px 11px",background:R.beRent<=R.monRent/R.numU?C.tealL:C.redL,border:"1px solid "+(R.beRent<=R.monRent/R.numU?"#9FE1CB":"#F7C1C1"),borderRadius:10,marginBottom:11}}>
+    <div style={{padding:"9px 11px",background:R.beRent<=R.monRent/R.numU?C.tealL:C.redL,border:"1px solid "+(R.beRent<=R.monRent/R.numU?C.border:C.border),borderRadius:10,marginBottom:11}}>
       <div style={{fontSize:10,fontWeight:700,color:R.beRent<=R.monRent/R.numU?C.teal:C.red,marginBottom:3}}>Break-even rent / unit</div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
         <div><div style={{fontSize:18,fontWeight:700,color:R.beRent<=R.monRent/R.numU?C.teal:C.red}}>{fmtD(R.beRent)}/unit/mo</div>
@@ -866,7 +880,7 @@ function OverviewTab({R,Y,S,compact}){
         </div>)}
       </div>
     </div>
-    {R.vaEnabled&&<div style={{padding:"9px 11px",background:C.goldL,border:"1px solid #EDCF8A",borderRadius:10,marginTop:8}}>
+    {R.vaEnabled&&<div style={{padding:"9px 11px",background:C.goldL,border:"1px solid "+C.border,borderRadius:10,marginTop:8}}>
       <div style={{fontSize:10,fontWeight:700,color:C.amber,marginBottom:5}}>VALUE-ADD AT STABILIZATION</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
         {[["Cap rate",fmtP(R.vaCapRate)],["Cash-on-cash",fmtP(R.vaCoc)],["Monthly CF",fmtD(R.vaCF/12)+"/mo"]].map(([l2,v2])=><div key={l2} style={{textAlign:"center"}}><div style={{fontSize:10,color:C.amber}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:C.amber}}>{v2}</div></div>)}
@@ -935,7 +949,7 @@ function CashflowChart({yearly,cashIn}){
   return <ChartBox title="Cumulative cash position" note={payback?`Crosses break-even at ~year ${payback} (cumulative cash flow recovers your ${fmtD(cashIn)} invested).`:"Does not recover initial investment from cash flow alone within the hold period — most of the return is at sale."}>
     <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}} onMouseLeave={()=>setHi(null)}>
       {ticks.map((v,i)=><g key={i}><line x1={pad.l} y1={py(v)} x2={W-pad.r} y2={py(v)} strokeWidth="1" style={{stroke:"var(--c-grid)"}}/><text x={pad.l-6} y={py(v)+3} textAnchor="end" style={{fontSize:9,fill:C.slate}}>{fmtD(v)}</text></g>)}
-      <line x1={pad.l} y1={zeroY} x2={W-pad.r} y2={zeroY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3 3"/>
+      <line x1={pad.l} y1={zeroY} x2={W-pad.r} y2={zeroY} strokeWidth="1" strokeDasharray="3 3" style={{stroke:C.muted}}/>
       <path d={area} style={{fill:C.teal,opacity:0.10}}/>
       <path d={line} fill="none" strokeWidth="2.5" strokeLinejoin="round" style={{stroke:C.teal}}/>
       {pts.map((p,i)=>showAt(i)?<circle key={i} cx={px(i)} cy={py(p.y)} r="3" style={{fill:p.y>=0?C.teal:C.red}}/>:null)}
@@ -976,7 +990,7 @@ function EquityChart({yearly,loan}){
         <rect x={tx} y={6} width="120" height="50" rx="6" opacity="0.96" style={{fill:C.navy}}/>
         <text x={tx+8} y={19} style={{fontSize:9,fill:"#fff",opacity:0.7}}>Year {r.year} · value {fmtD(r.propVal)}</text>
         <text x={tx+8} y={33} style={{fontSize:10,fontWeight:700,fill:C.gold}}>Equity {fmtD(r.equity)}</text>
-        <text x={tx+8} y={47} style={{fontSize:10,fontWeight:700,fill:"#9CC0F2"}}>Loan {fmtD(r.balance)}</text>
+        <text x={tx+8} y={47} style={{fontSize:10,fontWeight:700,fill:"rgba(255,255,255,0.82)"}}>Loan {fmtD(r.balance)}</text>
       </g>;})()}
     </svg>
     <div style={{display:"flex",gap:14,marginTop:8,fontSize:10,color:C.slate}}>
@@ -1052,7 +1066,7 @@ function ProjTrace({R,Y,S}){
           <div style={{fontSize:10,color:C.muted,marginTop:1,lineHeight:1.5}}>{row.f}</div>
         </div>)}
       </div>)}
-      <div style={{padding:"7px 9px",background:C.goldL,borderRadius:7,fontSize:10,color:C.amber,border:"1px solid #EDCF8A"}}>
+      <div style={{padding:"7px 9px",background:C.goldL,borderRadius:7,fontSize:10,color:C.amber,border:"1px solid "+C.border}}>
         Estimates only — appreciation, rent growth, vacancy and exit are assumptions you set in “Projection &amp; Growth”. Depreciation benefit is a rough figure; consult a CPA.
       </div>
     </div>}
@@ -1068,15 +1082,15 @@ function ProjectionTab({R,Y,S}){
   const irrTip=["IRR = annual rate where all cash flows net to $0:","· Year 0: "+fmtD(-R.cashIn)+" (cash in)","· Years 1–"+Math.max(1,hold-1)+": each year's CF","· Year "+hold+": CF + net sale "+fmtD(netSale),"= "+fmtP(Y.irr)+" / yr","Full detail below ↓"];
   return <div>
     <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:11}}>
-      <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyM+")",borderRadius:10,padding:"10px 12px",color:"#fff"}}>
-        <div style={{fontSize:9,marginBottom:2,display:"flex",alignItems:"center"}}><span style={{opacity:0.65}}>Total return ({hold}yr)</span><Info tint="#fff" lines={totRetTip}/></div>
-        <div style={{fontSize:18,fontWeight:700,color:Y.totRet>=0?C.gold:"#F87171"}}>{fmtD(Y.totRet)}</div>
-        <div style={{fontSize:10,opacity:0.55}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
+      <div style={{background:C.white,border:"1px solid "+C.border,borderRadius:"var(--c-rad)",padding:"11px 13px"}}>
+        <div style={{fontSize:9,marginBottom:3,display:"flex",alignItems:"center",color:C.muted,letterSpacing:"0.04em",textTransform:"uppercase"}}><span>Total return ({hold}yr)</span><Info lines={totRetTip}/></div>
+        <div style={{fontSize:19,fontWeight:700,color:Y.totRet>=0?C.heading:C.red,fontVariantNumeric:"tabular-nums"}}>{fmtD(Y.totRet)}</div>
+        <div style={{fontSize:10,color:C.muted}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
       </div>
-      <div style={{background:Y.irr>=15?C.tealS:Y.irr>=10?C.amberS:C.redS,borderRadius:10,padding:"10px 12px",color:"#fff"}}>
-        <div style={{fontSize:9,marginBottom:2,display:"flex",alignItems:"center"}}><span style={{opacity:0.65}}>Est. IRR</span><Info tint="#fff" lines={irrTip}/></div>
-        <div style={{fontSize:18,fontWeight:700}}>{fmtP(Y.irr)}</div>
-        <div style={{fontSize:10,opacity:0.7}}>{Y.irr>=15?"Excellent":Y.irr>=10?"Good":"Below target"}</div>
+      <div style={{background:C.white,border:"1px solid "+C.border,borderRadius:"var(--c-rad)",padding:"11px 13px"}}>
+        <div style={{fontSize:9,marginBottom:3,display:"flex",alignItems:"center",color:C.muted,letterSpacing:"0.04em",textTransform:"uppercase"}}><span>Est. IRR</span><Info lines={irrTip}/></div>
+        <div style={{fontSize:19,fontWeight:700,color:Y.irr>=15?C.tealS:Y.irr>=10?C.amberS:C.redS,fontVariantNumeric:"tabular-nums"}}>{fmtP(Y.irr)}</div>
+        <div style={{fontSize:10,color:C.muted}}>{Y.irr>=15?"Excellent":Y.irr>=10?"Good":"Below target"}</div>
       </div>
     </div>
     <CashflowChart yearly={Y.yearly} cashIn={R.cashIn}/>
@@ -1131,7 +1145,7 @@ function AnalysisTab({SEN,R,S,Y}){
             {icon:"🏠",label:"Needed rent/unit",val:fmtD(wnt.neededRentPU)+"/mo",curr:fmtD(R.monRent/R.numU)+"/mo current",delta:wnt.neededRentPU-(R.monRent/R.numU),good:wnt.neededRentPU<=R.monRent/R.numU},
             {icon:"💰",label:"Max purchase price",val:wnt.neededPrice?fmtD(wnt.neededPrice):"Not possible",curr:fmtD(S.price)+" current",delta:wnt.neededPrice?wnt.neededPrice-S.price:null,good:wnt.neededPrice>=S.price},
             {icon:"📉",label:"Needed rate",val:wnt.neededRate+"%",curr:S.financing.rate+"% current",delta:wnt.neededRate-S.financing.rate,good:wnt.neededRate>=S.financing.rate},
-          ].map(item=><div key={item.label} style={{padding:"9px 10px",background:item.good?C.tealL:C.redL,borderRadius:9,border:"1px solid "+(item.good?"#9FE1CB":"#F7C1C1")}}>
+          ].map(item=><div key={item.label} style={{padding:"9px 10px",background:item.good?C.tealL:C.redL,borderRadius:9,border:"1px solid "+(item.good?C.border:C.border)}}>
             <div style={{fontSize:13,marginBottom:3}}>{item.icon}</div>
             <div style={{fontSize:10,color:C.slate,marginBottom:2}}>{item.label}</div>
             <div style={{fontSize:14,fontWeight:700,color:item.good?C.teal:C.red}}>{item.val}</div>
@@ -1165,7 +1179,7 @@ function AnalysisTab({SEN,R,S,Y}){
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
       <div style={{padding:"7px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>CF sensitivity — rent/unit</div>
       <div style={{padding:"8px 12px",display:"flex",gap:6,flexWrap:"wrap"}}>
-        {SEN.rentCells.map(cell=><div key={cell.delta} style={{flex:1,minWidth:80,padding:"8px",background:cfBg(cell.cf),borderRadius:8,textAlign:"center",border:"1px solid "+(cell.delta===0?"#93C5FD":"transparent")}}>
+        {SEN.rentCells.map(cell=><div key={cell.delta} style={{flex:1,minWidth:80,padding:"8px",background:cfBg(cell.cf),borderRadius:8,textAlign:"center",border:"1px solid "+(cell.delta===0?C.gold:"transparent")}}>
           <div style={{fontSize:10,color:C.slate,marginBottom:2}}>{cell.delta===0?"Current":(cell.delta>0?"+":"")+fmtD(cell.delta)+"/unit"}</div>
           <div style={{fontSize:13,fontWeight:700,color:cfColor(cell.cf),fontVariantNumeric:"tabular-nums"}}>{fmtD(cell.cf/12)}/mo</div>
           <div style={{fontSize:10,color:C.slate,marginTop:1}}>{fmtP(cell.capRate)} cap</div>
@@ -1236,12 +1250,12 @@ function ScenarioCompare({deals,activeId,currentState}){
   const ordered=[...computed.filter(c=>c.cur),...computed.filter(c=>!c.cur).sort((a,b)=>sortV(b)-sortV(a))];
   const bestIdx=row=>{if(!row.best||ordered.length<2)return -1;let bi=0;for(let i=1;i<ordered.length;i++){const better=row.best==="max"?row.v(ordered[i])>row.v(ordered[bi]):row.v(ordered[i])<row.v(ordered[bi]);if(better)bi=i;}return bi;};
   return <>
-    <button onClick={()=>setOpen(true)} style={{fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>⚖ Compare</button>
+    <button onClick={()=>setOpen(true)} title="Compare deals side by side" style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,fontWeight:500,padding:"7px 13px",borderRadius:"var(--c-rad)",border:"1px solid var(--c-headborder)",background:"transparent",color:"var(--c-headfg)",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.02em"}}><Icon name="scale" size={14}/>Compare</button>
     {open&&<div className="no-print" onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.55)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"24px 12px",overflowY:"auto"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:14,maxWidth:900,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,0.3)",overflow:"hidden"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")"}}>
-          <span style={{fontSize:13,fontWeight:700,color:"#fff"}}>⚖ Compare deals</span>
-          <button onClick={()=>setOpen(false)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 16px",background:"var(--c-head)"}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:"var(--c-headfg)",letterSpacing:"0.04em"}}><Icon name="scale" size={16}/>Compare deals</span>
+          <button onClick={()=>setOpen(false)} style={{background:"transparent",border:"1px solid var(--c-headborder)",color:"var(--c-headfg)",borderRadius:"calc(var(--c-rad) - 4px)",padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
         </div>
         <div style={{padding:"14px 16px"}}>
           <div style={{fontSize:11,color:C.slate,marginBottom:8}}>Pick saved deals to compare against your current deal{pool.length===0?" — no other deals saved yet. Add one with ＋ New deal.":". Search, filter by grade, or sort to find them:"}</div>
@@ -1310,13 +1324,13 @@ function ComparablesCard({comps,setComps,currentR}){
   const add=()=>setComps(p=>[...p,{id:cuid(),label:"Comp "+(p.length+1),price:550000,rent:5600,capRate:5.5}]);
   const rem=i=>setComps(p=>p.filter((_,j)=>j!==i));
   const setC=(i,k,v)=>setComps(p=>{const a=[...p];a[i]={...a[i],[k]:v};return a;});
-  if(comps.length===0)return <Card title="Comparable properties" icon="📊">
+  if(comps.length===0)return <Card title="Comparable properties" icon="chart">
     <div style={{fontSize:12,color:C.slate,marginBottom:10}}>Add nearby comparable sales to benchmark this deal against the market.</div>
     <button onClick={add} style={{fontSize:12,padding:"7px 16px",borderRadius:8,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",color:C.slate,fontFamily:"inherit"}}>+ Add comparable</button>
   </Card>;
   const avgCapRate=comps.reduce((s,c)=>s+c.capRate,0)/comps.length;
   const avgPPU=comps.reduce((s,c)=>s+(c.price/(c.rent*12/12)),0)/comps.length;
-  return <Card title={"Comparables ("+comps.length+")"} icon="📊">
+  return <Card title={"Comparables ("+comps.length+")"} icon="chart">
     <div style={{display:"flex",gap:12,marginBottom:10,padding:"7px 10px",background:C.bg,borderRadius:8,border:"1px solid "+C.border,fontSize:11}}>
       <div><div style={{color:C.slate}}>Avg cap rate comps</div><div style={{fontWeight:700,color:C.text}}>{fmtP(avgCapRate)}</div></div>
       <div><div style={{color:C.slate}}>This deal</div><div style={{fontWeight:700,color:currentR.capRate>=avgCapRate?C.teal:C.red}}>{fmtP(currentR.capRate)} {currentR.capRate>=avgCapRate?"✓ above avg":"↓ below avg"}</div></div>
@@ -1452,9 +1466,9 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
   const xbtn={fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit"};
   return <div className="no-print" onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:1000,display:"flex",justifyContent:"flex-end"}}>
     <div onClick={e=>e.stopPropagation()} style={{width:"min(440px,100%)",height:"100%",background:C.bg,borderLeft:"1px solid "+C.border,display:"flex",flexDirection:"column",boxShadow:"-12px 0 40px rgba(0,0,0,0.55)"}}>
-      <div style={{padding:"13px 16px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-        <span style={{fontSize:14,fontWeight:700,color:"#fff"}}>📁 My deals <span style={{opacity:0.55,fontWeight:400}}>({deals.length})</span></span>
-        <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
+      <div style={{padding:"14px 16px",background:"var(--c-head)",borderBottom:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <span style={{fontSize:13,fontWeight:600,color:"var(--c-headfg)",letterSpacing:"0.04em"}}>My deals <span style={{opacity:0.55,fontWeight:400}}>({deals.length})</span></span>
+        <button onClick={onClose} style={{background:"transparent",border:"1px solid var(--c-headborder)",color:"var(--c-headfg)",borderRadius:"calc(var(--c-rad) - 4px)",padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>✕ Close</button>
       </div>
       <div style={{padding:"10px 12px 8px",borderBottom:"1px solid "+C.border,background:C.white,flexShrink:0}}>
         <div style={{display:"flex",gap:8,marginBottom:8}}>
@@ -1528,7 +1542,7 @@ function AreaInsights({data,onChange}){
   const lbl={fontSize:10,fontWeight:700,color:C.slate,marginBottom:3,display:"block"};
   const ta=t=>({...inp,resize:"vertical",lineHeight:1.4});
   const toggle=<button onClick={()=>setEdit(e=>!e)} style={{fontSize:11,fontWeight:700,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:7,padding:"4px 11px",cursor:"pointer",fontFamily:"inherit"}}>{edit?"Done":"Edit"}</button>;
-  return <Card title="Area & due-diligence" icon="📍" right={toggle} collapsible defaultOpen storeKey="area">
+  return <Card title="Area & due-diligence" icon="pin" right={toggle} collapsible defaultOpen storeKey="area">
     <div style={{fontSize:10,color:C.muted,marginBottom:9}}>Context only — does not affect the math. AI fills it via Quick-fill; edit anything. Verify schools/crime/flood independently.</div>
     {edit?<div style={{display:"flex",flexDirection:"column",gap:9}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
@@ -1591,7 +1605,7 @@ function QuickFill({state,onListing,onAI,onSource}){
     try{navigator.clipboard.writeText(txt).then(()=>flash("copy"),()=>setMsg({t:"Select the prompt below and copy it manually.",prompt:txt}));}catch(e){setMsg({t:"Copy not supported here — select & copy the prompt below:",prompt:txt});}
   };
   const doAI=()=>{const o=parseAIResult(at);if(!o){setMsg({e:1,t:"Couldn't read JSON — paste the AI's JSON answer."});return;}onAI(o);flash("ai");};
-  return <Card title="Auto-fill — paste a listing & round-trip AI" icon="⚡" collapsible defaultOpen={false} storeKey="quickfill">
+  return <Card title="Auto-fill — paste a listing & round-trip AI" icon="bolt" collapsible defaultOpen={false} storeKey="quickfill">
     <div>
       <div style={{fontSize:11,color:C.muted,marginBottom:10}}>Paste a Zillow link to grab the address, then let any chat AI estimate rents, taxes &amp; expenses. Tip: hit <strong>＋ New deal</strong> first to keep this as its own saved property.</div>
       <SecLabel text="1 · Paste the Zillow link & copy the prompt"/>
@@ -1610,7 +1624,7 @@ function QuickFill({state,onListing,onAI,onSource}){
       </div>
       <div style={{fontSize:9,color:C.muted,marginTop:3}}>Auto-set from the AI's answer — correct it here if it was vague (models often misname their version).</div>
 
-      {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?"#F7C1C1":"#9FE1CB")}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={5} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
+      {msg&&<div style={{marginTop:10,padding:"7px 10px",borderRadius:8,fontSize:11,background:msg.e?C.redL:C.tealL,color:msg.e?C.red:C.teal,border:"1px solid "+(msg.e?C.border:C.border)}}>{msg.t}{msg.prompt&&<textarea readOnly value={msg.prompt} rows={5} onFocus={e=>e.target.select()} style={{...ta,marginTop:6,fontSize:10}}/>}</div>}
     </div>
   </Card>;
 }
@@ -1926,7 +1940,7 @@ export default function App(){
         <div id="inputs-panel">
           <QuickFill key={activeId} state={S} onListing={applyListing} onAI={applyAI} onSource={v=>set("aiSource",v)}/>
           {/* Address + Notes */}
-          <Card title="Property details" icon="📍" collapsible defaultOpen storeKey="prop">
+          <Card title="Property details" icon="pin" collapsible defaultOpen storeKey="prop">
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               <div style={{display:"flex",flexDirection:"column",gap:2}}>
                 <label style={{fontSize:11,color:C.slate,fontWeight:600}}>Address / MLS #</label>
@@ -1943,7 +1957,7 @@ export default function App(){
           </Card>
 
           {/* Units */}
-          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="🏘️" collapsible defaultOpen storeKey="units" summary={fmtD(totalRent)+"/mo"}>
+          <Card title={"Units & Rents · "+numU+" unit"+(numU!==1?"s":"")} icon="home" collapsible defaultOpen storeKey="units" summary={fmtD(totalRent)+"/mo"}>
             <div style={{marginBottom:11}}><MoneyInput label="Purchase price" value={S.price} onChange={x=>set("price",x)} sub={"Loan: "+fmtD(S.price*(1-S.financing.downPct/100))+" · Down: "+fmtD(S.price*S.financing.downPct/100)}/></div>
             <div style={{marginBottom:9}}><Tog checked={showUD} onChange={setShowUD} label="Show unit details (beds / bath / sq ft)"/></div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -1951,7 +1965,7 @@ export default function App(){
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showUD?8:0}}>
                   <input value={u.label} onChange={e=>setUnit(i,"label",e.target.value)} style={{fontSize:12,fontWeight:700,color:C.heading,background:"transparent",border:"none",outline:"none",fontFamily:"inherit",flex:"0 1 72px",minWidth:0}}/>
                   <RentInput value={u.rent} onChange={v=>setUnit(i,"rent",v)}/>
-                  {numU>1&&<button className="tap-sm" aria-label={"Remove "+(u.label||"unit")} onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid #FCA5A5",borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
+                  {numU>1&&<button className="tap-sm" aria-label={"Remove "+(u.label||"unit")} onClick={()=>remUnit(i)} style={{padding:"5px 9px",background:C.redL,border:"1px solid "+C.border,borderRadius:6,cursor:"pointer",fontSize:12,color:C.red,fontFamily:"inherit",flexShrink:0}}>✕</button>}
                 </div>
                 {showUD&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:6}}>
                   <Field label="Beds" value={u.beds||0} onChange={x=>setUnit(i,"beds",x)} min={0} max={10} xs/>
@@ -1968,7 +1982,7 @@ export default function App(){
           </Card>
 
           {/* Financing */}
-          <Card title="Financing" icon="🏦" collapsible defaultOpen storeKey="fin" summary={fmtD(R.pmt)+"/mo"}>
+          <Card title="Financing" icon="bank" collapsible defaultOpen storeKey="fin" summary={fmtD(R.pmt)+"/mo"}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
               <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={x=>setFin("downPct",x)} min={0} max={100} step={0.5} sub={"= "+fmtD(S.price*S.financing.downPct/100)} showZero/>
               <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={x=>setFin("rate",x)} min={0} max={20} step={0.125} showZero/>
@@ -1997,7 +2011,7 @@ export default function App(){
           <Expenses ex={S.expenses} setEx={setEx} units={numU} egi={R.egi} price={S.price} collapsible defaultOpen/>
 
           {/* Repairs */}
-          <Card title="Repairs & Rehab" icon="🔧" collapsible defaultOpen storeKey="repairs" summary={S.repairs.include?(S.repairs.unknown?"TBD":fmtD(S.repairs.amount)):undefined}>
+          <Card title="Repairs & Rehab" icon="wrench" collapsible defaultOpen storeKey="repairs" summary={S.repairs.include?(S.repairs.unknown?"TBD":fmtD(S.repairs.amount)):undefined}>
             <Tog checked={S.repairs.include} onChange={x=>setRep("include",x)} label="Include repair / rehab budget" sub="Added to cash needed at close"/>
             {S.repairs.include&&<div style={{marginTop:9,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:9,alignItems:"end"}}>
               <MoneyInput label="Budget" value={S.repairs.unknown?0:S.repairs.amount} onChange={x=>setRep("amount",x)} sub={S.repairs.unknown?"Marked as unknown":fmtD(S.repairs.amount)+" added to cash in"}/>
@@ -2010,12 +2024,12 @@ export default function App(){
           </Card>
 
           {/* Projection */}
-          <Card title="Projection & Growth" icon="📈" collapsible defaultOpen storeKey="proj" summary={S.projection.holdYears+"yr · "+fmtP(S.projection.appreciationPct)}>
+          <Card title="Projection & Growth" icon="trend" collapsible defaultOpen storeKey="proj" summary={S.projection.holdYears+"yr · "+fmtP(S.projection.appreciationPct)}>
             <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9,marginBottom:12}}>
               <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={x=>setProj("holdYears",x)} min={1} max={30}/>
               <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={x=>setProj("appreciationPct",x)} min={0} max={12} step={0.25} sub="ATL forecast 4.1% in 2026"/>
               <Field label="Rent growth/yr" suffix="%" value={S.projection.rentGrowthPct||0} onChange={x=>setProj("rentGrowthPct",x)} min={0} max={10} step={0.25} sub="Applied to all units each year"/>
-              <div style={{padding:"7px 10px",background:C.tealL,borderRadius:8,border:"1px solid #9FE1CB",fontSize:11}}>
+              <div style={{padding:"7px 10px",background:C.tealL,borderRadius:8,border:"1px solid "+C.border,fontSize:11}}>
                 <div style={{color:C.teal,fontWeight:700,marginBottom:2}}>Rent in year {S.projection.holdYears}</div>
                 <div style={{fontWeight:700,color:C.teal,fontSize:14}}>{fmtD(Math.round((totalRent/numU)*Math.pow(1+(S.projection.rentGrowthPct||0)/100,(S.projection.holdYears||5)-1)))}/unit/mo</div>
               </div>
@@ -2032,7 +2046,7 @@ export default function App(){
               <div style={{marginBottom:8}}><Tog checked={S.projection.exitCapEnabled||false} onChange={x=>setProj("exitCapEnabled",x)} label="Value the exit on a cap rate" sub="Sale price = final-year NOI ÷ exit cap (instead of appreciation %)"/></div>
               {S.projection.exitCapEnabled&&<div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:9}}>
                 <Field label="Exit cap rate" suffix="%" value={S.projection.exitCapRate} onChange={x=>setProj("exitCapRate",x)} min={1} max={15} step={0.1} sub={"vs entry cap "+fmtP(R.capRate)}/>
-                <div style={{padding:"7px 10px",background:C.goldL,borderRadius:8,border:"1px solid #EDCF8A",fontSize:10,color:C.amber}}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
+                <div style={{padding:"7px 10px",background:C.goldL,borderRadius:8,border:"1px solid "+C.border,fontSize:10,color:C.amber}}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
               </div>}
             </div>
             <SecLabel text="Value-add scenario"/>
