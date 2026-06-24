@@ -407,7 +407,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
   const setI=(i,k,v)=>setCC(p=>{const a=[...p.customItems];a[i]={...a[i],[k]:v};return{...p,customItems:a};});
   return <Card title="Closing costs" icon="file" collapsible={collapsible} defaultOpen={defaultOpen} storeKey="closing" summary={collapsible?fmtD(total):undefined}>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-      {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
+      {[["quick","Quick %"],["detailed","Itemized"]].map(([id,lbl])=>{const on=cc.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
       <span style={{marginLeft:"auto",fontSize:12,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(total)}</strong></span>
     </div>
     {cc.mode==="quick"&&<div>
@@ -534,7 +534,7 @@ function Expenses({ex,setEx,units,egi,price,collapsible,defaultOpen}){
         :"Custom values — tap a class to prefill "+(ex.mode==="quick"?"its typical ratio.":"typical expense fields.")}</div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-      {[["quick","⚡ Quick %"],["detailed","🔬 Itemized"]].map(([id,lbl])=>{const on=ex.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
+      {[["quick","Quick %"],["detailed","Itemized"]].map(([id,lbl])=>{const on=ex.mode===id;return <button key={id} onClick={()=>sf("mode",id)} style={{padding:"5px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,border:"1.5px solid "+(on?C.navy:C.border),background:on?C.navy:C.white,color:on?"#fff":C.slate}}>{lbl}</button>;})}
       <span style={{marginLeft:"auto",fontSize:11,color:C.slate}}>Total: <strong style={{color:C.heading}}>{fmtD(totExp)}/yr</strong></span>
     </div>
     <div style={{marginBottom:ex.mode==="quick"?10:12}}>
@@ -819,10 +819,10 @@ function OverviewTab({R,Y,S,compact}){
     {/* Deal killers */}
     {killers.length>0&&<div style={{marginBottom:11}}>
       {killers.map(([lvl,msg],i)=>{
-        const cfg={critical:[C.redL,C.red,"⛔"],warn:[C.amberL,C.amber,"⚠"],info:[C.hl,C.heading,"ℹ"]};
-        const[bg,col,ic]=cfg[lvl]||cfg.info;
-        return <div key={i} style={{display:"flex",gap:8,padding:"7px 10px",background:bg,border:"1px solid "+C.border,borderRadius:8,marginBottom:5,fontSize:11,color:col}}>
-          <span style={{flexShrink:0}}>{ic}</span><span>{msg}</span>
+        const cfg={critical:[C.redL,C.red],warn:[C.amberL,C.amber],info:[C.hl,C.heading]};
+        const[bg,col]=cfg[lvl]||cfg.info;
+        return <div key={i} style={{display:"flex",gap:9,alignItems:"flex-start",padding:"8px 11px",background:bg,border:"1px solid "+C.border,borderRadius:"calc(var(--c-rad) - 2px)",marginBottom:5,fontSize:11,color:col}}>
+          <span style={{flexShrink:0,width:6,height:6,borderRadius:"50%",background:col,marginTop:4}}/><span>{msg}</span>
         </div>;
       })}
     </div>}
@@ -1029,21 +1029,21 @@ function ProjTrace({R,Y,S}){
   const netSale=Math.round((Y.exitVal||0)*(1-sc/100)-(last.balance||0));
   const exitMethod=S.projection.exitCapEnabled?("final-year NOI ÷ "+(S.projection.exitCapRate||6)+"% exit cap"):((S.projection.appreciationPct||0)+"%/yr appreciation");
   const sections=[
-    {t:"🏆 Total return ("+hold+"yr) — total dollars gained, four parts added up",rows:[
+    {t:"Total return ("+hold+"yr) — total dollars gained, four parts added up",rows:[
       {l:"Appreciation",v:fmtD(Y.appGain),f:"exit value "+fmtD(Y.exitVal)+" − price "+fmtD(S.price)+"  ("+exitMethod+")",c:Y.appGain>=0?C.teal:C.red},
       {l:"+ Principal paydown",v:fmtD(Y.equityBuild),f:"loan "+fmtD(R.loan)+" − balance still owed "+fmtD(last.balance),c:C.teal},
       {l:"+ Net cash flow",v:fmtD(Y.totCF),f:"every year's cash flow, summed",c:Y.totCF>=0?C.teal:C.red},
       {l:"+ Depreciation benefit (est.)",v:fmtD(Y.deprBen),f:"(price × 85% ÷ 27.5 yrs) × 28% tax × "+hold+" yrs — rough tax saving",c:C.teal},
       {l:"= Total return",v:fmtD(Y.totRet),f:"that's "+fmtP(Y.totRet/(R.cashIn||1)*100)+" of your "+fmtD(R.cashIn)+" cash in (not annualized)",bold:true,c:Y.totRet>=0?C.teal:C.red},
     ]},
-    {t:"📊 Est. IRR = "+fmtP(Y.irr)+" — annualized, timing-aware return",rows:[
+    {t:"Est. IRR = "+fmtP(Y.irr)+" — annualized, timing-aware return",rows:[
       {l:"What it is",v:"yearly % return",f:"the rate at which all the cash flows below net to $0. Unlike total return, it accounts for WHEN cash arrives, so it's comparable to other investments."},
       {l:"Year 0",v:fmtD(-R.cashIn),f:"cash invested at close",c:C.red},
       {l:"Years 1–"+Math.max(1,hold-1),v:"each year's cash flow",f:"straight from the year-by-year table"},
       {l:"Year "+hold,v:fmtD((last.cf||0)+netSale),f:"final-year CF "+fmtD(last.cf)+" + net sale "+fmtD(netSale),c:C.teal},
       {l:"Net sale proceeds",v:fmtD(netSale),f:"exit value "+fmtD(Y.exitVal)+" − "+sc+"% selling costs − loan payoff "+fmtD(last.balance)},
     ]},
-    {t:"📈 Cumulative cash position (the line chart)",rows:[
+    {t:"Cumulative cash position (the line chart)",rows:[
       {l:"Starts at",v:fmtD(-R.cashIn),f:"minus your cash invested at close — down payment + closing"+(R.repairCost?" + repairs":"")},
       {l:"Each year adds",v:"that year's cash flow",f:"the line rises by CF/yr from the year-by-year table"},
       {l:"Crosses $0 when",v:"rent has repaid your cash",f:"= the payback point (years to get your money back)",c:C.teal},
@@ -1052,7 +1052,7 @@ function ProjTrace({R,Y,S}){
   ];
   return <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
     <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",background:open?"var(--c-hl)":C.bg,border:"none",cursor:"pointer",fontFamily:"inherit",borderBottom:open?"1px solid "+C.border:"none"}}>
-      <span style={{fontSize:12,fontWeight:700,color:C.heading}}>🧮 How total return, IRR & the cash chart are calculated</span>
+      <span style={{fontSize:12,fontWeight:700,color:C.heading}}>How total return, IRR & the cash chart are calculated</span>
       <span style={{fontSize:14,color:C.slate,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s"}}>▾</span>
     </button>
     {open&&<div style={{padding:"10px 13px",background:C.white}}>
@@ -1134,7 +1134,7 @@ function AnalysisTab({SEN,R,S,Y}){
   return <div>
     {/* What needs to be true */}
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden",marginBottom:11}}>
-      <div style={{padding:"8px 13px",background:"linear-gradient(90deg,"+C.navy+","+C.navyM+")",fontSize:11,fontWeight:700,color:"#fff",borderBottom:"1px solid "+C.border}}>🎯 What needs to be true</div>
+      <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border,letterSpacing:"0.02em"}}>What needs to be true</div>
       <div style={{padding:"12px 13px",background:C.white}}>
         <div style={{fontSize:11,color:C.slate,marginBottom:10}}>Enter your target monthly CF — see what needs to change to hit it</div>
         <div style={{display:"flex",gap:9,alignItems:"end",marginBottom:12}}>
@@ -1142,12 +1142,11 @@ function AnalysisTab({SEN,R,S,Y}){
         </div>
         <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",gap:9}}>
           {[
-            {icon:"🏠",label:"Needed rent/unit",val:fmtD(wnt.neededRentPU)+"/mo",curr:fmtD(R.monRent/R.numU)+"/mo current",delta:wnt.neededRentPU-(R.monRent/R.numU),good:wnt.neededRentPU<=R.monRent/R.numU},
-            {icon:"💰",label:"Max purchase price",val:wnt.neededPrice?fmtD(wnt.neededPrice):"Not possible",curr:fmtD(S.price)+" current",delta:wnt.neededPrice?wnt.neededPrice-S.price:null,good:wnt.neededPrice>=S.price},
-            {icon:"📉",label:"Needed rate",val:wnt.neededRate+"%",curr:S.financing.rate+"% current",delta:wnt.neededRate-S.financing.rate,good:wnt.neededRate>=S.financing.rate},
-          ].map(item=><div key={item.label} style={{padding:"9px 10px",background:item.good?C.tealL:C.redL,borderRadius:9,border:"1px solid "+(item.good?C.border:C.border)}}>
-            <div style={{fontSize:13,marginBottom:3}}>{item.icon}</div>
-            <div style={{fontSize:10,color:C.slate,marginBottom:2}}>{item.label}</div>
+            {label:"Needed rent/unit",val:fmtD(wnt.neededRentPU)+"/mo",curr:fmtD(R.monRent/R.numU)+"/mo current",delta:wnt.neededRentPU-(R.monRent/R.numU),good:wnt.neededRentPU<=R.monRent/R.numU},
+            {label:"Max purchase price",val:wnt.neededPrice?fmtD(wnt.neededPrice):"Not possible",curr:fmtD(S.price)+" current",delta:wnt.neededPrice?wnt.neededPrice-S.price:null,good:wnt.neededPrice>=S.price},
+            {label:"Needed rate",val:wnt.neededRate+"%",curr:S.financing.rate+"% current",delta:wnt.neededRate-S.financing.rate,good:wnt.neededRate>=S.financing.rate},
+          ].map(item=><div key={item.label} style={{padding:"10px 11px",background:C.white,borderRadius:"calc(var(--c-rad) - 2px)",border:"1px solid "+C.border}}>
+            <div style={{fontSize:10,color:C.slate,marginBottom:2,letterSpacing:"0.03em",textTransform:"uppercase"}}>{item.label}</div>
             <div style={{fontSize:14,fontWeight:700,color:item.good?C.teal:C.red}}>{item.val}</div>
             <div style={{fontSize:10,color:C.slate,marginTop:2}}>{item.curr}</div>
             {item.delta!==null&&<div style={{fontSize:10,fontWeight:600,color:item.good?C.teal:C.red,marginTop:2}}>{item.delta>=0?"+":""}{item.label.includes("Rate")?(item.delta.toFixed(2)+"%"):(item.label.includes("rent")?fmtD(item.delta):fmtD(item.delta))} vs current</div>}
@@ -1368,11 +1367,11 @@ const INIT={
 // but zeroes the property-specific fields so nothing misleads you or the AI prompt.
 const BLANK={...INIT,price:0,address:"",notes:"",listingUrl:"",insights:null,comparables:[],units:[{id:1,label:"Unit 1",rent:0,beds:0,bath:0,sqft:0}]};
 const EXAMPLES=[
-  {id:"en",label:"English Ave",sub:"SW ATL · C/D",tag:"⛔ Disaster",col:C.red,address:"English Ave, Atlanta, GA 30314",notes:"Distressed SW Atlanta block. Below-market rents but deferred maintenance, high vacancy and crime drag. Riskier-area financing pushes the rate higher. NOI can't cover the mortgage — a money pit unless bought all-cash at a deep discount.",price:250000,units:[{id:1,label:"Unit 1",rent:700,beds:2,bath:1,sqft:780},{id:2,label:"Unit 2",rent:700,beds:2,bath:1,sqft:780},{id:3,label:"Unit 3",rent:650,beds:1,bath:1,sqft:560},{id:4,label:"Unit 4",rent:650,beds:1,bath:1,sqft:560}],financing:{downPct:25,rate:8.75,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:56,vacancyPct:14,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:1,rentGrowthPct:1},repairs:{include:false,unknown:true,amount:0},partnership:{...INIT.partnership},comparables:[]},
+  {id:"en",label:"English Ave",sub:"SW ATL · C/D",tag:"Disaster",col:C.red,address:"English Ave, Atlanta, GA 30314",notes:"Distressed SW Atlanta block. Below-market rents but deferred maintenance, high vacancy and crime drag. Riskier-area financing pushes the rate higher. NOI can't cover the mortgage — a money pit unless bought all-cash at a deep discount.",price:250000,units:[{id:1,label:"Unit 1",rent:700,beds:2,bath:1,sqft:780},{id:2,label:"Unit 2",rent:700,beds:2,bath:1,sqft:780},{id:3,label:"Unit 3",rent:650,beds:1,bath:1,sqft:560},{id:4,label:"Unit 4",rent:650,beds:1,bath:1,sqft:560}],financing:{downPct:25,rate:8.75,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:56,vacancyPct:14,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:1,rentGrowthPct:1},repairs:{include:false,unknown:true,amount:0},partnership:{...INIT.partnership},comparables:[]},
   {id:"cp",label:"College Park",sub:"South ATL · C",tag:"Bad",col:C.red,address:"College Park, GA 30337",notes:"Near the airport, steady C-class demand. Priced too high for the rents it produces — cap rate sits below the mortgage rate, so it bleeds cash every month. Lender DSCR also falls short of 1.0. Needs a price cut to work.",price:410000,units:[{id:1,label:"Unit 1",rent:1150,beds:2,bath:1,sqft:880},{id:2,label:"Unit 2",rent:1150,beds:2,bath:1,sqft:880},{id:3,label:"Unit 3",rent:1050,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1050,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:7.5,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:49,vacancyPct:8,propertyClass:"C"},projection:{...INIT.projection,appreciationPct:2.5,rentGrowthPct:2},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
   {id:"cl",label:"Clarkston",sub:"DeKalb · B−",tag:"Mixed",col:C.amber,address:"Clarkston, GA 30021",notes:"Stable, diverse DeKalb rental market with reliable demand. Roughly breaks even today with a thin DSCR — the return is mostly a bet on modest appreciation and rent growth. Workable but no margin for error.",price:520000,units:[{id:1,label:"Unit 1",rent:1500,beds:2,bath:1,sqft:930},{id:2,label:"Unit 2",rent:1500,beds:2,bath:1,sqft:930},{id:3,label:"Unit 3",rent:1325,beds:1,bath:1,sqft:700},{id:4,label:"Unit 4",rent:1325,beds:1,bath:1,sqft:700}],financing:{downPct:25,rate:7.25,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:45,vacancyPct:6,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:3.2,rentGrowthPct:3},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
   {id:"sm",label:"Smyrna",sub:"Cobb · B+",tag:"Good",col:C.teal,address:"Smyrna, GA 30080",notes:"Strong Cobb County submarket — low vacancy, good schools, steady appreciation. Bought at a fair price with a relationship rate, it clears a 1.2 DSCR and cash-flows from day one. A solid, financeable hold.",price:620000,units:[{id:1,label:"Unit 1",rent:1800,beds:2,bath:1,sqft:950},{id:2,label:"Unit 2",rent:1800,beds:2,bath:1,sqft:950},{id:3,label:"Unit 3",rent:1550,beds:1,bath:1,sqft:700},{id:4,label:"Unit 4",rent:1550,beds:1,bath:1,sqft:700}],financing:{downPct:25,rate:6.9,loanYears:30},closing:{...DCC,quickPct:3},expenses:{...DEX,mode:"quick",ratio:42,vacancyPct:5,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:4,rentGrowthPct:3.5},repairs:{include:false,unknown:false,amount:0},partnership:{...INIT.partnership},comparables:[]},
-  {id:"kw",label:"Kirkwood",sub:"Intown · Value-add",tag:"🔥 Home run",col:C.teal,address:"Kirkwood, Atlanta, GA 30317",notes:"Off-market intown fourplex with below-market rents and light cosmetic needs. Bought right, it already cash-flows and clears every metric. Turn the units and push rents to market (≈$2,050) for forced appreciation and a true home run.",price:550000,units:[{id:1,label:"Unit 1",rent:1850,beds:2,bath:1,sqft:950},{id:2,label:"Unit 2",rent:1850,beds:2,bath:1,sqft:950},{id:3,label:"Unit 3",rent:1600,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1600,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:6.75,loanYears:30},closing:{...DCC,quickPct:3.5},expenses:{...DEX,mode:"quick",ratio:40,vacancyPct:5,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:5,rentGrowthPct:4,vaEnabled:true,vaMarketRentPerUnit:2050,vaYear:2},repairs:{include:true,unknown:false,amount:25000},partnership:{...INIT.partnership},comparables:[]},
+  {id:"kw",label:"Kirkwood",sub:"Intown · Value-add",tag:"Home run",col:C.teal,address:"Kirkwood, Atlanta, GA 30317",notes:"Off-market intown fourplex with below-market rents and light cosmetic needs. Bought right, it already cash-flows and clears every metric. Turn the units and push rents to market (≈$2,050) for forced appreciation and a true home run.",price:550000,units:[{id:1,label:"Unit 1",rent:1850,beds:2,bath:1,sqft:950},{id:2,label:"Unit 2",rent:1850,beds:2,bath:1,sqft:950},{id:3,label:"Unit 3",rent:1600,beds:1,bath:1,sqft:680},{id:4,label:"Unit 4",rent:1600,beds:1,bath:1,sqft:680}],financing:{downPct:25,rate:6.75,loanYears:30},closing:{...DCC,quickPct:3.5},expenses:{...DEX,mode:"quick",ratio:40,vacancyPct:5,propertyClass:"B"},projection:{...INIT.projection,appreciationPct:5,rentGrowthPct:4,vaEnabled:true,vaMarketRentPerUnit:2050,vaYear:2},repairs:{include:true,unknown:false,amount:25000},partnership:{...INIT.partnership},comparables:[]},
 ];
 let _uid=10;function uid(){return ++_uid;}
 
@@ -1493,7 +1492,7 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
                   ? <input autoFocus value={editVal} onClick={e=>e.stopPropagation()} onChange={e=>setEditVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEdit();if(e.key==="Escape")setEditId(null);}} onBlur={commitEdit} placeholder="Name this deal…" style={{width:"100%",padding:"3px 6px",fontSize:13,border:"1px solid "+C.navy,borderRadius:6,fontFamily:"inherit",color:C.text,background:C.white}}/>
                   : <div style={{fontSize:13,fontWeight:700,color:C.heading,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isA?(liveTitle||dealTitle(d)):dealTitle(d)}</div>}
                 <div style={{fontSize:10,color:C.muted,marginTop:2}}>{fmtD(d.price)} · {(d.units||[]).length} units{isA?" · open now":""}</div>
-                <div style={{fontSize:9,color:C.muted,marginTop:1}}>✎ {fmtWhen(d._ts)} <span style={{opacity:0.6}}>· {relTime(d._ts)}</span>{d.aiSource?<span> · 🤖 {d.aiSource}</span>:""}</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:1}}>✎ {fmtWhen(d._ts)} <span style={{opacity:0.6}}>· {relTime(d._ts)}</span>{d.aiSource?<span> · {d.aiSource}</span>:""}</div>
               </div>
               <div style={{textAlign:"right",flexShrink:0}}>
                 <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:9,background:sc.color,color:"#fff"}}>{sc.grade}</span>
@@ -1503,7 +1502,7 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
             <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}} onClick={e=>e.stopPropagation()}>
               <button onClick={()=>startEdit(d)} style={xbtn}>✎ Rename</button>
               <button onClick={()=>onDuplicate(d._id)} style={xbtn}>⧉ Duplicate</button>
-              <button onClick={()=>onDelete(d._id)} style={{...xbtn,color:C.red,borderColor:C.redL}}>🗑 Delete</button>
+              <button onClick={()=>onDelete(d._id)} style={{...xbtn,color:C.red,borderColor:C.redL}}>Delete</button>
               {/^https?:\/\//i.test(d.listingUrl||"")&&<a href={d.listingUrl} target="_blank" rel="noopener noreferrer" style={{...xbtn,color:C.heading,textDecoration:"none",marginLeft:"auto"}}>↗ Listing</a>}
             </div>
           </div>;
@@ -1511,8 +1510,8 @@ function DealsDrawer({open,onClose,deals,activeId,liveTitle,onSelect,onNew,onRen
       </div>
       <div style={{flexShrink:0,borderTop:"1px solid "+C.border,background:C.white,padding:"10px 12px"}}>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={onExportAll} style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>⬇ Export all ({deals.length})</button>
-          <button onClick={onImportAll} style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>⬆ Import all</button>
+          <button onClick={onExportAll} style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>Export all ({deals.length})</button>
+          <button onClick={onImportAll} style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.bg,color:C.slate,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>Import all</button>
         </div>
         <div style={{fontSize:9,color:C.muted,marginTop:6,lineHeight:1.5}}>Backs up every deal to one JSON file (your deals live only in this browser). Import adds them to your library.</div>
       </div>
@@ -1525,7 +1524,7 @@ function AreaInsights({data,onChange}){
   const d=(data&&typeof data==="object")?data:{};
   const has=d.neighborhoodGrade||d.schools||d.safety||d.appreciation||d.demand||(d.pros||[]).length||(d.cons||[]).length||(d.risks||[]).length;
   const[edit,setEdit]=useState(false);
-  if(!has&&!edit)return <button onClick={()=>setEdit(true)} className="no-print" style={{width:"100%",padding:"9px 12px",borderRadius:11,border:"1px dashed "+C.border,background:"transparent",color:C.slate,fontSize:12,fontFamily:"inherit",cursor:"pointer",marginBottom:11,textAlign:"left"}}>📍 Add area &amp; due-diligence notes <span style={{color:C.muted}}>— neighborhood, schools, safety, pros/cons (optional; or let Quick-fill AI fill it)</span></button>;
+  if(!has&&!edit)return <button onClick={()=>setEdit(true)} className="no-print" style={{width:"100%",padding:"9px 12px",borderRadius:11,border:"1px dashed "+C.border,background:"transparent",color:C.slate,fontSize:12,fontFamily:"inherit",cursor:"pointer",marginBottom:11,textAlign:"left"}}>Add area &amp; due-diligence notes <span style={{color:C.muted}}>— neighborhood, schools, safety, pros/cons (optional; or let Quick-fill AI fill it)</span></button>;
   const set=(k,v)=>onChange({...d,[k]:v});
   const setList=(k,text)=>onChange({...d,[k]:String(text).split("\n").map(s=>s.trim()).filter(Boolean)});
   const gCol={A:C.teal,B:C.blueS,C:C.amber,D:C.red}[String(d.neighborhoodGrade||"").charAt(0)]||C.slate;
@@ -1612,7 +1611,7 @@ function QuickFill({state,onListing,onAI,onSource}){
       <div style={{fontSize:11,color:C.muted,marginBottom:6}}>No need to select text — just copy the page link. <span style={{color:C.slate}}>iPhone: in the Zillow app tap <strong>Share → Copy</strong>; in Safari tap the address bar → <strong>Copy</strong>.</span> (You can paste full listing text instead if you have it.)</div>
       <textarea value={lt} onChange={e=>setLt(e.target.value)} rows={2} placeholder="https://www.zillow.com/homedetails/…  (or paste listing text)" style={ta}/>
       <div style={{fontSize:11,color:C.slate,margin:"6px 0"}}>One click grabs the address &amp; price from the link <em>and</em> copies a prompt with the link baked in — paste it into any chat AI.</div>
-      <div style={{marginBottom:14}}><button onClick={copyPrompt} style={btn}>{done==="copy"?"✓ Copied":"📋 Copy AI prompt"}</button></div>
+      <div style={{marginBottom:14}}><button onClick={copyPrompt} style={btn}>{done==="copy"?"✓ Copied":"Copy AI prompt"}</button></div>
 
       <SecLabel text="2 · Paste the AI's answer"/>
       <div style={{fontSize:11,color:C.slate,marginBottom:6}}>Run that prompt in your AI, then paste its JSON answer back here.</div>
@@ -1802,7 +1801,7 @@ export default function App(){
   const copyShareLink=()=>{
     try{
       const url=location.origin+location.pathname+"#deal="+encodeURIComponent(stateToCSV(S));
-      const ok=()=>setToast("🔗 Link copied — anyone who opens it gets this deal");
+      const ok=()=>setToast("Link copied — anyone who opens it gets this deal");
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(ok,()=>window.prompt("Copy this link:",url));
       else window.prompt("Copy this link:",url);
     }catch(e){alert("Couldn't build a share link for this deal.");}
