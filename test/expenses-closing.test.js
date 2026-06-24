@@ -63,17 +63,16 @@ test("calcCC: quick mode = quickPct % of price", () => {
   close(M.calcCC({ mode: "quick", quickPct: 3 }, 500000, 375000, 0, 0, 7), 15000, 1e-9);
 });
 
-test("calcCC: Georgia statutory taxes (intangible, transfer, flat fee)", () => {
+test("calcCC: transfer/deed tax is an editable % of price (state-neutral)", () => {
   const zero = {
     mode: "detailed", origPct: 0, pointsPct: 0, appraisal: 0, creditReport: 0, underwriting: 0,
-    recordingFees: 0, attyFee: 0, titleSearch: 0, lenderTitle: 0, ownerTitle: 0,
+    transferTaxPct: 0.4, recordingFees: 0, attyFee: 0, titleSearch: 0, lenderTitle: 0, ownerTitle: 0,
     firstYearInsurance: 0, prepaidDays: 0, taxEscrowMonths: 0, insEscrowMonths: 0,
     inspection: 0, termite: 0, survey: 0, enviro: 0, customItems: [],
   };
-  // intangible $1.50 / $500 of loan + transfer $1 / $1,000 of price + flat $10
-  const expected = Math.ceil(400000 / 500) * 1.5 + Math.round(500000 / 1000) + 10; // 1200 + 500 + 10
-  close(M.calcCC(zero, 500000, 400000, 0, 0, 7), expected, 1e-9);
-  close(expected, 1710, 1e-9, "sanity on the GA tax math");
+  close(M.calcCC(zero, 500000, 400000, 0, 0, 7), 500000 * 0.4 / 100, 1e-9, "= price × transferTaxPct"); // 2000
+  // omitted/zero pct adds nothing (no region baked in)
+  close(M.calcCC({ ...zero, transferTaxPct: 0 }, 500000, 400000, 0, 0, 7), 0, 1e-9);
 });
 
 test("calcCC: prepaids & escrows (per-diem interest + tax/ins reserves)", () => {
@@ -84,11 +83,10 @@ test("calcCC: prepaids & escrows (per-diem interest + tax/ins reserves)", () => 
     inspection: 0, termite: 0, survey: 0, enviro: 0, customItems: [],
   };
   const loan = 400000, price = 500000, rate = 7, annTax = 6000, annIns = 2400;
-  const ga = Math.ceil(loan / 500) * 1.5 + Math.round(price / 1000) + 10;
   const prepaidInt = 15 * (loan * rate / 100 / 365);
   const taxEsc = (annTax / 12) * 3;
   const insEsc = (annIns / 12) * 2;
-  close(M.calcCC(cc, price, loan, annTax, annIns, rate), ga + prepaidInt + taxEsc + insEsc, 1e-6);
+  close(M.calcCC(cc, price, loan, annTax, annIns, rate), prepaidInt + taxEsc + insEsc, 1e-6);
 });
 
 test("calcExp / calcCC default presets are shaped correctly", () => {
