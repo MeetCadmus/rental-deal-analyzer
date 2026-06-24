@@ -1778,9 +1778,13 @@ export default function App(){
     inp.click();
   };
 
-  // Auto-save: sync the working state into its deal (touch "edited" time only on real edits)
+  // Auto-save: sync the working state into its deal. Only bump "edited" time on a real
+  // edit — NOT when merely switching/opening a deal. Capture `touched` BEFORE setDeals:
+  // the functional updater runs lazily (after the line below sets touchRef=true), so
+  // reading touchRef.current inside it would always see true and bump on every open.
   useEffect(()=>{
-    setDeals(ds=>{const n=ds.map(d=>d._id!==activeId?d:{...d,...state,_id:d._id,_label:d._label,_created:d._created,_ts:touchRef.current?Date.now():d._ts});persistDeals(n,activeId);return n;});
+    const touched=touchRef.current;
+    setDeals(ds=>{const n=ds.map(d=>d._id!==activeId?d:{...d,...state,_id:d._id,_label:d._label,_created:d._created,_ts:touched?Date.now():d._ts});persistDeals(n,activeId);return n;});
     touchRef.current=true;
   },[state]);
 
