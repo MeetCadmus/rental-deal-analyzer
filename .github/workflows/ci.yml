@@ -2,13 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "refactor/**"]
   pull_request:
-    branches: [main]
 
 jobs:
-  test:
-    name: Math test suite
+  build-test:
+    name: Typecheck · Test · Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,5 +15,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm install
+      - run: npm ci
+      - run: npm run typecheck
       - run: npm test
+      - run: npm run build
