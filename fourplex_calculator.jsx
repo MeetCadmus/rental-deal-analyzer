@@ -869,7 +869,16 @@ function OverviewTab({R,Y,S,compact}){
         <div style={{fontSize:10,color:R.beRent<=R.monRent/R.numU?C.teal:C.red}}>{R.beRent<=R.monRent/R.numU?"+"+fmtD(R.monRent/R.numU-R.beRent)+" buffer":"−"+fmtD(R.beRent-R.monRent/R.numU)+" shortfall"}</div></div>
       </div>
     </div>
-    {/* Quick checks (no GRM) */}
+    {/* Acquisition snapshot — the per-door / per-sqft metrics pros scan first */}
+    {(()=>{const numU=R.numU||1,tsf=S.units.reduce((s,u)=>s+(u.sqft||0),0);
+      const cells=[["Price / unit",fmtD(S.price/numU)],["Price / sq ft",tsf?fmtD(S.price/tsf):"—"],["Rent / sq ft",tsf?("$"+(R.monRent/tsf).toFixed(2)+"/mo"):"—"],["GRM",fmtX(R.grm)]];
+      return <div style={{border:"1px solid "+C.border,borderRadius:"var(--c-rad)",overflow:"hidden",marginBottom:8}}>
+        <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border,letterSpacing:"0.02em"}}>Acquisition</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",padding:"11px 13px",gap:10}}>
+          {cells.map(([l2,v2])=><div key={l2}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.04em"}}>{l2}</div><div style={{fontSize:14,fontWeight:700,color:C.heading,fontVariantNumeric:"tabular-nums",marginTop:2}}>{v2}</div></div>)}
+        </div>
+      </div>;})()}
+    {/* Quick checks */}
     <div style={{border:"1px solid "+C.border,borderRadius:11,overflow:"hidden"}}>
       <div style={{padding:"8px 13px",background:C.bg,fontSize:11,fontWeight:700,color:C.heading,borderBottom:"1px solid "+C.border}}>Quick checks</div>
       <div style={{padding:"6px 13px"}}>
@@ -1085,7 +1094,7 @@ function ProjectionTab({R,Y,S}){
       <div style={{background:C.white,border:"1px solid "+C.border,borderRadius:"var(--c-rad)",padding:"11px 13px"}}>
         <div style={{fontSize:9,marginBottom:3,display:"flex",alignItems:"center",color:C.muted,letterSpacing:"0.04em",textTransform:"uppercase"}}><span>Total return ({hold}yr)</span><Info lines={totRetTip}/></div>
         <div style={{fontSize:19,fontWeight:700,color:Y.totRet>=0?C.heading:C.red,fontVariantNumeric:"tabular-nums"}}>{fmtD(Y.totRet)}</div>
-        <div style={{fontSize:10,color:C.muted}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in</div>
+        <div style={{fontSize:10,color:C.muted}}>{fmtP(Y.totRet/(R.cashIn||1)*100)} on cash in · {((R.cashIn+Y.totRet)/(R.cashIn||1)).toFixed(2)}× equity multiple</div>
       </div>
       <div style={{background:C.white,border:"1px solid "+C.border,borderRadius:"var(--c-rad)",padding:"11px 13px"}}>
         <div style={{fontSize:9,marginBottom:3,display:"flex",alignItems:"center",color:C.muted,letterSpacing:"0.04em",textTransform:"uppercase"}}><span>Est. IRR</span><Info lines={irrTip}/></div>
