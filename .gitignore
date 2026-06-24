@@ -2,6 +2,8 @@ node_modules/
 .DS_Store
 .idea/
 *.log
+dist/
+legacy-index.html.bak
 
 # local smoke-test harness
 .render-check.js

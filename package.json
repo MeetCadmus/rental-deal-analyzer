@@ -1,12 +1,33 @@
 {
   "name": "re-investment-analyzer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Atlanta multifamily investment analyzer — single-file React app + math test suite",
+  "type": "module",
+  "description": "Rental property deal analyzer — React + TypeScript (Clean Architecture)",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:legacy": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@supabase/supabase-js": "^2.45.0"
   },
   "devDependencies": {
-    "@babel/standalone": "^7.24.0"
+    "@babel/standalone": "^7.24.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.4.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^24.1.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.5"
   }
 }

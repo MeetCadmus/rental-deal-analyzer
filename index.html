@@ -7,71 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 16px; background: #F6F2EA; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-  </style>
+  <!-- Optional cloud sync (Supabase) — sets window.SUPABASE_* if keys are present. Safe to commit. -->
+  <script src="%BASE_URL%config.js"></script>
 </head>
 <body>
   <div id="root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Optional cloud sync (Supabase). Harmless if config.js leaves the keys blank. -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js"></script>
-  <script>
-    fetch('./fourplex_calculator.jsx')
-      .then(function(r) { return r.text(); })
-      .then(function(src) {
-
-        // Rewrite `import { ... } from "react"` into a destructure from the
-        // global React (loaded from the CDN). Hooks like useState are used as
-        // bare names in the JSX, so they must stay in scope. Drop any other
-        // import lines.
-        src = src.split('\n').map(function(l) {
-          var t = l.trim();
-          if (t.slice(0, 7) !== 'import ') return l;
-          var m = t.match(/^import\s*\{([^}]*)\}\s*from\s*["']react["']/);
-          if (m) return 'const {' + m[1] + '} = React;';
-          return '';
-        }).join('\n');
-
-        // Remove export default keyword
-        src = src.replace(/export\s+default\s+/g, '');
-
-        // Compile JSX to plain JS using Babel. Force the classic runtime so it
-        // emits React.createElement(...) instead of injecting an
-        // `import ... from "react/jsx-runtime"` (illegal in a classic script).
-        var js = Babel.transform(src, {
-          presets: [['react', { runtime: 'classic' }]]
-        }).code;
-
-        // Expose App as explicit global before eval
-        js = js.replace(/function App\b/, 'window.App = function App');
-
-        // Create a Blob URL and load it as a real script tag
-        // This avoids eval() and any strict-mode module restrictions
-        var blob = new Blob([js], { type: 'application/javascript' });
-        var url  = URL.createObjectURL(blob);
-        var s    = document.createElement('script');
-        s.src    = url;
-        s.onload = function() {
-          URL.revokeObjectURL(url);
-          ReactDOM.createRoot(document.getElementById('root'))
-            .render(React.createElement(window.App));
-        };
-        s.onerror = function(e) {
-          document.getElementById('root').innerHTML =
-            '<div style="color:red;padding:24px"><b>Script load error.</b> Check DevTools console.</div>';
-        };
-        document.head.appendChild(s);
-      })
-      .catch(function(e) {
-        document.getElementById('root').innerHTML =
-          '<div style="color:red;padding:24px;font-family:monospace">' +
-          '<b>Error:</b> ' + e.message + '</div>';
-      });
-  </script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
