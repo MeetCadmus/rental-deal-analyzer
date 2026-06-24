@@ -7,11 +7,11 @@ const C={navy:"var(--c-navy)",navyM:"var(--c-navyM)",gold:"var(--c-gold)",goldL:
 // whole app re-skins from an html[data-skin] attribute. The bare :root is the
 // "Classic" skin; the other three override via [data-skin="…"]. Treatment vars
 // live in the light block and reference colour tokens, so they adapt to dark too.
-const SKINS=[["classic","Classic"],["ink","Ink"],["graphite","Graphite"],["heritage","Heritage"]];
+const SKINS=[["calm","Calm"],["classic","Classic"],["ink","Ink"],["graphite","Graphite"],["heritage","Heritage"]];
 const THEME_CSS=`
 /* Classic — the original navy + gold (default) */
 :root{--c-navy:#0D1F3C;--c-navyM:#1e3a6e;--c-gold:#C8922A;--c-goldL:#FDF3E3;--c-teal:#14705A;--c-tealL:#DFF2EC;--c-red:#9B2335;--c-redL:#FCEAEC;--c-amber:#8C5A0A;--c-amberL:#FDF3E3;--c-slate:#4A5568;--c-border:#E2E8F0;--c-bg:#F7F8FA;--c-white:#ffffff;--c-text:#1A202C;--c-heading:#0D1F3C;--c-page:#F7F8FA;--c-rowline:#F7FAFC;--c-grid:#EDF1F6;--c-hl:#EEF2FF;--c-tealS:#14705A;--c-redS:#9B2335;--c-amberS:#8C5A0A;--c-blueS:#185FA5;--c-muted:#718096;color-scheme:light;
-  --c-rad:11px;--c-head:linear-gradient(90deg,var(--c-navy),var(--c-navyM));--c-fdisp:system-ui,-apple-system,sans-serif;--c-fui:system-ui,-apple-system,sans-serif;--c-headfg:#ffffff;--c-ring:rgba(30,58,110,0.25);--c-emoji:inline;--c-bar:none;--c-deco:block;}
+  --c-rad:11px;--c-head:linear-gradient(90deg,var(--c-navy),var(--c-navyM));--c-fdisp:system-ui,-apple-system,sans-serif;--c-fui:system-ui,-apple-system,sans-serif;--c-headfg:#ffffff;--c-headborder:rgba(255,255,255,0.28);--c-ring:rgba(30,58,110,0.25);--c-emoji:inline;--c-bar:none;--c-deco:block;}
 :root[data-theme="dark"]{--c-navy:#16325C;--c-navyM:#244a86;--c-gold:#E0A93C;--c-goldL:#33280F;--c-teal:#3FD0AE;--c-tealL:#123A30;--c-red:#F08699;--c-redL:#3A1A20;--c-amber:#E6B454;--c-amberL:#33280F;--c-slate:#9AA7BC;--c-border:#2C3A53;--c-bg:#161F33;--c-white:#1C2740;--c-text:#E6EAF2;--c-heading:#9CC0F2;--c-page:#0F1624;--c-rowline:#222C42;--c-grid:#222C42;--c-hl:#1B2A47;--c-tealS:#0E7A5F;--c-redS:#B53049;--c-amberS:#8A5A0E;--c-blueS:#2A63A6;--c-muted:#8593A8;color-scheme:dark;}
 
 /* Ink & Ivory — editorial luxury (near-black ink on ivory, champagne accent) */
@@ -28,6 +28,12 @@ const THEME_CSS=`
 :root[data-skin="heritage"]{--c-navy:#14342A;--c-navyM:#1E4A3B;--c-gold:#C2A24A;--c-goldL:#F4ECD6;--c-teal:#1F6B4F;--c-tealL:#E2EEE7;--c-red:#8A2E2E;--c-redL:#F1E3E1;--c-amber:#9A7B2E;--c-amberL:#F2EBD7;--c-slate:#5C5A4E;--c-border:#E2D9C5;--c-bg:#F1EBDD;--c-white:#FCFAF3;--c-text:#23271F;--c-heading:#14342A;--c-page:#F4EFE3;--c-rowline:#FAF6EC;--c-grid:#EBE3D2;--c-hl:#EFEAD9;--c-tealS:#1F6B4F;--c-redS:#8A2E2E;--c-amberS:#9A7B2E;--c-blueS:#2F6E5E;--c-muted:#928C7C;
   --c-rad:8px;--c-head:linear-gradient(90deg,var(--c-navy),var(--c-navyM));--c-fdisp:'Playfair Display',Georgia,serif;--c-fui:'Inter',system-ui,sans-serif;--c-headfg:#F4EFE3;--c-ring:rgba(194,162,74,0.35);--c-emoji:none;--c-bar:inline-block;--c-deco:none;}
 :root[data-skin="heritage"][data-theme="dark"]{--c-navy:#143228;--c-navyM:#1C4435;--c-gold:#D4B45C;--c-goldL:#2C2614;--c-teal:#6FB58F;--c-tealL:#16271E;--c-red:#D98A86;--c-redL:#2C1B19;--c-amber:#CDA85A;--c-amberL:#2C2614;--c-slate:#A39E8C;--c-border:#313A30;--c-bg:#121A14;--c-white:#182019;--c-text:#E9E6D6;--c-heading:#E6DFC8;--c-page:#0E140E;--c-rowline:#182019;--c-grid:#212A22;--c-hl:#1A241B;--c-tealS:#6FB58F;--c-redS:#D98A86;--c-amberS:#CDA85A;--c-blueS:#7FA892;--c-muted:#8E8A78;}
+
+/* Calm — Apple / Claude / Google: light neutral canvas, near-black text, ONE quiet
+   clay accent, light section headers (no colour bars), soft corners, lots of air */
+:root[data-skin="calm"]{--c-navy:#1F1E1C;--c-navyM:#2C2A27;--c-gold:#A86A47;--c-goldL:#F2E8E0;--c-teal:#4E7A5E;--c-tealL:#E9F0EB;--c-red:#A75A4D;--c-redL:#F4E7E4;--c-amber:#9A7B3F;--c-amberL:#F2ECDE;--c-slate:#6E6B64;--c-border:#E9E6DE;--c-bg:#F4F2EC;--c-white:#FFFFFF;--c-text:#2B2A28;--c-heading:#1F1E1C;--c-page:#FAF9F5;--c-rowline:#FBFAF6;--c-grid:#EFEBE2;--c-hl:#F3EFE7;--c-tealS:#4E7A5E;--c-redS:#A75A4D;--c-amberS:#9A7B3F;--c-blueS:#4C6585;--c-muted:#9C988E;
+  --c-rad:12px;--c-head:var(--c-bg);--c-fdisp:'Inter',system-ui,-apple-system,sans-serif;--c-fui:'Inter',system-ui,-apple-system,sans-serif;--c-headfg:#1F1E1C;--c-headborder:rgba(0,0,0,0.13);--c-ring:rgba(168,106,71,0.30);--c-emoji:none;--c-bar:none;--c-deco:none;}
+:root[data-skin="calm"][data-theme="dark"]{--c-navy:#1A1815;--c-navyM:#26231D;--c-gold:#C98A66;--c-goldL:#2C211A;--c-teal:#7FB48E;--c-tealL:#1C2A20;--c-red:#D9978B;--c-redL:#2C1C18;--c-amber:#CDA85A;--c-amberL:#2C2416;--c-slate:#A39E92;--c-border:#34302A;--c-bg:#211E18;--c-white:#1C1A15;--c-text:#ECE7DB;--c-heading:#F0EBDF;--c-page:#16140F;--c-rowline:#1C1A15;--c-grid:#262219;--c-hl:#221F17;--c-tealS:#7FB48E;--c-redS:#D9978B;--c-amberS:#CDA85A;--c-blueS:#8AA0BE;--c-muted:#8C8678;--c-headfg:#F0EBDF;--c-headborder:rgba(255,255,255,0.16);}
 
 body{background:var(--c-page)!important;color:var(--c-text);font-family:var(--c-fui);transition:background .2s ease,color .2s ease;}
 .skin-emoji{display:var(--c-emoji,inline)}
@@ -1635,8 +1641,8 @@ function HeaderMenu({btnStyle,items}){
 }
 // Segmented style picker for the (dark) header bar — switches the whole skin.
 function SkinToggle({skin,setSkin}){
-  return <div style={{display:"inline-flex",gap:2,padding:2,borderRadius:"var(--c-rad)",background:"rgba(255,255,255,0.10)",border:"1px solid rgba(255,255,255,0.22)"}}>
-    {SKINS.map(([id,lbl])=>{const on=skin===id;return <button key={id} onClick={()=>setSkin(id)} title={"Style: "+lbl} style={{fontSize:10,fontWeight:700,padding:"4px 9px",borderRadius:"calc(var(--c-rad) - 2px)",border:"none",cursor:"pointer",fontFamily:"inherit",background:on?C.gold:"transparent",color:on?C.navy:"var(--c-headfg)",letterSpacing:"0.02em",whiteSpace:"nowrap"}}>{lbl}</button>;})}
+  return <div style={{display:"inline-flex",gap:2,padding:2,borderRadius:"var(--c-rad)",background:"transparent",border:"1px solid var(--c-headborder)"}}>
+    {SKINS.map(([id,lbl])=>{const on=skin===id;return <button key={id} onClick={()=>setSkin(id)} title={"Style: "+lbl} style={{fontSize:10,fontWeight:700,padding:"4px 9px",borderRadius:"calc(var(--c-rad) - 2px)",border:"none",cursor:"pointer",fontFamily:"inherit",background:on?C.gold:"transparent",color:on?"#fff":"var(--c-headfg)",letterSpacing:"0.02em",whiteSpace:"nowrap"}}>{lbl}</button>;})}
   </div>;
 }
 // ── App ────────────────────────────────────────────────────────
@@ -1659,7 +1665,7 @@ export default function App(){
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),2600);return ()=>clearTimeout(t);},[toast]);
   const[dark,setDark]=useState(()=>{try{const t=localStorage.getItem("re_theme");if(t)return t==="dark";return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-theme",dark?"dark":"light");localStorage.setItem("re_theme",dark?"dark":"light");}catch{}},[dark]);
-  const[skin,setSkin]=useState(()=>{try{return localStorage.getItem("re_skin")||"classic";}catch(e){return "classic";}});
+  const[skin,setSkin]=useState(()=>{try{return localStorage.getItem("re_skin")||"calm";}catch(e){return "calm";}});
   useEffect(()=>{try{document.documentElement.setAttribute("data-skin",skin);localStorage.setItem("re_skin",skin);}catch(e){}},[skin]);
 
   // ── Cloud sync (Supabase) — dormant unless config.js + the CDN client exist ──
@@ -1858,7 +1864,7 @@ export default function App(){
           .mobile-bar{display:flex!important;padding-bottom:calc(8px + env(safe-area-inset-bottom))!important}
           .preset-grid{grid-template-columns:repeat(3,1fr)!important}
           input,select,textarea{font-size:16px!important}}
-        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(166,128,63,0.35)}
+        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px var(--c-ring)}
       `}</style>
 
       {/* Header */}
@@ -1868,12 +1874,12 @@ export default function App(){
           <div>
             <div style={{fontSize:9,fontWeight:600,letterSpacing:"0.26em",color:C.gold,marginBottom:7,textTransform:"uppercase"}}>Rental Property · Deal Analyzer</div>
             <div style={{fontFamily:"var(--c-fdisp)",fontSize:24,fontWeight:600,color:"var(--c-headfg)",letterSpacing:"0.01em",lineHeight:1.12}}>Investment Property Analyzer</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.55)",marginTop:6,letterSpacing:"0.02em"}}>Unlimited deals · every change auto-saves · switch &amp; compare anytime</div>
+            <div style={{fontSize:11,color:"var(--c-headfg)",opacity:0.55,marginTop:6,letterSpacing:"0.02em"}}>Unlimited deals · every change auto-saves · switch &amp; compare anytime</div>
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-            {(() => {const hb={fontSize:11,fontWeight:500,padding:"7px 13px",borderRadius:"var(--c-rad)",border:"1px solid rgba(255,255,255,0.28)",background:"transparent",color:"var(--c-headfg)",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.02em"};return <>
+            {(() => {const hb={fontSize:11,fontWeight:500,padding:"7px 13px",borderRadius:"var(--c-rad)",border:"1px solid var(--c-headborder)",background:"transparent",color:"var(--c-headfg)",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.02em"};return <>
               <SkinToggle skin={skin} setSkin={setSkin}/>
-              <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:C.gold,border:"1px solid "+C.gold,color:C.navy,fontWeight:600,maxWidth:230,overflow:"hidden",textOverflow:"ellipsis"}}>{activeTitle} <span style={{opacity:0.65,fontWeight:500}}>({deals.length})</span></button>
+              <button onClick={()=>setDealsOpen(true)} title="Browse, search & switch deals" style={{...hb,background:C.navy,border:"1px solid "+C.navy,color:"#fff",fontWeight:600,maxWidth:230,overflow:"hidden",textOverflow:"ellipsis"}}>{activeTitle} <span style={{opacity:0.65,fontWeight:500}}>({deals.length})</span></button>
               <button onClick={newDeal} style={hb} title="Start a new blank deal">＋ New deal</button>
               <ScenarioCompare deals={deals} activeId={activeId} currentState={S}/>
               <HeaderMenu btnStyle={hb} items={[
@@ -1887,7 +1893,7 @@ export default function App(){
                      <span style={{fontSize:11,color:C.slate}}>{sync==="syncing"?"Saving…":sync==="error"?"Sync error":"Synced"}</span>
                      <button onClick={signOut} style={{fontSize:12,fontWeight:600,color:C.slate,background:C.bg,border:"1px solid "+C.border,borderRadius:4,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}} title={user.email||"Sign out"}>Sign out</button>
                    </div>
-                  :<button onClick={signIn} style={{width:"100%",fontSize:12,fontWeight:700,color:C.navy,background:C.gold,border:"none",borderRadius:4,padding:"9px 10px",cursor:"pointer",fontFamily:"inherit",letterSpacing:"0.02em"}}>Sign in with Google</button>)}:null,
+                  :<button onClick={signIn} style={{width:"100%",fontSize:12,fontWeight:700,color:"#fff",background:C.navy,border:"none",borderRadius:"var(--c-rad)",padding:"9px 10px",cursor:"pointer",fontFamily:"inherit",letterSpacing:"0.02em"}}>Sign in with Google</button>)}:null,
               ]}/>
             </>;})()}
           </div>
