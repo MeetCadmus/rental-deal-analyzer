@@ -462,7 +462,7 @@ function ClosingCosts({cc,setCC,price,loan,annTax,annIns,rate,collapsible,defaul
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:11,opacity:0.7}}><span>Total closing costs</span><span>{p>0?(grand/p*100).toFixed(2):0}% of price</span></div>
         <div style={{fontSize:20,fontWeight:700,color:C.gold,marginBottom:7}}>{fmtD(grand)}</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:5}}>
-          {[["Lender",lT],["GA taxes",gaT],["Title/atty",titleT],["Prepaids",prepT]].map(([l2,v2])=><div key={l2} style={{background:"rgba(255,255,255,0.08)",borderRadius:6,padding:"4px 7px"}}><div style={{fontSize:9,opacity:0.65}}>{l2}</div><div style={{fontSize:11,fontWeight:700,color:C.gold}}>{fmtD(v2)}</div></div>)}
+          {[["Lender",lT],["Taxes",taxT],["Title/atty",titleT],["Prepaids",prepT]].map(([l2,v2])=><div key={l2} style={{background:"rgba(255,255,255,0.08)",borderRadius:6,padding:"4px 7px"}}><div style={{fontSize:9,opacity:0.65}}>{l2}</div><div style={{fontSize:11,fontWeight:700,color:C.gold}}>{fmtD(v2)}</div></div>)}
         </div>
       </div>
     </div>}
@@ -616,7 +616,8 @@ function computeBase(state){
   const{units,financing,closing,expenses,projection,repairs}=state;
   const gpi=units.reduce((s,u)=>s+u.rent,0)*12;
   const vacAmt=gpi*((expenses.vacancyPct||0)/100);
-  const egi=gpi-vacAmt;
+  const otherInc=(state.otherIncome||0)*12;          // laundry/parking/pet/storage etc.
+  const egi=gpi-vacAmt+otherInc;
   const price=state.price||0;
   const{totExp,items:expItems}=calcExp(expenses,units.length,egi,price);
   const noi=egi-totExp;
@@ -656,7 +657,7 @@ function computeBase(state){
   // Partnership
   const myPct=(state.partnership?.myPct||100)/100;
   const myCF=cf*myPct,myCoc=cashIn>0?(myCF/cashIn)*100:0;
-  return{gpi,vacAmt,egi,totExp,expItems,noi,down,loan,pmt,annPmt,ccTotal,repairCost,cashIn,pitiMo,reserveMonths,reserves,cashOnHand,cf,capRate,coc,dscr,beOcc,grm,pct1,adjThresh,expRatio,beRent,monRent,numU,vaEnabled,vaCF,vaCapRate,vaCoc,myCF,myCoc,myPct};
+  return{gpi,vacAmt,otherInc,egi,totExp,expItems,noi,down,loan,pmt,annPmt,ccTotal,repairCost,cashIn,pitiMo,reserveMonths,reserves,cashOnHand,cf,capRate,coc,dscr,beOcc,grm,pct1,adjThresh,expRatio,beRent,monRent,numU,vaEnabled,vaCF,vaCapRate,vaCoc,myCF,myCoc,myPct};
 }
 
 function computeYearly(state,R){
@@ -675,7 +676,7 @@ function computeYearly(state,R){
   for(let y=1;y<=years;y++){
     let mRent=R.monRent*Math.pow(1+rentGrowth,y-1);
     if(vaEnabled&&y>=vaYear)mRent=Math.max(mRent,vaMonthlyRent*R.numU);
-    const gpiY=mRent*12,egiY=gpiY*(1-vacPct);
+    const gpiY=mRent*12,egiY=gpiY*(1-vacPct)+(R.otherInc||0)*Math.pow(1+rentGrowth,y-1);
     const expY=expenses.mode==="quick"?egiY*((expenses.ratio||45)/100):R.totExp*Math.pow(1.02,y-1);
     const noiY=egiY-expY;
     if(refiEnabled&&y===refiYear&&balance>0){
@@ -765,7 +766,8 @@ function CalcTrace({R,S}){
   const rows=[
     {l:"Gross potential income",v:fmtD(R.gpi)+"/yr",f:"= "+fmtD(R.monRent)+"/mo × 12 = "+fmtD(R.gpi)+"/yr",c:C.blueS,b:true},
     {l:"(−) Vacancy ("+S.expenses.vacancyPct+"%)",v:"−"+fmtD(R.vacAmt)+"/yr",f:"= GPI × "+S.expenses.vacancyPct+"%",c:C.red},
-    {l:"= Effective gross income",v:fmtD(Math.round(R.egi))+"/yr",f:"= GPI − vacancy",c:C.blueS,b:true},
+    ...(R.otherInc>0?[{l:"(+) Other income",v:"+"+fmtD(R.otherInc)+"/yr",f:"laundry · parking · pet · storage",c:C.teal}]:[]),
+    {l:"= Effective gross income",v:fmtD(Math.round(R.egi))+"/yr",f:R.otherInc>0?"= GPI − vacancy + other income":"= GPI − vacancy",c:C.blueS,b:true},
     {l:"(−) Total expenses",v:"−"+fmtD(R.totExp)+"/yr",f:S.expenses.mode==="quick"?S.expenses.ratio+"% of EGI":"sum of itemized expenses",c:C.red},
     {l:"= Net operating income (NOI)",v:fmtD(Math.round(R.noi))+"/yr",f:"= EGI − expenses",c:C.teal,b:true},
     {l:"(−) Debt service",v:"−"+fmtD(Math.round(R.annPmt))+"/yr",f:fmtD(R.pmt)+"/mo × 12",c:C.red},
@@ -905,6 +907,7 @@ function IncomeTab({R,S}){
       <div style={{paddingBottom:4}}>
         <PLRow label="Gross potential income" value={fmtD(R.gpi)+"/yr"} pos note={R.numU+" units × "+fmtD(R.monRent/R.numU)+" avg"}/>
         <PLRow label={"(−) Vacancy ("+S.expenses.vacancyPct+"%)"}  value={"−"+fmtD(R.vacAmt)+"/yr"} neg indent/>
+        {R.otherInc>0&&<PLRow label="(+) Other income" value={"+"+fmtD(R.otherInc)+"/yr"} pos indent note="laundry · parking · pet · storage"/>}
         <PLRow label="= Effective gross income (EGI)" value={fmtD(Math.round(R.egi))+"/yr"} bold hl/>
         {S.expenses.mode==="quick"?<PLRow label={"(−) Expenses ("+S.expenses.ratio+"% of EGI)"}  value={"−"+fmtD(Math.round(R.totExp))+"/yr"} neg indent/>
           :R.expItems&&Object.entries({Taxes:R.expItems.taxes,Insurance:R.expItems.insurance,Management:R.expItems.mgmt,Maintenance:R.expItems.maint,"CapEx":R.expItems.capex,Utilities:R.expItems.util,Landscaping:R.expItems.landscape,Accounting:R.expItems.acctg,Misc:R.expItems.misc,Custom:R.expItems.custom}).filter(([,v2])=>v2>0).map(([l2,v2])=><PLRow key={l2} label={"(−) "+l2} value={"−"+fmtD(v2)+"/yr"} neg indent/>)}
@@ -1363,7 +1366,7 @@ function ComparablesCard({comps,setComps,currentR}){
 // ── Init state & examples ──────────────────────────────────────
 const INIT={
   address:"",notes:"",listingUrl:"",insights:null,aiSource:"",aiAt:0,
-  price:620000,
+  price:620000,otherIncome:0,
   units:[{id:1,label:"Unit 1",rent:1550,beds:2,bath:1,sqft:900},{id:2,label:"Unit 2",rent:1550,beds:2,bath:1,sqft:900},{id:3,label:"Unit 3",rent:1150,beds:1,bath:1,sqft:650},{id:4,label:"Unit 4",rent:1150,beds:1,bath:1,sqft:650}],
   financing:{downPct:25,rate:7.25,loanYears:30,reserveMonths:0},
   closing:{...DCC},expenses:{...DEX},
@@ -1983,9 +1986,12 @@ export default function App(){
               </div>)}
             </div>
             <button onClick={addUnit} style={{marginTop:8,width:"100%",padding:"7px",borderRadius:8,border:"1px dashed "+C.border,background:C.white,cursor:"pointer",fontSize:12,fontWeight:600,color:C.slate,fontFamily:"inherit"}}>+ Add unit</button>
+            <div style={{marginTop:10}}>
+              <MoneyInput label="Other income / mo" value={S.otherIncome||0} onChange={x=>set("otherIncome",x)} sub="laundry · parking · pet · storage (added to EGI)"/>
+            </div>
             <div style={{marginTop:9,padding:"6px 9px",background:C.bg,borderRadius:7,border:"1px solid "+C.border,fontSize:12,display:"flex",justifyContent:"space-between"}}>
-              <span style={{color:C.slate}}>Total monthly</span>
-              <span style={{fontWeight:700,color:C.heading}}>{fmtD(totalRent)}/mo · {fmtD(totalRent*12)}/yr</span>
+              <span style={{color:C.slate}}>Total monthly income</span>
+              <span style={{fontWeight:700,color:C.heading}}>{fmtD(totalRent+(S.otherIncome||0))}/mo · {fmtD((totalRent+(S.otherIncome||0))*12)}/yr</span>
             </div>
           </Card>
 
