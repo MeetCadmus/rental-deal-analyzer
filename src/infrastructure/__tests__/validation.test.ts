@@ -5,7 +5,10 @@ describe("validateAIResult", () => {
   test("accepts a well-formed AI object (numbers or numeric strings)", () => {
     const r = validateAIResult({ address: "1 A St", price: 500000, units: [{ beds: 2, bath: 1, sqft: "900", rent: "1500" }], opinion: "ok" });
     expect(r.ok).toBe(true);
-    if (r.ok) { expect(r.data.address).toBe("1 A St"); expect(r.data.units?.length).toBe(1); }
+    if (r.ok) {
+      expect(r.data.address).toBe("1 A St");
+      expect(r.data.units?.length).toBe(1);
+    }
   });
 
   test("rejects a non-object", () => {

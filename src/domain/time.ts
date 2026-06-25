@@ -16,12 +16,14 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 // today -> "3:45p" · yesterday -> "Yest 3:45p" · this year -> "Jun 22, 3:45p" · older -> "Jun 22 '24"
 export function fmtWhen(ts: number | undefined): string {
   if (!ts) return "";
-  const d = new Date(ts), now = new Date();
+  const d = new Date(ts),
+    now = new Date();
   let h = d.getHours();
   const ap = h < 12 ? "a" : "p";
   h = h % 12 || 12;
   const time = h + ":" + String(d.getMinutes()).padStart(2, "0") + ap;
-  const day = d.toDateString(), today = now.toDateString();
+  const day = d.toDateString(),
+    today = now.toDateString();
   const yest = new Date(now.getTime() - 86400000).toDateString();
   if (day === today) return time;
   if (day === yest) return "Yest " + time;

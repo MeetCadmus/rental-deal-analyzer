@@ -54,7 +54,7 @@ test("buildAIPrompt: embeds known fields and the JSON schema", () => {
 test("buildAIPrompt: asks the model to self-report its active name + tier", () => {
   const prompt = M.buildAIPrompt({ units: [] });
   assert.match(prompt, /current active model name and tier/i);
-  assert.doesNotMatch(prompt, /blank model is correct/i);   // old "leave it blank" guidance is gone
+  assert.doesNotMatch(prompt, /blank model is correct/i); // old "leave it blank" guidance is gone
 });
 
 test("parseAIResult: parses plain JSON", () => {

@@ -20,8 +20,17 @@ export function Icon({ name, size = 15, style }: { name?: string; size?: number;
   const p = name ? ICONS[name] : undefined;
   if (!p) return null;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"
-      style={{ flexShrink: 0, display: "block", ...style }} dangerouslySetInnerHTML={{ __html: p }} />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0, display: "block", ...style }}
+      dangerouslySetInnerHTML={{ __html: p }}
+    />
   );
 }

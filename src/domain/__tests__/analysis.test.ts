@@ -5,13 +5,23 @@ import * as M from "../index";
 import { close, pmtOf } from "../../test/util";
 
 function deal(over) {
-  return M.fullState(Object.assign({
-    price: 620000,
-    units: [{ id: 1, rent: 1800 }, { id: 2, rent: 1800 }, { id: 3, rent: 1550 }, { id: 4, rent: 1550 }],
-    financing: { downPct: 25, rate: 7, loanYears: 30 },
-    expenses: { mode: "quick", ratio: 42, vacancyPct: 5 },
-    closing: { mode: "quick", quickPct: 3 },
-  }, over));
+  return M.fullState(
+    Object.assign(
+      {
+        price: 620000,
+        units: [
+          { id: 1, rent: 1800 },
+          { id: 2, rent: 1800 },
+          { id: 3, rent: 1550 },
+          { id: 4, rent: 1550 },
+        ],
+        financing: { downPct: 25, rate: 7, loanYears: 30 },
+        expenses: { mode: "quick", ratio: 42, vacancyPct: 5 },
+        closing: { mode: "quick", quickPct: 3 },
+      },
+      over,
+    ),
+  );
 }
 
 test("whatNeedsToBeTrue: the required rent/unit actually produces the target CF", () => {

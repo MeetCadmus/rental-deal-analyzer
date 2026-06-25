@@ -12,27 +12,26 @@ const numish = z.union([z.number(), z.string()]).optional();
 
 const aiUnitSchema = z.object({ beds: numish, bath: numish, sqft: numish, rent: numish }).loose();
 
-export const aiResultSchema = z.object({
-  address: z.string().optional(),
-  price: numish,
-  units: z.array(aiUnitSchema).optional(),
-  expenses: z.record(z.string(), z.unknown()).optional(),
-  financing: z.record(z.string(), z.unknown()).optional(),
-  closingPct: numish,
-  projection: z.record(z.string(), z.unknown()).optional(),
-  insights: z.record(z.string(), z.unknown()).optional(),
-  opinion: z.string().optional(),
-  model: z.string().optional(),
-}).loose();
+export const aiResultSchema = z
+  .object({
+    address: z.string().optional(),
+    price: numish,
+    units: z.array(aiUnitSchema).optional(),
+    expenses: z.record(z.string(), z.unknown()).optional(),
+    financing: z.record(z.string(), z.unknown()).optional(),
+    closingPct: numish,
+    projection: z.record(z.string(), z.unknown()).optional(),
+    insights: z.record(z.string(), z.unknown()).optional(),
+    opinion: z.string().optional(),
+    model: z.string().optional(),
+  })
+  .loose();
 
 export type AIResult = z.infer<typeof aiResultSchema>;
 
 // True if the validated AI object carries at least one field we can actually apply.
 function aiHasUsableFields(d: AIResult): boolean {
-  return Boolean(
-    d.address || d.price != null || (d.units && d.units.length) ||
-    d.expenses || d.financing || d.projection || d.insights || d.opinion,
-  );
+  return Boolean(d.address || d.price != null || (d.units && d.units.length) || d.expenses || d.financing || d.projection || d.insights || d.opinion);
 }
 
 export function validateAIResult(obj: unknown): Validated<AIResult> {
@@ -52,13 +51,29 @@ export function validateAIResult(obj: unknown): Validated<AIResult> {
 }
 
 // A deal export (CSV / shared link) — any recognizable deal field qualifies.
-const DEAL_KEYS = ["address", "price", "units", "financing", "expenses", "projection", "closing", "repairs", "partnership", "notes", "listingUrl", "otherIncome", "insights"];
+const DEAL_KEYS = [
+  "address",
+  "price",
+  "units",
+  "financing",
+  "expenses",
+  "projection",
+  "closing",
+  "repairs",
+  "partnership",
+  "notes",
+  "listingUrl",
+  "otherIncome",
+  "insights",
+];
 
-export const dealImportSchema = z.object({
-  address: z.string().optional(),
-  price: z.union([z.number(), z.string()]).optional(),
-  units: z.array(z.record(z.string(), z.unknown())).optional(),
-}).loose();
+export const dealImportSchema = z
+  .object({
+    address: z.string().optional(),
+    price: z.union([z.number(), z.string()]).optional(),
+    units: z.array(z.record(z.string(), z.unknown())).optional(),
+  })
+  .loose();
 
 export function validateDealImport(obj: unknown): Validated<Record<string, unknown>> {
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
@@ -69,5 +84,5 @@ export function validateDealImport(obj: unknown): Validated<Record<string, unkno
   if (!Object.keys(obj).some((k) => DEAL_KEYS.includes(k))) {
     return { ok: false, error: "This file doesn't look like a deal export — no recognizable fields." };
   }
-  return { ok: true, data: r.data as Record<string, unknown> };
+  return { ok: true, data: r.data };
 }

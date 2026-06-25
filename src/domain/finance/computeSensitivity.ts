@@ -1,14 +1,29 @@
 import { computeBase } from "./computeBase";
 import type { Deal, BaseMetrics } from "../types";
 
-export interface SensitivityCell { label: string; cf: number; capRate: number }
-export interface PriceRow { label: string; price: number; cells: SensitivityCell[] }
-export interface RentCell { delta: number; cf: number; capRate: number }
-export interface Sensitivity { priceRate: PriceRow[]; rentCells: RentCell[] }
+export interface SensitivityCell {
+  label: string;
+  cf: number;
+  capRate: number;
+}
+export interface PriceRow {
+  label: string;
+  price: number;
+  cells: SensitivityCell[];
+}
+export interface RentCell {
+  delta: number;
+  cf: number;
+  capRate: number;
+}
+export interface Sensitivity {
+  priceRate: PriceRow[];
+  rentCells: RentCell[];
+}
 
 // Price×rate grid + rent-delta sensitivity. Pure (re-runs computeBase on variants).
 export function computeSensitivity(state: Deal, _R: BaseMetrics): Sensitivity {
-  const pVars = [-0.10, -0.05, 0, +0.05, +0.10];
+  const pVars = [-0.1, -0.05, 0, +0.05, +0.1];
   const rVars = [-1.0, -0.5, 0, +0.5, +1.0];
   return {
     priceRate: pVars.map((pv) => {
