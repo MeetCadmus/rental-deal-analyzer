@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { DealStore } from "../storage/dealRepository";
 
 export interface CloudConfig { url: string; key: string }
@@ -9,7 +9,9 @@ export function getCloudConfig(): CloudConfig | null {
   return url && key ? { url, key } : null;
 }
 
-export function createSupabase(cfg: CloudConfig): SupabaseClient {
+// Lazy: the heavy @supabase/supabase-js bundle is only fetched when sync is configured.
+export async function createSupabase(cfg: CloudConfig): Promise<SupabaseClient> {
+  const { createClient } = await import("@supabase/supabase-js");
   return createClient(cfg.url, cfg.key);
 }
 

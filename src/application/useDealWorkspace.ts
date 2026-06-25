@@ -98,13 +98,18 @@ export function useDealWorkspace(setToast: (s: string) => void) {
   useEffect(() => {
     if (!cloudCfg) return;
     let unsub: { unsubscribe: () => void } | undefined;
-    try {
-      const c = createSupabase(cloudCfg); supa.current = c;
-      c.auth.getSession().then(({ data }) => { const u = data && data.session && data.session.user; if (u) onAuthUser(u); });
-      const sub = c.auth.onAuthStateChange((_e, session) => onAuthUser(session && session.user));
-      unsub = sub && sub.data && sub.data.subscription;
-    } catch { /* ignore */ }
-    return () => { try { unsub && unsub.unsubscribe(); } catch { /* ignore */ } };
+    let cancelled = false;
+    (async () => {
+      try {
+        const c = await createSupabase(cloudCfg); // dynamic import — chunk loads only here
+        if (cancelled) return;
+        supa.current = c;
+        c.auth.getSession().then(({ data }) => { const u = data && data.session && data.session.user; if (u) onAuthUser(u); });
+        const sub = c.auth.onAuthStateChange((_e, session) => onAuthUser(session && session.user));
+        unsub = sub && sub.data && sub.data.subscription;
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; try { unsub && unsub.unsubscribe(); } catch { /* ignore */ } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
