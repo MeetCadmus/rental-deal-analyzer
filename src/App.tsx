@@ -6,15 +6,16 @@ import { useWorkspace, cloudCfg } from "./application/workspaceStore";
 import { useWorkspaceEffects } from "./application/useWorkspaceEffects";
 import { useMetrics } from "./application/useMetrics";
 import { useTheme, useViewTab } from "./application/uiState";
-import { Card } from "./presentation/ui/Card";
-import { MoneyInput, RentInput, Field } from "./presentation/ui/inputs";
-import { Tog, SecLabel } from "./presentation/ui/primitives";
 import { HeaderMenu } from "./presentation/ui/HeaderMenu";
 import { Icon } from "./presentation/ui/Icon";
 import { QuickFill } from "./presentation/sections/QuickFill";
-import { ListingLink } from "./presentation/sections/ListingLink";
+import { PropertyDetails } from "./presentation/sections/PropertyDetails";
+import { Units } from "./presentation/sections/Units";
+import { Financing } from "./presentation/sections/Financing";
 import { ClosingCosts } from "./presentation/sections/ClosingCosts";
 import { Expenses } from "./presentation/sections/Expenses";
+import { Repairs } from "./presentation/sections/Repairs";
+import { Projection } from "./presentation/sections/Projection";
 import { AreaInsights } from "./presentation/sections/AreaInsights";
 import { OverviewTab } from "./presentation/results/OverviewTab";
 import { IncomeTab } from "./presentation/results/IncomeTab";
@@ -32,7 +33,7 @@ export default function App() {
   const store = useWorkspace();
   const metrics = useMetrics();
   const w = { ...store, ...metrics, S: store.state, cloudCfg };
-  const { S, R, Y, SEN, score, totalRent, numU } = w;
+  const { S, R, Y, SEN, score, numU } = w;
   const toast = store.toast, setToast = store.setToast;
   const hb = { fontSize: 11, fontWeight: 500, padding: "7px 13px", borderRadius: "var(--c-rad)", border: "1px solid var(--c-headborder)", background: "transparent", color: "var(--c-headfg)", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", letterSpacing: "0.02em" } as const;
 
@@ -100,126 +101,13 @@ export default function App() {
         {/* LEFT: Inputs */}
         <div id="inputs-panel">
           <QuickFill key={w.activeId} state={S} onListing={w.applyListing} onAI={w.applyAI} onSource={(v: string) => w.set("aiSource", v)} />
-          <Card title="Property details" icon="pin" collapsible defaultOpen storeKey="prop">
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <label style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Address / MLS #</label>
-                <input value={S.address || ""} onChange={(e) => w.set("address", e.target.value)} placeholder="123 Maple St, Atlanta, GA 30308" style={{ padding: "7px 10px", fontSize: 13, border: "1px solid " + C.border, borderRadius: 7, fontFamily: "inherit", color: C.text, outline: "none" }} />
-              </div>
-              <ListingLink url={S.listingUrl} onChange={(v) => w.set("listingUrl", v)} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <label style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Notes / assumptions</label>
-                <textarea value={S.notes || ""} onChange={(e) => w.set("notes", e.target.value)} placeholder="Seller motivated, rents below market, new roof 2022..." rows={2} style={{ padding: "7px 10px", fontSize: 12, border: "1px solid " + C.border, borderRadius: 7, fontFamily: "inherit", color: C.text, outline: "none", resize: "vertical", lineHeight: 1.5 }} />
-              </div>
-            </div>
-          </Card>
-
-          <Card title={"Units & Rents · " + numU + " unit" + (numU !== 1 ? "s" : "")} icon="home" collapsible defaultOpen storeKey="units" summary={fmtD(totalRent) + "/mo"}>
-            <div style={{ marginBottom: 11 }}><MoneyInput label="Purchase price" value={S.price} onChange={(x) => w.set("price", x)} sub={"Loan: " + fmtD(S.price * (1 - S.financing.downPct / 100)) + " · Down: " + fmtD(S.price * S.financing.downPct / 100)} /></div>
-            <div style={{ marginBottom: 9 }}><Tog checked={w.showUD} onChange={w.setShowUD} label="Show unit details (beds / bath / sq ft)" /></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-              {S.units.map((u, i) => <div key={u.id} style={{ border: "1px solid " + C.border, borderRadius: 9, padding: "8px 10px", background: C.bg }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: w.showUD ? 8 : 0 }}>
-                  <input value={u.label} onChange={(e) => w.setUnit(i, "label", e.target.value)} style={{ fontSize: 12, fontWeight: 700, color: C.heading, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", flex: "0 1 72px", minWidth: 0 }} />
-                  <RentInput value={u.rent} onChange={(v) => w.setUnit(i, "rent", v)} />
-                  {numU > 1 && <button className="tap-sm" aria-label={"Remove " + (u.label || "unit")} onClick={() => w.remUnit(i)} style={{ padding: "5px 9px", background: C.redL, border: "1px solid " + C.border, borderRadius: 6, cursor: "pointer", fontSize: 12, color: C.red, fontFamily: "inherit", flexShrink: 0 }}>✕</button>}
-                </div>
-                {w.showUD && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 6 }}>
-                  <Field label="Beds" value={u.beds || 0} onChange={(x) => w.setUnit(i, "beds", x)} min={0} max={10} xs />
-                  <Field label="Baths" value={u.bath || 0} onChange={(x) => w.setUnit(i, "bath", x)} min={0} max={6} step={0.5} xs />
-                  <Field label="Sq ft" value={u.sqft || 0} onChange={(x) => w.setUnit(i, "sqft", x)} min={0} step={50} xs />
-                </div>}
-              </div>)}
-            </div>
-            <button onClick={w.addUnit} style={{ marginTop: 8, width: "100%", padding: "7px", borderRadius: 8, border: "1px dashed " + C.border, background: C.white, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.slate, fontFamily: "inherit" }}>+ Add unit</button>
-            <div style={{ marginTop: 10 }}><MoneyInput label="Other income / mo" value={S.otherIncome || 0} onChange={(x) => w.set("otherIncome", x)} sub="laundry · parking · pet · storage (added to EGI)" /></div>
-            <div style={{ marginTop: 9, padding: "6px 9px", background: C.bg, borderRadius: 7, border: "1px solid " + C.border, fontSize: 12, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: C.slate }}>Total monthly income</span>
-              <span style={{ fontWeight: 700, color: C.heading }}>{fmtD(totalRent + (S.otherIncome || 0))}/mo · {fmtD((totalRent + (S.otherIncome || 0)) * 12)}/yr</span>
-            </div>
-          </Card>
-
-          <Card title="Financing" icon="bank" collapsible defaultOpen storeKey="fin" summary={fmtD(R.pmt) + "/mo"}>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
-              <Field label="Down payment" suffix="%" value={S.financing.downPct} onChange={(x) => w.setFin("downPct", x)} min={0} max={100} step={0.5} sub={"= " + fmtD(S.price * S.financing.downPct / 100)} showZero />
-              <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={(x) => w.setFin("rate", x)} min={0} max={20} step={0.125} showZero />
-              <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={(x) => w.setFin("loanYears", x)} min={1} max={40} />
-              <div style={{ padding: "7px 10px", background: C.bg, borderRadius: 8, border: "1px solid " + C.border }}>
-                <div style={{ fontSize: 10, color: C.slate, marginBottom: 2 }}>Monthly payment</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.heading }}>{fmtD(R.pmt)}/mo</div>
-                <div style={{ fontSize: 10, color: C.muted }}>Loan: {fmtD(R.loan)}</div>
-              </div>
-            </div>
-            <div style={{ marginTop: 9 }}>
-              <Field label="Cash reserves" suffix="mo PITI" value={S.financing.reserveMonths || 0} onChange={(x) => w.setFin("reserveMonths", x)} min={0} max={24} step={1}
-                tip={["Liquid cash a lender wants you to keep AFTER closing — months of PITI (principal+interest+taxes+insurance).", "· Investment / multifamily: often 6 months", "· DSCR loans: ~3–12 months", "· Owner-occupied: 0–2 months", "· You keep this money — it's not spent, so it's not counted in cash-on-cash."]}
-                sub={(S.financing.reserveMonths || 0) > 0 ? ("= " + fmtD(R.reserves) + " to keep on hand · PITI ≈ " + fmtD(R.pitiMo) + "/mo") : "0 = none. Investment loans often require ~6."} />
-            </div>
-            <div style={{ marginTop: 11, paddingTop: 11, borderTop: "1px solid " + C.border }}>
-              <Tog checked={S.partnership?.enabled || false} onChange={(x) => w.setPart("enabled", x)} label="Partnership purchase" sub="Calculate my share of returns" />
-              {S.partnership?.enabled && <div style={{ marginTop: 9 }}>
-                <Field label="My equity share" suffix="%" value={S.partnership.myPct || 60} onChange={(x) => w.setPart("myPct", x)} min={1} max={99} step={1} sub={"Partner: " + (100 - (S.partnership.myPct || 60)) + "%"} />
-              </div>}
-            </div>
-          </Card>
-
+          <PropertyDetails />
+          <Units />
+          <Financing R={R} />
           <ClosingCosts cc={S.closing} setCC={w.setCC} price={S.price} loan={R.loan} annTax={S.expenses.taxes || 0} annIns={S.expenses.insurance || 0} rate={S.financing.rate} collapsible defaultOpen />
           <Expenses ex={S.expenses} setEx={w.setEx} units={numU} egi={R.egi} price={S.price} collapsible defaultOpen />
-
-          <Card title="Repairs & Rehab" icon="wrench" collapsible defaultOpen storeKey="repairs" summary={S.repairs.include ? (S.repairs.unknown ? "TBD" : fmtD(S.repairs.amount)) : undefined}>
-            <Tog checked={S.repairs.include} onChange={(x) => w.setRep("include", x)} label="Include repair / rehab budget" sub="Added to cash needed at close" />
-            {S.repairs.include && <div style={{ marginTop: 9, display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 9, alignItems: "end" }}>
-              <MoneyInput label="Budget" value={S.repairs.unknown ? 0 : S.repairs.amount} onChange={(x) => w.setRep("amount", x)} sub={S.repairs.unknown ? "Marked as unknown" : fmtD(S.repairs.amount) + " added to cash in"} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <label style={{ fontSize: 10, color: C.slate, fontWeight: 600 }}>Unknown?</label>
-                <button onClick={() => w.setRep("unknown", !S.repairs.unknown)} style={{ padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 700, border: "1px solid " + (S.repairs.unknown ? C.amber : C.border), background: S.repairs.unknown ? C.amberL : C.white, color: S.repairs.unknown ? C.amber : C.slate }}>? TBD</button>
-              </div>
-            </div>}
-            {S.repairs.include && S.repairs.unknown && <div style={{ marginTop: 6, fontSize: 10, color: C.amber }}>⚠︎ Get inspection quotes. Budget 5–15% of price for older buildings.</div>}
-          </Card>
-
-          <Card title="Projection & Growth" icon="trend" collapsible defaultOpen storeKey="proj" summary={S.projection.holdYears + "yr · " + fmtP(S.projection.appreciationPct)}>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9, marginBottom: 12 }}>
-              <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={(x) => w.setProj("holdYears", x)} min={1} max={30} />
-              <Field label="Appreciation/yr" suffix="%" value={S.projection.appreciationPct} onChange={(x) => w.setProj("appreciationPct", x)} min={0} max={12} step={0.25} sub="set your market's forecast" />
-              <Field label="Rent growth/yr" suffix="%" value={S.projection.rentGrowthPct || 0} onChange={(x) => w.setProj("rentGrowthPct", x)} min={0} max={10} step={0.25} sub="Applied to all units each year" />
-              <div style={{ padding: "7px 10px", background: C.tealL, borderRadius: 8, border: "1px solid " + C.border, fontSize: 11 }}>
-                <div style={{ color: C.teal, fontWeight: 700, marginBottom: 2 }}>Rent in year {S.projection.holdYears}</div>
-                <div style={{ fontWeight: 700, color: C.teal, fontSize: 14 }}>{fmtD(Math.round((totalRent / numU) * Math.pow(1 + (S.projection.rentGrowthPct || 0) / 100, (S.projection.holdYears || 5) - 1)))}/unit/mo</div>
-              </div>
-            </div>
-            <SecLabel text="Exit assumptions" />
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9, marginBottom: 9 }}>
-                <Field label="Selling costs" suffix="%" value={S.projection.sellingCostPct} onChange={(x) => w.setProj("sellingCostPct", x)} min={0} max={12} step={0.5} sub="agent + closing at sale" showZero />
-                <div style={{ padding: "7px 10px", background: C.bg, borderRadius: 8, border: "1px solid " + C.border }}>
-                  <div style={{ fontSize: 10, color: C.slate, marginBottom: 2 }}>Net sale proceeds (yr {S.projection.holdYears})</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.heading }}>{fmtD(Y.exitVal * (1 - (S.projection.sellingCostPct ?? 6) / 100) - (Y.yearly[Y.yearly.length - 1]?.balance || 0))}</div>
-                </div>
-              </div>
-              <div style={{ marginBottom: 8 }}><Tog checked={S.projection.exitCapEnabled || false} onChange={(x) => w.setProj("exitCapEnabled", x)} label="Value the exit on a cap rate" sub="Sale price = final-year NOI ÷ exit cap (instead of appreciation %)" /></div>
-              {S.projection.exitCapEnabled && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
-                <Field label="Exit cap rate" suffix="%" value={S.projection.exitCapRate} onChange={(x) => w.setProj("exitCapRate", x)} min={1} max={15} step={0.1} sub={"vs entry cap " + fmtP(R.capRate)} />
-                <div style={{ padding: "7px 10px", background: C.goldL, borderRadius: 8, border: "1px solid " + C.border, fontSize: 10, color: C.amber }}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
-              </div>}
-            </div>
-            <SecLabel text="Value-add scenario" />
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ marginBottom: 8 }}><Tog checked={S.projection.vaEnabled || false} onChange={(x) => w.setProj("vaEnabled", x)} label="Below-market rents — value-add potential" sub="Show metrics at stabilized market rents" /></div>
-              {S.projection.vaEnabled && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
-                <Field label="Market rent / unit" prefix="$" value={S.projection.vaMarketRentPerUnit || 1700} onChange={(x) => w.setProj("vaMarketRentPerUnit", x)} min={0} step={25} sub={"current: " + fmtD(totalRent / numU) + "/unit"} />
-                <Field label="Stabilized by year" value={S.projection.vaYear || 2} onChange={(x) => w.setProj("vaYear", x)} min={1} max={10} />
-              </div>}
-            </div>
-            <SecLabel text="Refinance scenario" />
-            <div>
-              <div style={{ marginBottom: 8 }}><Tog checked={S.projection.refiEnabled || false} onChange={(x) => w.setProj("refiEnabled", x)} label="Model a refinance in projection" sub="New rate applies from refi year onward" /></div>
-              {S.projection.refiEnabled && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
-                <Field label="Refi year" value={S.projection.refiYear || 3} onChange={(x) => w.setProj("refiYear", x)} min={1} max={S.projection.holdYears || 5} />
-                <Field label="New rate" suffix="%" value={S.projection.refiRate || 6.5} onChange={(x) => w.setProj("refiRate", x)} min={1} max={15} step={0.125} />
-              </div>}
-            </div>
-          </Card>
+          <Repairs />
+          <Projection R={R} Y={Y} />
 
           <AreaInsights data={S.insights} onChange={w.setInsights} />
         </div>
