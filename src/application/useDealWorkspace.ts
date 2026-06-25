@@ -129,7 +129,6 @@ export function useDealWorkspace(setToast: (s: string) => void) {
   const setUnit = (i: number, k: string, v: unknown) => setState((p) => { const u = [...p.units]; u[i] = { ...u[i], [k]: v }; return { ...p, units: u }; });
   const addUnit = () => setState((p) => { const next = p.units.reduce((m, u) => { const mm = /(\d+)\s*$/.exec(u.label || ""); return Math.max(m, mm ? parseInt(mm[1], 10) : 0); }, 0) + 1; return { ...p, units: [...p.units, { id: uid(), label: "Unit " + next, rent: 1400, beds: 1, bath: 1, sqft: 700 }] }; });
   const remUnit = (i: number) => setState((p) => ({ ...p, units: p.units.filter((_, j) => j !== i) }));
-  const setComps = useCallback((fn: (p: Deal["comparables"]) => Deal["comparables"]) => setState((p) => ({ ...p, comparables: typeof fn === "function" ? fn(p.comparables || []) : fn })), []);
   const setInsights = (v: unknown) => setState((p) => ({ ...p, insights: v }));
 
   // ── Quick-fill ──
@@ -258,7 +257,7 @@ export function useDealWorkspace(setToast: (s: string) => void) {
 
   return {
     deals, activeId, S, R, Y, SEN, score, totalRent, numU, activeTitle,
-    set, setFin, setProj, setRep, setPart, setCC, setEx, setUnit, addUnit, remUnit, setComps, setInsights,
+    set, setFin, setProj, setRep, setPart, setCC, setEx, setUnit, addUnit, remUnit, setInsights,
     applyListing, applyAI,
     addDeal, switchDeal, newDeal, duplicateDeal, renameDeal, deleteDeal, undo, undoDelete, loadEx,
     exportCSV, importCSV, copyShareLink, exportAllDeals, importAllDeals,
