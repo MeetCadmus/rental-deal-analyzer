@@ -8,6 +8,7 @@ import { Card } from "./presentation/ui/Card";
 import { MoneyInput, RentInput, Field } from "./presentation/ui/inputs";
 import { Tog, SecLabel } from "./presentation/ui/primitives";
 import { HeaderMenu } from "./presentation/ui/HeaderMenu";
+import { Icon } from "./presentation/ui/Icon";
 import { QuickFill } from "./presentation/sections/QuickFill";
 import { ListingLink } from "./presentation/sections/ListingLink";
 import { ClosingCosts } from "./presentation/sections/ClosingCosts";
@@ -41,7 +42,12 @@ export default function App() {
             <div style={{ fontSize: 11, color: "var(--c-headfg)", opacity: 0.55, marginTop: 6, letterSpacing: "0.02em" }}>Unlimited deals · every change auto-saves · switch &amp; compare anytime</div>
           </div>
           <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button onClick={() => w.setDealsOpen(true)} title="Browse, search & switch deals" style={{ ...hb, background: C.navy, border: "1px solid " + C.navy, color: "#fff", fontWeight: 600, maxWidth: 230, overflow: "hidden", textOverflow: "ellipsis" }}>{w.activeTitle} <span style={{ opacity: 0.65, fontWeight: 500 }}>({w.deals.length})</span></button>
+            <button onClick={() => w.setDealsOpen(true)} title="Browse, search & switch deals" style={{ ...hb, display: "inline-flex", alignItems: "center", gap: 7, background: C.navy, border: "1px solid " + C.navy, color: "#fff", fontWeight: 600, maxWidth: 250 }}>
+              <Icon name="list" size={13} style={{ opacity: 0.85, flexShrink: 0 }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.activeTitle}</span>
+              <span style={{ opacity: 0.6, fontWeight: 500, flexShrink: 0 }}>· {w.deals.length}</span>
+              <span style={{ opacity: 0.7, flexShrink: 0, fontSize: 10 }}>▾</span>
+            </button>
             <button onClick={w.newDeal} style={hb} title="Start a new blank deal">＋ New deal</button>
             <ScenarioCompare deals={w.deals} activeId={w.activeId} currentState={S} />
             <HeaderMenu btnStyle={hb} items={[

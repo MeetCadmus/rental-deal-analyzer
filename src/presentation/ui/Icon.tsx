@@ -13,6 +13,7 @@ export const ICONS: Record<string, string> = {
   chart: '<path d="M3 3v18h18"/><path d="M7 15v-3M12 15V8M17 15v-5"/>',
   bolt: '<path d="M13 2 4 13h6l-1 9 9-11h-6l1-8Z"/>',
   scale: '<path d="M12 4v17M7 21h10M5 7h14"/><path d="M5 7 2.6 12.5a3 3 0 0 0 4.8 0L5 7Z"/><path d="M19 7l-2.4 5.5a3 3 0 0 0 4.8 0L19 7Z"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
 };
 
 export function Icon({ name, size = 15, style }: { name?: string; size?: number; style?: CSSProperties }) {
