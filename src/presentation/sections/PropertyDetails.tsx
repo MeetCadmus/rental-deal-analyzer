@@ -1,20 +1,20 @@
 import { useId } from "react";
 import { useWorkspace } from "../../application/workspaceStore";
-import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
 import { ListingLink } from "./ListingLink";
+import s from "./sections.module.css";
 
 // Address / listing link / notes for the working deal.
 export function PropertyDetails() {
-  const S = useWorkspace((s) => s.state);
-  const set = useWorkspace((s) => s.set);
+  const S = useWorkspace((st) => st.state);
+  const set = useWorkspace((st) => st.set);
   const addrId = useId();
   const notesId = useId();
   return (
     <Card title="Property details" icon="pin" collapsible defaultOpen storeKey="prop">
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <label htmlFor={addrId} style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>
+      <div className={s.stack}>
+        <div className={s.fieldCol}>
+          <label htmlFor={addrId} className={s.fieldLabel}>
             Address / MLS #
           </label>
           <input
@@ -22,20 +22,12 @@ export function PropertyDetails() {
             value={S.address || ""}
             onChange={(e) => set("address", e.target.value)}
             placeholder="123 Maple St, Atlanta, GA 30308"
-            style={{
-              padding: "7px 10px",
-              fontSize: 13,
-              border: "1px solid " + C.border,
-              borderRadius: 7,
-              fontFamily: "inherit",
-              color: C.text,
-              outline: "none",
-            }}
+            className={s.textInput}
           />
         </div>
         <ListingLink url={S.listingUrl} onChange={(v) => set("listingUrl", v)} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <label htmlFor={notesId} style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>
+        <div className={s.fieldCol}>
+          <label htmlFor={notesId} className={s.fieldLabel}>
             Notes / assumptions
           </label>
           <textarea
@@ -44,17 +36,7 @@ export function PropertyDetails() {
             onChange={(e) => set("notes", e.target.value)}
             placeholder="Seller motivated, rents below market, new roof 2022..."
             rows={2}
-            style={{
-              padding: "7px 10px",
-              fontSize: 12,
-              border: "1px solid " + C.border,
-              borderRadius: 7,
-              fontFamily: "inherit",
-              color: C.text,
-              outline: "none",
-              resize: "vertical",
-              lineHeight: 1.5,
-            }}
+            className={s.textArea}
           />
         </div>
       </div>

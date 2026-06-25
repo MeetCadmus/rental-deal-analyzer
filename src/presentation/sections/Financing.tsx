@@ -1,10 +1,10 @@
 import { useWorkspace } from "../../application/workspaceStore";
 import { fmtD } from "../../domain/money";
 import type { computeBase } from "../../domain/finance/computeBase";
-import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
 import { Field } from "../ui/inputs";
 import { Tog } from "../ui/primitives";
+import s from "./sections.module.css";
 
 type Base = ReturnType<typeof computeBase>;
 
@@ -15,7 +15,7 @@ export function Financing({ R }: { R: Base }) {
   const setPart = useWorkspace((s) => s.setPart);
   return (
     <Card title="Financing" icon="bank" collapsible defaultOpen storeKey="fin" summary={fmtD(R.pmt) + "/mo"}>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
+      <div className={s.grid2}>
         <Field
           label="Down payment"
           suffix="%"
@@ -29,10 +29,10 @@ export function Financing({ R }: { R: Base }) {
         />
         <Field label="Interest rate" suffix="%" value={S.financing.rate} onChange={(x) => setFin("rate", x)} min={0} max={20} step={0.125} showZero />
         <Field label="Loan term" suffix="yrs" value={S.financing.loanYears} onChange={(x) => setFin("loanYears", x)} min={1} max={40} />
-        <div style={{ padding: "7px 10px", background: C.bg, borderRadius: 8, border: "1px solid " + C.border }}>
-          <div style={{ fontSize: 10, color: C.slate, marginBottom: 2 }}>Monthly payment</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.heading }}>{fmtD(R.pmt)}/mo</div>
-          <div style={{ fontSize: 10, color: C.muted }}>Loan: {fmtD(R.loan)}</div>
+        <div className={s.box}>
+          <div className={s.boxLabel}>Monthly payment</div>
+          <div className={s.boxValue}>{fmtD(R.pmt)}/mo</div>
+          <div className={s.boxSub}>Loan: {fmtD(R.loan)}</div>
         </div>
       </div>
       <div style={{ marginTop: 9 }}>
@@ -58,7 +58,7 @@ export function Financing({ R }: { R: Base }) {
           }
         />
       </div>
-      <div style={{ marginTop: 11, paddingTop: 11, borderTop: "1px solid " + C.border }}>
+      <div className={s.dividerTop}>
         <Tog
           checked={S.partnership?.enabled || false}
           onChange={(x) => setPart("enabled", x)}

@@ -4,6 +4,7 @@ import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
 import { MoneyInput } from "../ui/inputs";
 import { Tog } from "../ui/primitives";
+import s from "./sections.module.css";
 
 // Optional repair / rehab budget, added to cash needed at close.
 export function Repairs() {
@@ -27,17 +28,12 @@ export function Repairs() {
             onChange={(x) => setRep("amount", x)}
             sub={S.repairs.unknown ? "Marked as unknown" : fmtD(S.repairs.amount) + " added to cash in"}
           />
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <label style={{ fontSize: 10, color: C.slate, fontWeight: 600 }}>Unknown?</label>
+          <div className={s.col}>
+            <label className={s.miniLabel}>Unknown?</label>
             <button
               onClick={() => setRep("unknown", !S.repairs.unknown)}
+              className={s.toggleBtn}
               style={{
-                padding: "6px 12px",
-                borderRadius: 7,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 12,
-                fontWeight: 700,
                 border: "1px solid " + (S.repairs.unknown ? C.amber : C.border),
                 background: S.repairs.unknown ? C.amberL : C.white,
                 color: S.repairs.unknown ? C.amber : C.slate,
@@ -48,9 +44,7 @@ export function Repairs() {
           </div>
         </div>
       )}
-      {S.repairs.include && S.repairs.unknown && (
-        <div style={{ marginTop: 6, fontSize: 10, color: C.amber }}>⚠︎ Get inspection quotes. Budget 5–15% of price for older buildings.</div>
-      )}
+      {S.repairs.include && S.repairs.unknown && <div className={s.warn}>⚠︎ Get inspection quotes. Budget 5–15% of price for older buildings.</div>}
     </Card>
   );
 }
