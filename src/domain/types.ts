@@ -208,10 +208,12 @@ export interface YearlyResult {
 }
 
 export interface DealScore {
-  grade: "A" | "B" | "C" | "D";
+  grade: "A" | "B" | "C" | "D" | "—";
   pct: number;
   color: string;
   label: string;
   desc: string;
   metrics: Level[];
+  /** True when the deal lacks the inputs needed to score it (no price or no rent). */
+  incomplete?: boolean;
 }

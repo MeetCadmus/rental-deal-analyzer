@@ -1,17 +1,30 @@
 import { lv, fmtD, fmtP } from "../money";
 import type { BaseMetrics, YearlyResult, DealScore, Deal, Level } from "../types";
 
-type ScoreInput = Pick<BaseMetrics, "capRate" | "coc" | "dscr" | "cf" | "numU" | "beOcc">;
+type ScoreInput = Pick<BaseMetrics, "capRate" | "coc" | "dscr" | "cf" | "numU" | "beOcc"> & { gpi?: number };
 
 // Grade colors are CSS-variable token strings (resolved by the active skin in the UI).
-const SCORE_COLOR: Record<DealScore["grade"], string> = {
+const SCORE_COLOR: Record<"A" | "B" | "C" | "D", string> = {
   A: "var(--c-tealS)",
   B: "var(--c-blueS)",
   C: "var(--c-amberS)",
   D: "var(--c-redS)",
 };
 
-export function calcDealScore(R: ScoreInput, Y: Pick<YearlyResult, "irr"> | null | undefined): DealScore {
+export function calcDealScore(R: ScoreInput, Y: Pick<YearlyResult, "irr"> | null | undefined, price?: number): DealScore {
+  // A deal can't be graded until it has both a purchase price and some rent — without
+  // them, division-by-zero makes metrics read as falsely "good". Show "—" instead.
+  if ((R.gpi ?? 1) <= 0 || (price != null && price <= 0)) {
+    return {
+      grade: "—",
+      pct: 0,
+      color: "var(--c-muted)",
+      label: "Incomplete",
+      desc: "Enter a purchase price and rents to score this deal.",
+      metrics: [],
+      incomplete: true,
+    };
+  }
   const ms: Level[] = [
     lv(R.capRate, 7, 4.5),
     lv(R.coc, 8, 4),
@@ -22,7 +35,7 @@ export function calcDealScore(R: ScoreInput, Y: Pick<YearlyResult, "irr"> | null
   ];
   const pts = ms.reduce((s, m) => s + (m === "good" ? 2 : m === "warn" ? 1 : 0), 0);
   const pct = pts / (ms.length * 2);
-  const grade: DealScore["grade"] = pct >= 0.75 ? "A" : pct >= 0.5 ? "B" : pct >= 0.25 ? "C" : "D";
+  const grade: "A" | "B" | "C" | "D" = pct >= 0.75 ? "A" : pct >= 0.5 ? "B" : pct >= 0.25 ? "C" : "D";
   const labels = { A: "Great deal", B: "Good deal", C: "Weak deal", D: "Risky deal" } as const;
   const descs = {
     A: "All key metrics in the green zone.",

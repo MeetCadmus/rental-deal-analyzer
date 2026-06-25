@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useWorkspace } from "../../application/workspaceStore";
 import { Card } from "../ui/Card";
 import { ListingLink } from "./ListingLink";
@@ -10,6 +10,16 @@ export function PropertyDetails() {
   const set = useWorkspace((st) => st.set);
   const addrId = useId();
   const notesId = useId();
+  // Auto-grow the notes field to fit its content. iOS Safari ignores the CSS resize
+  // handle, so growing-to-content is the only way to expand notes on iPhone.
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const autosizeNotes = () => {
+    const el = notesRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.max(el.scrollHeight, 42) + "px";
+  };
+  useEffect(autosizeNotes, [S.notes]);
   return (
     <Card title="Property details" icon="pin" collapsible defaultOpen storeKey="prop">
       <div className={s.stack}>
@@ -31,12 +41,15 @@ export function PropertyDetails() {
             Notes / assumptions
           </label>
           <textarea
+            ref={notesRef}
             id={notesId}
             value={S.notes || ""}
             onChange={(e) => set("notes", e.target.value)}
+            onInput={autosizeNotes}
             placeholder="Seller motivated, rents below market, new roof 2022..."
             rows={2}
             className={s.textArea}
+            style={{ resize: "none", overflow: "hidden", minHeight: 42 }}
           />
         </div>
       </div>

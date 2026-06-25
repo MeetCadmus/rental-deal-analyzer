@@ -25,7 +25,7 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
         const st = fullState(d);
         const R = computeBase(st);
         const Y = computeYearly(st, R);
-        return { d, st, R, Y, score: calcDealScore(R, Y) };
+        return { d, st, R, Y, score: calcDealScore(R, Y, st.price) };
       })
     : [];
   const PSORT: Record<string, [string, (c: any) => any]> = {
@@ -52,7 +52,7 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
   const computed = cols.map((c: any) => {
     const R = computeBase(c.st);
     const Y = computeYearly(c.st, R);
-    return { ...c, R, Y, score: calcDealScore(R, Y) };
+    return { ...c, R, Y, score: calcDealScore(R, Y, c.st.price) };
   });
   const rows: any[] = [
     { l: "Purchase price", f: (c: any) => fmtD(c.st.price), v: (c: any) => c.st.price },

@@ -1,27 +1,37 @@
 import { useEffect, useRef, useState } from "react";
 import s from "./sections.module.css";
 
-// ── Listing link: compact Open + Edit (input only while editing) ──
+// ── Listing link: clearly shows it opens the external listing (and where). ──
 function ListingLink({ url, onChange }: { url: string; onChange: (v: string) => void }) {
   const [edit, setEdit] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const valid = /^https?:\/\//i.test(url || "");
-  // Focus the URL field when the user reveals it (replaces autoFocus, which is a11y-flagged).
+  // Show the destination host (e.g. "zillow.com") so it's obvious what "Open" does.
+  let host = "";
+  try {
+    if (valid) host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    /* ignore */
+  }
   useEffect(() => {
     if (edit) inputRef.current?.focus();
   }, [edit]);
   return (
     <div className={s.listingWrap}>
       <div className={s.row}>
-        <span className={s.fieldLabel}>Listing</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          {valid && (
-            <a href={url} target="_blank" rel="noopener noreferrer" className={`${s.linkBtn} ${s.linkBtnPrimary}`}>
-              ↗︎ Open
+        <span className={s.fieldLabel}>Listing link</span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+          {valid && !edit && (
+            <a href={url} target="_blank" rel="noopener noreferrer" className={`${s.linkBtn} ${s.linkBtnPrimary}`} title={"Open listing in a new tab — " + url}>
+              ↗ Open{host ? " · " + host : " listing"}
             </a>
           )}
-          <button onClick={() => setEdit((e) => !e)} className={`${s.linkBtn} ${s.linkBtnGhost}`}>
-            {edit ? "Done" : valid ? "✎ Edit" : "+ Add link"}
+          <button
+            onClick={() => setEdit((e) => !e)}
+            className={`${s.linkBtn} ${s.linkBtnGhost}`}
+            title={valid ? "Edit the listing URL" : "Paste the property's listing URL"}
+          >
+            {edit ? "Done" : valid ? "✎ Edit" : "+ Add listing link"}
           </button>
         </div>
       </div>
@@ -33,7 +43,7 @@ function ListingLink({ url, onChange }: { url: string; onChange: (v: string) => 
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === "Escape") setEdit(false);
           }}
-          placeholder="https://www.zillow.com/homedetails/…"
+          placeholder="Paste a Zillow / Redfin / MLS listing URL"
           inputMode="url"
           className={s.textInput}
           style={{ borderColor: "var(--c-navy)" }}
