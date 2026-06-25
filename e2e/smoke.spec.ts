@@ -29,6 +29,26 @@ test("toggles are keyboard-accessible Radix switches", async ({ page }) => {
   await expect(sw).toHaveAttribute("aria-checked", "true");
 });
 
+test("deals drawer is a Radix dialog: opens and closes on Escape", async ({ page }) => {
+  await page.goto(APP);
+  await page.getByTitle(/Browse, search & switch deals/).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(/My deals/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
+test("overflow menu is a Radix dropdown: opens with menuitems, closes on Escape", async ({ page }) => {
+  await page.goto(APP);
+  await page.getByTitle("More actions").click();
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  expect(await page.getByRole("menuitem").count()).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+});
+
 test("a new deal can be created from the header", async ({ page }) => {
   await page.goto(APP);
   const switcher = page.getByTitle(/Browse, search & switch deals/);
