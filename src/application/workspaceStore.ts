@@ -6,6 +6,7 @@ import type { Deal } from "../domain/types";
 import type { Example } from "../domain/examples";
 import { loadDealStore, persistDeals, getTomb, setTomb, type DealStore } from "../infrastructure/storage/dealRepository";
 import { stateToCSV, csvToState } from "../infrastructure/csv";
+import { validateDealImport } from "../infrastructure/validation";
 import { downloadFile } from "../infrastructure/download";
 import type { ParsedListing } from "../infrastructure/listing";
 import { getCloudConfig, signInWithGoogle, signOut as sbSignOut, type SupabaseClient, type User } from "../infrastructure/sync/supabase";
@@ -181,7 +182,11 @@ export const useWorkspace = create<WorkspaceStore>((set, get) => ({
   importCSV: () => {
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".csv,text/csv";
     inp.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return; const rd = new FileReader();
-      rd.onload = () => { try { get().addDeal(mergeImported(csvToState(rd.result as string))); set({ selEx: null }); } catch (err) { set({ toast: "Couldn't import that CSV: " + (err as Error).message }); } };
+      rd.onload = () => { try {
+        const v = validateDealImport(csvToState(rd.result as string));
+        if (!v.ok) { set({ toast: v.error }); return; }
+        get().addDeal(mergeImported(v.data as Partial<Deal>)); set({ selEx: null });
+      } catch (err) { set({ toast: "Couldn't import that CSV: " + (err as Error).message }); } };
       rd.readAsText(f); };
     inp.click();
   },
@@ -196,7 +201,11 @@ export const useWorkspace = create<WorkspaceStore>((set, get) => ({
   importShared: () => {
     try {
       const m = (location.hash || "").match(/^#deal=([\s\S]*)$/);
-      if (m) { const st = csvToState(decodeURIComponent(m[1])); if (st && Object.keys(st).length) { get().addDeal(mergeImported(st), (st.address as string) || "Shared deal"); set({ selEx: null, toast: "Loaded a shared deal into your library" }); } }
+      if (m) {
+        const v = validateDealImport(csvToState(decodeURIComponent(m[1])));
+        if (v.ok) { get().addDeal(mergeImported(v.data as Partial<Deal>), (v.data.address as string) || "Shared deal"); set({ selEx: null, toast: "Loaded a shared deal into your library" }); }
+        else set({ toast: v.error });
+      }
     } catch { set({ toast: "That shared link couldn't be read." }); }
     try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ }
   },
