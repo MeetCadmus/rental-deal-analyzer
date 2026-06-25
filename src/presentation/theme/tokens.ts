@@ -7,8 +7,3 @@ export const C = {
   rowline: "var(--c-rowline)", grid: "var(--c-grid)", hl: "var(--c-hl)", tealS: "var(--c-tealS)",
   redS: "var(--c-redS)", amberS: "var(--c-amberS)", blueS: "var(--c-blueS)", muted: "var(--c-muted)",
 } as const;
-
-// Selectable skins (id, label) — order = switcher order.
-export const SKINS: [string, string][] = [
-  ["calm", "Calm"], ["classic", "Classic"], ["ink", "Ink"], ["graphite", "Graphite"], ["heritage", "Heritage"],
-];

@@ -3,7 +3,7 @@ import { fmtD, fmtP } from "./domain/money";
 import { dealTitle } from "./domain/deal";
 import { EXAMPLES } from "./domain/examples";
 import { useDealWorkspace } from "./application/useDealWorkspace";
-import { useTheme, useSkin, useToast, useViewTab } from "./application/uiState";
+import { useTheme, useToast, useViewTab } from "./application/uiState";
 import { Card } from "./presentation/ui/Card";
 import { MoneyInput, RentInput, Field } from "./presentation/ui/inputs";
 import { Tog, SecLabel } from "./presentation/ui/primitives";
@@ -20,13 +20,11 @@ import { ProjectionTab } from "./presentation/results/ProjectionTab";
 import { AnalysisTab } from "./presentation/results/AnalysisTab";
 import { DealsDrawer } from "./presentation/deals/DealsDrawer";
 import { ScenarioCompare } from "./presentation/deals/ScenarioCompare";
-import { SkinToggle } from "./presentation/deals/SkinToggle";
 
 const TABS: [string, string][] = [["overview", "Overview"], ["income", "Income"], ["projection", "Projection"], ["analysis", "Analysis"]];
 
 export default function App() {
   const { dark, setDark } = useTheme();
-  const { skin, setSkin } = useSkin();
   const { toast, setToast } = useToast();
   const { tab, setTab } = useViewTab();
   const w = useDealWorkspace(setToast);
@@ -37,7 +35,6 @@ export default function App() {
     <div style={{ fontFamily: "'Inter',system-ui,-apple-system,sans-serif", maxWidth: 1040, margin: "0 auto", padding: "0.5rem 0" }}>
       {/* Header */}
       <div style={{ background: "var(--c-head)", borderRadius: "var(--c-rad)", padding: "20px 22px", marginBottom: 14, overflow: "hidden", position: "relative", borderTop: "2px solid " + C.gold }} className="no-print">
-        <div className="skin-deco" style={{ position: "absolute", right: -12, top: -12, width: 74, height: 74, border: "2px solid rgba(200,146,42,0.22)", borderRadius: "50%", pointerEvents: "none" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.26em", color: C.gold, marginBottom: 7, textTransform: "uppercase" }}>Rental Property · Deal Analyzer</div>
@@ -45,7 +42,6 @@ export default function App() {
             <div style={{ fontSize: 11, color: "var(--c-headfg)", opacity: 0.55, marginTop: 6, letterSpacing: "0.02em" }}>Unlimited deals · every change auto-saves · switch &amp; compare anytime</div>
           </div>
           <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <SkinToggle skin={skin} setSkin={setSkin} />
             <button onClick={() => w.setDealsOpen(true)} title="Browse, search & switch deals" style={{ ...hb, background: C.navy, border: "1px solid " + C.navy, color: "#fff", fontWeight: 600, maxWidth: 230, overflow: "hidden", textOverflow: "ellipsis" }}>{w.activeTitle} <span style={{ opacity: 0.65, fontWeight: 500 }}>({w.deals.length})</span></button>
             <button onClick={w.newDeal} style={hb} title="Start a new blank deal">＋ New deal</button>
             <ScenarioCompare deals={w.deals} activeId={w.activeId} currentState={S} />

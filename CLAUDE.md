@@ -5,77 +5,124 @@ Context for any AI/dev session. Read this first, then the code is the source of 
 ## What this is
 **Rental Deal Analyzer** — a single-page app for underwriting small multifamily / rental
 deals (cash flow, cap rate, CoC, DSCR, IRR, projections, deal grade) with a multi-deal
-workspace, optional cloud sync, and an AI-assisted "Quick fill" flow.
+workspace, optional cloud sync, an AI-assisted "Quick fill" flow, and shareable deal links.
 
-- Live: https://meetcadmus.github.io/rental-deal-analyzer/ (GitHub Pages, auto-deploys from `main`)
+- Live: https://meetcadmus.github.io/rental-deal-analyzer/ (GitHub Pages, **deployed via Actions**)
 - Repo: MeetCadmus/rental-deal-analyzer
 
-## Architecture (important quirks)
-- **Almost everything lives in one file: `fourplex_calculator.jsx`** (~1,700 lines: helpers,
-  React components, the App, and all the finance math). Keep new code there unless there's a
-  strong reason not to.
-- **No build step.** `index.html` fetches the `.jsx`, rewrites `import {…} from "react"` into a
-  destructure from the global `React`, strips `export default`, and compiles with
-  **Babel standalone (classic runtime)** in the browser. React/ReactDOM/Babel load from CDNs.
-- **Styling is inline** via a `C` palette of **CSS variables** (light/dark themes in `THEME_CSS`).
-  Use `C.*` tokens, not raw hex. Dark mode toggles `data-theme` on `<html>`.
-- `config.js` holds optional public Supabase keys (safe to commit). `supabase/` has the
-  migration + setup notes (`SUPABASE.md`). Sync is dormant unless keys are present.
+## Stack & build
+- **React 18 + TypeScript (strict), built with Vite.** Tests run on **Vitest** (jsdom).
+- This replaced the old single-file `fourplex_calculator.jsx` + Babel-in-browser loader
+  (removed). There is now a real build step.
+- Styling is **inline styles driven by CSS variables** (the `C` token map in
+  `src/presentation/theme/tokens.ts` → vars defined in `theme.css`). Use `C.*`, not raw hex.
+
+## Architecture — Clean Architecture + light DDD (dependency rule: inward only)
+```
+src/
+  domain/            # PURE finance core — no React/DOM. The ubiquitous language.
+    money.ts           fmt/fmtD/fmtP/fmtX, clamp, num, lv, fmtGroup, editNumber
+    time.ts            relTime, fmtWhen
+    types.ts           Deal (aggregate), Unit, Financing, Closing, Expenses, Projection,
+                       BaseMetrics, YearlyResult, DealScore, …
+    defaults.ts        INIT, BLANK, DCC, DEX, CLASS_PRESETS
+    examples.ts        EXAMPLES (Atlanta sample deals; `col` is a CSS-var string)
+    deal.ts            fullState, makeDeal, dealTitle, uid, newDealId
+    finance/           closing, expenses, computeBase, computeYearly,
+                       computeSensitivity, scoring (calcDealScore/Killers/
+                       whatNeedsToBeTrue/calcLoanOptions)
+    index.ts           barrel
+  infrastructure/    # side-effects; depends only on domain
+    csv.ts  listing.ts  ai.ts  download.ts
+    storage/dealRepository.ts   persist/load + mergeDealStores + tombstones (DDD repository)
+    storage/preferences.ts      theme / active-tab / collapsed-card prefs (localStorage)
+    sync/supabase.ts            @supabase/supabase-js client + fetch/push/auth
+  application/       # React orchestration (hooks) — no JSX
+    useDealWorkspace.ts   deal library + working deal + all CRUD/edit actions + CSV/share
+                          I/O + cloud sync. The App's "application service".
+    uiState.ts            useTheme, useToast, useViewTab
+  presentation/
+    theme/theme.css  theme/tokens.ts   (the single "Calm" theme; see below)
+    ui/              Card, inputs (Field/MoneyInput/RentInput), Icon, HeaderMenu, useGrouped,
+                     primitives (Tog/Pill/Bar/Info/SmBtn/SecLabel/PLRow/MBox)
+    charts/          ChartBox, CashflowChart, EquityChart, ReturnDonut
+    sections/        QuickFill, ClosingCosts, Expenses, AreaInsights, ComparablesCard, ListingLink
+    results/         OverviewTab, IncomeTab, ProjectionTab, AnalysisTab, CalcTrace, ProjTrace
+    deals/           DealsDrawer, ScenarioCompare
+  App.tsx            thin composition root (header + input cards + results + drawer + toasts)
+  main.tsx           ReactDOM root; imports theme.css
+```
+Rule of thumb: **domain depends on nothing; infrastructure → domain; application →
+domain + infrastructure; presentation → application + domain.** Keep the finance math in
+`domain/` pure and React-free (it's what the tests pin). The God-component is gone — App
+state/effects live in hooks.
 
 ## Run & test
 ```bash
-npm install        # only dep: @babel/standalone
-npm test           # node --test — the math/logic suite (currently ~93 tests)
-python3 -m http.server 8000   # then open http://localhost:8000 (file:// won't work)
+npm install
+npm run dev        # Vite dev server
+npm test           # Vitest — the math/helper suite (95 tests, ported 1:1 from the old suite)
+npm run typecheck  # tsc --noEmit (strict)
+npm run build      # tsc --noEmit && vite build  → dist/
+npm run preview    # serve the production build (base path /rental-deal-analyzer/)
 ```
-- Tests load the pure functions out of the JSX via the same Babel transform the browser uses
-  (`test-harness.js`). To make a function testable, add its name to the `exportNames` list in
-  `test-harness.js` and write a `test/*.test.js`.
-- **`test-harness.js` lives at the repo root**, not in `test/`, so "run all in test/" never tries
-  to execute it.
-- Quick sanity render (no browser): compile the file and `renderToString` the App with stubbed
-  `window`/`document`/`localStorage` (see the inline `node -e` snippets used in history).
+- Domain/infra tests live in `src/**/__tests__/*.test.ts` and import via `src/test/barrel.ts`
+  (a re-export of domain + infra) using a shared `close`/`pmtOf` helper in `src/test/util.ts`.
+- **Always keep the finance math behavior identical** unless intentionally changing it —
+  the 95 tests are the guard. Add a test when you touch a pure function.
+
+## Theme (single "Calm" look)
+- One theme — **Calm** (Apple/Claude/Google spirit: warm off-white canvas, near-black text,
+  one muted clay accent). It's the base `:root` in `theme.css`; **dark mode** via
+  `html[data-theme="dark"]`. (The old multi-skin switcher was removed.)
+- Components use inline styles referencing `var(--c-*)` (via the `C` map). Treatment vars:
+  `--c-rad` (radius), `--c-head`/`--c-headfg`/`--c-headborder` (card/header chrome),
+  `--c-fdisp`/`--c-fui` (fonts), `--c-ring` (focus). No emoji in chrome — use `<Icon name=…/>`.
+- Fonts (Inter + Playfair Display) load from Google Fonts in `index.html`.
+
+## Data model (a "deal")
+Working state `S` (see `INIT` in `domain/defaults.ts`): `address, notes, listingUrl, insights,
+aiSource/aiAt, price, otherIncome, units[], financing, closing(DCC), expenses(DEX), projection,
+repairs, partnership, comparables[]`.
+- **Deals library**: array of deals, each with `_id, _label, _ts, _created`, persisted to
+  `localStorage` (`re_deals_v1`) via `dealRepository`, optionally synced to Supabase.
+  Deletions use **tombstones** so they stick and propagate. `+ New deal` uses `BLANK`.
+- **Expenses are stored ANNUAL** (`expenses.v === 2`); `migrateExpenses` upgrades old data.
+- Opening/switching a deal must NOT bump `_ts` — only real edits do (see the autosave effect
+  in `useDealWorkspace`: capture `touched` BEFORE `setDeals`, since the functional updater
+  runs lazily).
+- `EGI = GPI − vacancy + otherIncome`. Closing "transfer/deed tax" is an editable % of price
+  (state-neutral — no Georgia assumptions baked in).
+
+## Quick fill / share / AI
+- `parseListing`/`addressFromUrl` (infra) read a Zillow link → address/price/units. **Copy AI
+  prompt** (`buildAIPrompt`) also fills from the link, then copies a prompt; paste the AI's JSON
+  back → `parseAIResult` → `applyAI`. The prompt asks the model to self-report its name + tier.
+- **Share link**: `#deal=<csv>` (reuses `stateToCSV`/`csvToState`); opening it adds the deal.
+- These helpers are pure/testable (`src/infrastructure/__tests__`).
+
+## Deploy
+- **GitHub Pages via Actions.** `.github/workflows/deploy.yml` builds `dist/` and publishes on
+  push to `main`. Pages "Source" is set to **GitHub Actions** (not branch). `vite.config.ts`
+  sets `base: '/rental-deal-analyzer/'`. `public/config.js` carries the optional Supabase keys
+  (safe to commit) and is loaded via `%BASE_URL%config.js`.
 
 ## Dev workflow (please follow)
-`main` is **protected** — direct pushes are blocked; CI (`npm test`) must pass. So:
+`main` is **protected** — direct pushes blocked; CI (the **`Typecheck · Test · Build`** job in
+`ci.yml`) must pass. So:
 1. `git checkout -b <type>/<short-name>`
-2. make the change **in `fourplex_calculator.jsx`** (+ tests if logic changed)
-3. verify: `npm test` green **and** the file still compiles/renders
+2. make the change in the right layer (+ tests if domain/infra logic changed)
+3. verify: `npm run typecheck && npm test && npm run build` all green
 4. `git commit` (end message with the Co-Authored-By trailer), push, `gh pr create`
 5. `gh pr checks <n> --watch` → `gh pr merge <n> --squash --delete-branch`
 6. `git checkout main && git fetch -p && git reset --hard origin/main`
-- Pages redeploys automatically; Safari caches the `.jsx`, so hard-refresh / reopen the tab to see changes.
-- Commit author identity is `Maksym Andreiev <vipmindwalker@gmail.com>`.
-
-## Data model (a "deal")
-Working state `S` (see `INIT`): `address, notes, listingUrl, insights, aiSource/aiAt, price, units[],
-financing{downPct,rate,loanYears,reserveMonths}, closing(DCC), expenses(DEX), projection{…},
-repairs{…}, partnership{…}, comparables[]`.
-- **Deals library**: array of deals, each with `_id, _label, _ts, _created`, persisted to
-  `localStorage` (`re_deals_v1`) and optionally Supabase. `+ New deal` uses the **`BLANK`**
-  template (sensible defaults but empty property fields). Deletions use **tombstones** (`TOMB`)
-  so they stick and sync.
-- **Expenses are stored ANNUAL** (`expenses.v === 2`); `migrateExpenses()` upgrades old per-mo data.
-- `fullState(d)` merges a partial deal over defaults (and migrates). `computeBase` / `computeYearly`
-  / `computeSensitivity` are the pure metric engines — covered by tests; change them carefully.
-
-## Quick fill / AI round-trip
-- Capture: paste a Zillow **link** (or text) → `parseListing` (uses `addressFromUrl` for the
-  URL slug) fills address/price/units/`listingUrl`. Or **Copy AI prompt** (`buildAIPrompt`,
-  embeds the link) → run in any chat AI → paste its JSON → `parseAIResult` (tolerant of smart
-  quotes / NBSP / code fences / trailing commas) → `applyAI` fills units+rents, itemized
-  expenses, financing rate/refi, closing %, projection (appreciation/rent-growth/exit cap),
-  `insights`, the opinion (→ notes), and `aiSource` (the model self-reports its active
-  name + tier; user-editable since models can misname their version).
-- `parseListing` / `addressFromUrl` / `buildAIPrompt` / `parseAIResult` are pure and **tested**.
-- **Area & due-diligence** (`insights`) is editable and **non-math** (informational only);
-  collapses to a slim "add" bar when empty.
-- `+ New deal` uses `BLANK` (empty property fields) so the prompt isn't seeded with fake
-  "known" values; `QuickFill` is keyed by `activeId` so its inputs reset per deal.
+- Merge auto-deploys via Actions. Commit author identity is `Maksym Andreiev <vipmindwalker@gmail.com>`.
 
 ## Conventions
-- Numbers in inputs use `Field` / `MoneyInput` / `RentInput` (live comma grouping, caret-safe,
-  `useGrouped`). Don't reintroduce raw `type=number`.
-- Tooltips: `<Info lines={[…]} />` (viewport-clamped). Sectioned forms: `SecLabel` with a subtotal.
-- Keep changes mobile-first (the layout is single-column under 680px; grids use `minmax(0,1fr)`).
-- Prefer small, reviewable PRs; add a test whenever you touch the math or a pure helper.
+- Numbers in inputs use `Field` / `MoneyInput` / `RentInput` (live comma grouping, caret-safe
+  via `useGrouped`). Don't reintroduce raw `type=number`.
+- Tooltips: `<Info lines={[…]} />` (viewport-clamped, flips below near the top). Section forms:
+  `Card` (collapsible, remembers state) + `SecLabel`.
+- Mobile-first: single column under 680px; grids use `minmax(0,1fr)`. Keep `no-print`/`sticky-col`/
+  `mobile-bar`/`tap-sm`/`del-row-*` class hooks intact (CSS in `theme.css`).
+- Prefer small, reviewable PRs; keep the dependency rule (don't import presentation from domain).

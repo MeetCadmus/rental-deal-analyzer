@@ -14,11 +14,6 @@ export const themePref = {
   set(dark: boolean): void { safeSet("re_theme", dark ? "dark" : "light"); },
 };
 
-export const skinPref = {
-  get(): string { return safeGet("re_skin") || "calm"; },
-  set(skin: string): void { safeSet("re_skin", skin); },
-};
-
 export const tabPref = {
   get(): string { return safeGet("re_tab") || "overview"; },
   set(tab: string): void { safeSet("re_tab", tab); },
