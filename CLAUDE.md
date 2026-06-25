@@ -13,9 +13,13 @@ workspace, optional cloud sync, an AI-assisted "Quick fill" flow, and shareable 
 
 ## Stack & build
 
-- **React 18 + TypeScript (strict), built with Vite.** Tests run on **Vitest** (jsdom).
+- **React 18 + TypeScript (strict), built with Vite.** Tests run on **Vitest** (jsdom) +
+  **Playwright** (e2e).
 - This replaced the old single-file `fourplex_calculator.jsx` + Babel-in-browser loader
   (removed). There is now a real build step.
+- **Key deps:** Zustand (state), zod (import validation), Radix UI (Switch / Dialog /
+  DropdownMenu — accessible primitives), `@supabase/supabase-js` (lazy, optional sync).
+  Tooling: ESLint (flat, type-aware) + Prettier + v8 coverage, all gated in CI.
 - Styling is **CSS Modules** (`*.module.css` co-located with each component) for static
   chrome, with **dynamic values kept as inline styles** (score colors, bar widths, toggle
   state, etc.). Both reference the CSS-variable tokens from `theme.css`; in inline styles
@@ -44,29 +48,37 @@ src/
     index.ts           barrel
   infrastructure/    # side-effects; depends only on domain
     csv.ts  listing.ts  ai.ts  download.ts
+    validation.ts               zod schemas: validateAIResult / validateDealImport (boundaries)
     storage/dealRepository.ts   persist/load + mergeDealStores + tombstones (DDD repository)
     storage/preferences.ts      theme / active-tab / collapsed-card prefs (localStorage)
-    sync/supabase.ts            @supabase/supabase-js client + fetch/push/auth
-  application/       # React orchestration (hooks) — no JSX
-    useDealWorkspace.ts   deal library + working deal + all CRUD/edit actions + CSV/share
-                          I/O + cloud sync. The App's "application service".
-    uiState.ts            useTheme, useToast, useViewTab
-  presentation/
+    sync/supabase.ts            lazy @supabase/supabase-js (dynamic import) + fetch/push/auth
+  application/       # React orchestration — no JSX
+    workspaceStore.ts     Zustand store: deals/activeId/working deal/ui/user/sync/toast +
+                          typed actions (CRUD, set*, applyAI, CSV/share, sign-in). The
+                          App's "application service". `touched` is a non-reactive module var.
+    useWorkspaceEffects.ts side-effects: autosave (store.subscribe), lazy Supabase sync, share import
+    useMetrics.ts         selector hook → R/Y/SEN/score/title via useMemo on `state`
+    uiState.ts            useTheme, useViewTab
+  presentation/      # *.module.css co-located with each component (static chrome)
     theme/theme.css  theme/tokens.ts   (the single "Calm" theme; see below)
-    ui/              Card, inputs (Field/MoneyInput/RentInput), Icon, HeaderMenu, useGrouped,
-                     primitives (Tog/Pill/Bar/Info/SmBtn/SecLabel/PLRow/MBox)
+    ui/              Card, inputs (Field/MoneyInput/RentInput), Icon, HeaderMenu (Radix
+                     DropdownMenu), ErrorBoundary, useGrouped, primitives (Tog=Radix Switch,
+                     Pill/Bar/Info/SmBtn/SecLabel/PLRow/MBox)
     charts/          ChartBox, CashflowChart, EquityChart, ReturnDonut
-    sections/        QuickFill, ClosingCosts, Expenses, AreaInsights, ComparablesCard, ListingLink
+    sections/        QuickFill, PropertyDetails, Units, Financing, ClosingCosts, Expenses,
+                     Repairs, Projection, AreaInsights, ListingLink
     results/         OverviewTab, IncomeTab, ProjectionTab, AnalysisTab, CalcTrace, ProjTrace
-    deals/           DealsDrawer, ScenarioCompare
-  App.tsx            thin composition root (header + input cards + results + drawer + toasts)
-  main.tsx           ReactDOM root; imports theme.css
+    deals/           DealsDrawer (Radix Dialog), ScenarioCompare
+  App.tsx            thin composition root (header + section components + results + drawer + toasts)
+  main.tsx           ReactDOM root inside <ErrorBoundary>; imports theme.css
+  e2e/               Playwright specs (run against the built preview)
 ```
 
 Rule of thumb: **domain depends on nothing; infrastructure → domain; application →
 domain + infrastructure; presentation → application + domain.** Keep the finance math in
-`domain/` pure and React-free (it's what the tests pin). The God-component is gone — App
-state/effects live in hooks.
+`domain/` pure and React-free (it's what the tests pin). State lives in the **Zustand
+workspace store** (no god-hook, no prop-drilling) — leaf components read it directly;
+App is a thin composition.
 
 ## Run & test
 
@@ -84,15 +96,18 @@ npm run build         # tsc --noEmit && vite build  → dist/
 npm run preview       # serve the production build (base path /rental-deal-analyzer/)
 ```
 
-- **CI gate `Typecheck · Test · Build`** runs typecheck → lint → format:check → test → build.
-  Lint **errors** fail CI; `any` and structural-a11y findings are **warnings** (tracked, not
-  blocking — a11y is slated for accessible-primitive replacements). Run `npm run lint` &
-  `npm run format` before pushing.
+- **Two CI jobs** (`.github/workflows/ci.yml`): the required **`Typecheck · Test · Build`**
+  (typecheck → lint → format:check → test → build) and a separate non-blocking
+  **`E2E (Playwright)`** (installs chromium, runs `test:e2e`). Lint **errors** fail CI;
+  `any` and the remaining structural-a11y findings are **warnings** (tracked, non-blocking).
+  Run `npm run lint` & `npm run format` before pushing.
 
 - Domain/infra tests live in `src/**/__tests__/*.test.ts` and import via `src/test/barrel.ts`
   (a re-export of domain + infra) using a shared `close`/`pmtOf` helper in `src/test/util.ts`.
+  Component/integration tests (`@testing-library`, jsdom) and the Playwright e2e specs
+  (`e2e/*.spec.ts`, run against the built `vite preview`) round out the suite (~111 total).
 - **Always keep the finance math behavior identical** unless intentionally changing it —
-  the 95 tests are the guard. Add a test when you touch a pure function.
+  the math tests are the guard. Add a test when you touch a pure function.
 
 ## Theme (single "Calm" look)
 
@@ -115,9 +130,10 @@ repairs, partnership, comparables[]`.
   `localStorage` (`re_deals_v1`) via `dealRepository`, optionally synced to Supabase.
   Deletions use **tombstones** so they stick and propagate. `+ New deal` uses `BLANK`.
 - **Expenses are stored ANNUAL** (`expenses.v === 2`); `migrateExpenses` upgrades old data.
-- Opening/switching a deal must NOT bump `_ts` — only real edits do (see the autosave effect
-  in `useDealWorkspace`: capture `touched` BEFORE `setDeals`, since the functional updater
-  runs lazily).
+- Opening/switching a deal must NOT bump `_ts` — only real edits do. The autosave lives in
+  `useWorkspaceEffects` (a `store.subscribe` on `state`): switch/open actions set the
+  non-reactive `touched` flag false **before** changing `state`, so the subscriber writes
+  the deal back without bumping `_ts`. (An e2e test pins this.)
 - `EGI = GPI − vacancy + otherIncome`. Closing "transfer/deed tax" is an editable % of price
   (state-neutral — no Georgia assumptions baked in).
 
@@ -125,8 +141,12 @@ repairs, partnership, comparables[]`.
 
 - `parseListing`/`addressFromUrl` (infra) read a Zillow link → address/price/units. **Copy AI
   prompt** (`buildAIPrompt`) also fills from the link, then copies a prompt; paste the AI's JSON
-  back → `parseAIResult` → `applyAI`. The prompt asks the model to self-report its name + tier.
+  back → `parseAIResult` → **`validateAIResult` (zod)** → `applyAI`. The prompt asks the model
+  to self-report its name + tier.
 - **Share link**: `#deal=<csv>` (reuses `stateToCSV`/`csvToState`); opening it adds the deal.
+- Untrusted imports (AI JSON, CSV, share links) pass through **zod** (`validation.ts`):
+  `validateAIResult` / `validateDealImport` reject garbage with a user-facing message
+  (toast, or QuickFill's inline message) instead of creating a broken deal.
 - These helpers are pure/testable (`src/infrastructure/__tests__`).
 
 ## Deploy
