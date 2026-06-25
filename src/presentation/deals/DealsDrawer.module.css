@@ -1,0 +1,229 @@
+/* Deals drawer (Radix Dialog). Static chrome here; data-driven colors (active
+   card, grade badge, cash-flow sign, grade-filter state) stay inline. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(440px, 100%);
+  height: 100%;
+  background: var(--c-bg);
+  border-left: 1px solid var(--c-border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.55);
+  z-index: 1001;
+}
+.head {
+  padding: 14px 16px;
+  background: var(--c-head);
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-headfg);
+  letter-spacing: 0.04em;
+}
+.titleCount {
+  opacity: 0.55;
+  font-weight: 400;
+}
+.close {
+  background: transparent;
+  border: 1px solid var(--c-headborder);
+  color: var(--c-headfg);
+  border-radius: calc(var(--c-rad) - 4px);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.toolbar {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-white);
+  flex-shrink: 0;
+}
+.searchRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.search {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 13px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  outline: none;
+}
+.newBtn {
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--c-navy);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.filterRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sort {
+  padding: 5px 8px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-bg);
+}
+.gradeBtn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.empty {
+  text-align: center;
+  color: var(--c-muted);
+  font-size: 12px;
+  padding: 28px 12px;
+}
+.card {
+  border-radius: 10px;
+  padding: 9px 11px;
+  margin-bottom: 7px;
+  cursor: pointer;
+}
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.cardMain {
+  flex: 1;
+  min-width: 0;
+}
+.editInput {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 13px;
+  border: 1px solid var(--c-navy);
+  border-radius: 6px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-white);
+}
+.cardName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cardMeta {
+  font-size: 10px;
+  color: var(--c-muted);
+  margin-top: 2px;
+}
+.cardMeta2 {
+  font-size: 9px;
+  color: var(--c-muted);
+  margin-top: 1px;
+}
+.cardRight {
+  text-align: right;
+  flex-shrink: 0;
+}
+.gradeBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9px;
+  color: #fff;
+}
+.cfVal {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.cardActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.xbtn {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-slate);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-white);
+  padding: 10px 12px;
+}
+.footerRow {
+  display: flex;
+  gap: 8px;
+}
+.footBtn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-slate);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.footNote {
+  font-size: 9px;
+  color: var(--c-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}

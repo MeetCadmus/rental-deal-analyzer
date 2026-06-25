@@ -7,6 +7,7 @@ import { calcDealScore } from "../../domain/finance/scoring";
 import { fullState, dealTitle } from "../../domain/deal";
 import { fmtWhen } from "../../domain/time";
 import type { Deal } from "../../domain/types";
+import s from "./ScenarioCompare.module.css";
 
 function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; activeId: string; currentState: Deal }) {
   const [open, setOpen] = useState(false);
@@ -96,118 +97,32 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
   };
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Compare deals side by side"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: 11,
-          fontWeight: 500,
-          padding: "7px 13px",
-          borderRadius: "var(--c-rad)",
-          border: "1px solid var(--c-headborder)",
-          background: "transparent",
-          color: "var(--c-headfg)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          whiteSpace: "nowrap",
-          letterSpacing: "0.02em",
-        }}
-      >
+      <button onClick={() => setOpen(true)} title="Compare deals side by side" className={s.trigger}>
         <Icon name="scale" size={14} />
         Compare
       </button>
       {open && (
-        <div
-          className="no-print"
-          onClick={() => setOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(13,31,60,0.55)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            padding: "24px 12px",
-            overflowY: "auto",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: C.white, borderRadius: 14, maxWidth: 900, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.3)", overflow: "hidden" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px", background: "var(--c-head)" }}>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "var(--c-headfg)",
-                  letterSpacing: "0.04em",
-                }}
-              >
+        <div className={`no-print ${s.overlay}`} onClick={() => setOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} className={s.modal}>
+            <div className={s.modalHead}>
+              <span className={s.modalTitle}>
                 <Icon name="scale" size={16} />
                 Compare deals
               </span>
-              <button
-                onClick={() => setOpen(false)}
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--c-headborder)",
-                  color: "var(--c-headfg)",
-                  borderRadius: "calc(var(--c-rad) - 4px)",
-                  padding: "4px 10px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                }}
-              >
+              <button onClick={() => setOpen(false)} className={s.modalClose}>
                 ✕ Close
               </button>
             </div>
-            <div style={{ padding: "14px 16px" }}>
-              <div style={{ fontSize: 11, color: C.slate, marginBottom: 8 }}>
+            <div className={s.body}>
+              <div className={s.intro}>
                 Pick saved deals to compare against your current deal
                 {pool.length === 0 ? " — no other deals saved yet. Add one with ＋ New deal." : ". Search, filter by grade, or sort to find them:"}
               </div>
               {pool.length > 0 && (
-                <div style={{ border: "1px solid " + C.border, borderRadius: 10, padding: "10px", marginBottom: 12, background: C.bg }}>
-                  <div style={{ display: "flex", gap: 7, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-                    <input
-                      value={q}
-                      onChange={(e) => setQ(e.target.value)}
-                      placeholder="Search by name / address…"
-                      style={{
-                        flex: "1 1 150px",
-                        minWidth: 0,
-                        padding: "6px 10px",
-                        fontSize: 13,
-                        border: "1px solid " + C.border,
-                        borderRadius: 8,
-                        background: C.white,
-                        color: C.text,
-                        outline: "none",
-                      }}
-                    />
-                    <select
-                      value={pickSort}
-                      onChange={(e) => setPickSort(e.target.value)}
-                      title="Sort the list"
-                      style={{
-                        padding: "6px 8px",
-                        fontSize: 12,
-                        border: "1px solid " + C.border,
-                        borderRadius: 8,
-                        fontFamily: "inherit",
-                        color: C.text,
-                        background: C.white,
-                      }}
-                    >
+                <div className={s.picker}>
+                  <div className={s.pickerRow}>
+                    <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name / address…" className={s.search} />
+                    <select value={pickSort} onChange={(e) => setPickSort(e.target.value)} title="Sort the list" className={s.select}>
                       {Object.keys(PSORT).map((k) => (
                         <option key={k} value={k}>
                           Sort: {PSORT[k][0]}
@@ -215,94 +130,47 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                       ))}
                     </select>
                   </div>
-                  <div style={{ display: "flex", gap: 5, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <div className={s.gradeRow}>
                     {["all", "A", "B", "C", "D"].map((g) => {
                       const on = gradeF === g;
                       return (
                         <button
                           key={g}
                           onClick={() => setGradeF(g)}
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: "3px 10px",
-                            borderRadius: 20,
-                            cursor: "pointer",
-                            fontFamily: "inherit",
-                            border: "1.5px solid " + (on ? C.navy : C.border),
-                            background: on ? C.navy : C.white,
-                            color: on ? "#fff" : C.slate,
-                          }}
+                          className={s.gradeBtn}
+                          style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white, color: on ? "#fff" : C.slate }}
                         >
                           {g === "all" ? "All" : g}
                         </button>
                       );
                     })}
-                    <span style={{ marginLeft: "auto", fontSize: 11, color: C.slate }}>{sel.length} selected</span>
+                    <span className={s.selCount}>{sel.length} selected</span>
                   </div>
-                  <div style={{ maxHeight: 240, overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", gap: 5 }}>
-                    {picks.length === 0 && <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "16px 8px" }}>No deals match.</div>}
+                  <div className={s.pickList}>
+                    {picks.length === 0 && <div className={s.noMatch}>No deals match.</div>}
                     {picks.map((c) => {
                       const on = sel.includes(c.d._id!);
                       return (
                         <button
                           key={c.d._id}
                           onClick={() => toggle(c.d._id!)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 9,
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "7px 9px",
-                            borderRadius: 8,
-                            cursor: "pointer",
-                            fontFamily: "inherit",
-                            border: "1.5px solid " + (on ? C.navy : C.border),
-                            background: on ? C.hl : C.white,
-                          }}
+                          className={s.pickItem}
+                          style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.hl : C.white }}
                         >
-                          <span
-                            style={{
-                              flexShrink: 0,
-                              width: 18,
-                              height: 18,
-                              borderRadius: 5,
-                              border: "1.5px solid " + (on ? C.navy : C.border),
-                              background: on ? C.navy : C.white,
-                              color: "#fff",
-                              fontSize: 12,
-                              fontWeight: 700,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
+                          <span className={s.checkbox} style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white }}>
                             {on ? "✓" : ""}
                           </span>
-                          <span style={{ flex: 1, minWidth: 0 }}>
-                            <span
-                              style={{
-                                display: "block",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                color: C.heading,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {dealTitle(c.d)}
-                            </span>
-                            <span style={{ display: "block", fontSize: 10, color: C.muted }}>
+                          <span className={s.pickMain}>
+                            <span className={s.pickName}>{dealTitle(c.d)}</span>
+                            <span className={s.pickSub}>
                               {fmtD(c.st.price)} · cap {fmtP(c.R.capRate)} · {fmtWhen(c.d._ts)}
                             </span>
                           </span>
-                          <span style={{ flexShrink: 0, textAlign: "right" }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 9, background: c.score.color, color: "#fff" }}>
+                          <span className={s.pickRight}>
+                            <span className={s.pickGrade} style={{ background: c.score.color }}>
                               {c.score.grade}
                             </span>
-                            <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: c.R.cf >= 0 ? C.teal : C.red, marginTop: 2 }}>
+                            <span className={s.pickCf} style={{ color: c.R.cf >= 0 ? C.teal : C.red }}>
                               {fmtD(c.R.cf / 12)}/mo
                             </span>
                           </span>
@@ -310,38 +178,17 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                       );
                     })}
                   </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <div className={s.pickActions}>
                     <button
                       onClick={selectAll}
                       disabled={!picks.length}
-                      style={{
-                        fontSize: 11,
-                        padding: "4px 10px",
-                        borderRadius: 7,
-                        border: "1px solid " + C.border,
-                        background: C.white,
-                        cursor: picks.length ? "pointer" : "default",
-                        color: C.slate,
-                        fontFamily: "inherit",
-                        opacity: picks.length ? 1 : 0.5,
-                      }}
+                      className={s.smallBtn}
+                      style={{ cursor: picks.length ? "pointer" : "default", opacity: picks.length ? 1 : 0.5 }}
                     >
                       + Select all{ql || gradeF !== "all" ? " shown" : ""} ({picks.length})
                     </button>
                     {sel.length > 0 && (
-                      <button
-                        onClick={() => setSel([])}
-                        style={{
-                          fontSize: 11,
-                          padding: "4px 10px",
-                          borderRadius: 7,
-                          border: "1px solid " + C.border,
-                          background: C.white,
-                          cursor: "pointer",
-                          color: C.slate,
-                          fontFamily: "inherit",
-                        }}
-                      >
+                      <button onClick={() => setSel([])} className={s.smallBtn}>
                         Clear selection
                       </button>
                     )}
@@ -349,56 +196,31 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                 </div>
               )}
               {ordered.length > 1 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, color: C.slate }}>Rank by</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    style={{
-                      padding: "4px 8px",
-                      fontSize: 12,
-                      border: "1px solid " + C.border,
-                      borderRadius: 7,
-                      fontFamily: "inherit",
-                      color: C.text,
-                      background: C.white,
-                    }}
-                  >
+                <div className={s.rankRow}>
+                  <span className={s.rankLabel}>Rank by</span>
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={s.select} style={{ padding: "4px 8px", borderRadius: 7 }}>
                     {Object.keys(SORTS).map((k) => (
                       <option key={k} value={k}>
                         {SORTS[k][0]}
                       </option>
                     ))}
                   </select>
-                  <span style={{ fontSize: 10, color: C.muted }}>best → worst · ★ = best in row</span>
+                  <span className={s.rankNote}>best → worst · ★ = best in row</span>
                 </div>
               )}
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <div className={s.tableWrap}>
+                <table className={s.table}>
                   <thead>
                     <tr>
-                      <th
-                        style={{
-                          padding: "7px 10px",
-                          textAlign: "left",
-                          borderBottom: "2px solid " + C.border,
-                          position: "sticky",
-                          left: 0,
-                          background: C.white,
-                        }}
-                      ></th>
+                      <th className={s.thBlank}></th>
                       {ordered.map((c: any, i: number) => (
-                        <th key={i} style={{ padding: "7px 10px", textAlign: "right", borderBottom: "2px solid " + C.border, minWidth: 120 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: c.cur ? C.heading : C.text, whiteSpace: "nowrap" }}>
+                        <th key={i} className={s.th}>
+                          <div className={s.colName} style={{ color: c.cur ? C.heading : C.text }}>
                             {c.name}
-                            {c.cur && (
-                              <span style={{ fontSize: 9, marginLeft: 4, padding: "1px 5px", background: C.hl, color: C.heading, borderRadius: 4 }}>
-                                current
-                              </span>
-                            )}
+                            {c.cur && <span className={s.currentChip}>current</span>}
                           </div>
                           <div style={{ marginTop: 3 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 8px", borderRadius: 10, background: c.score.color, color: "#fff" }}>
+                            <span className={s.colGrade} style={{ background: c.score.color }}>
                               {c.score.grade} · {c.score.label}
                             </span>
                           </div>
@@ -411,35 +233,14 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                       const bi = bestIdx(row);
                       return (
                         <tr key={ri} style={{ background: ri % 2 ? C.bg : C.white }}>
-                          <td
-                            style={{
-                              padding: "6px 10px",
-                              color: C.slate,
-                              fontWeight: 600,
-                              whiteSpace: "nowrap",
-                              position: "sticky",
-                              left: 0,
-                              background: ri % 2 ? C.bg : C.white,
-                            }}
-                          >
+                          <td className={s.rowLabel} style={{ background: ri % 2 ? C.bg : C.white }}>
                             {row.l}
                           </td>
                           {ordered.map((c: any, i: number) => {
                             const col = row.lvl ? lvlCol[row.lvl(c)] : row.col ? row.col(c) : C.text;
                             const win = i === bi;
                             return (
-                              <td
-                                key={i}
-                                style={{
-                                  padding: "6px 10px",
-                                  textAlign: "right",
-                                  fontWeight: win ? 800 : 600,
-                                  color: col,
-                                  fontVariantNumeric: "tabular-nums",
-                                  whiteSpace: "nowrap",
-                                  background: win ? C.tealL : "transparent",
-                                }}
-                              >
+                              <td key={i} className={s.cell} style={{ fontWeight: win ? 800 : 600, color: col, background: win ? C.tealL : "transparent" }}>
                                 {win ? "★ " : ""}
                                 {row.f(c)}
                               </td>
@@ -451,11 +252,7 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                   </tbody>
                 </table>
               </div>
-              {computed.length === 1 && (
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 12, textAlign: "center" }}>
-                  Select one or more saved deals above to see them side-by-side.
-                </div>
-              )}
+              {computed.length === 1 && <div className={s.emptyHint}>Select one or more saved deals above to see them side-by-side.</div>}
             </div>
           </div>
         </div>
