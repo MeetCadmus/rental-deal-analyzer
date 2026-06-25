@@ -1,0 +1,292 @@
+/* Scenario compare modal. Static chrome here; data-driven colors (grade badges,
+   metric levels, best-in-row highlight, selection state, row striping) stay inline. */
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: var(--c-rad);
+  border: 1px solid var(--c-headborder);
+  background: transparent;
+  color: var(--c-headfg);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 31, 60, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 12px;
+  overflow-y: auto;
+}
+.modal {
+  background: var(--c-white);
+  border-radius: 14px;
+  max-width: 900px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.modalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--c-head);
+}
+.modalTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-headfg);
+  letter-spacing: 0.04em;
+}
+.modalClose {
+  background: transparent;
+  border: 1px solid var(--c-headborder);
+  color: var(--c-headfg);
+  border-radius: calc(var(--c-rad) - 4px);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+.body {
+  padding: 14px 16px;
+}
+.intro {
+  font-size: 11px;
+  color: var(--c-slate);
+  margin-bottom: 8px;
+}
+
+.picker {
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--c-bg);
+}
+.pickerRow {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.search {
+  flex: 1 1 150px;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-white);
+  color: var(--c-text);
+  outline: none;
+}
+.select {
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-white);
+}
+.gradeRow {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.gradeBtn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.selCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--c-slate);
+}
+.pickList {
+  max-height: 240px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.noMatch {
+  font-size: 12px;
+  color: var(--c-muted);
+  text-align: center;
+  padding: 16px 8px;
+}
+.pickItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pickMain {
+  flex: 1;
+  min-width: 0;
+}
+.pickName {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pickSub {
+  display: block;
+  font-size: 10px;
+  color: var(--c-muted);
+}
+.pickRight {
+  flex-shrink: 0;
+  text-align: right;
+}
+.pickGrade {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9px;
+  color: #fff;
+}
+.pickCf {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.pickActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.smallBtn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
+  color: var(--c-slate);
+  font-family: inherit;
+  cursor: pointer;
+}
+.rankRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rankLabel {
+  font-size: 11px;
+  color: var(--c-slate);
+}
+.rankNote {
+  font-size: 10px;
+  color: var(--c-muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.thBlank {
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--c-border);
+  position: sticky;
+  left: 0;
+  background: var(--c-white);
+}
+.th {
+  padding: 7px 10px;
+  text-align: right;
+  border-bottom: 2px solid var(--c-border);
+  min-width: 120px;
+}
+.colName {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.currentChip {
+  font-size: 9px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  background: var(--c-hl);
+  color: var(--c-heading);
+  border-radius: 4px;
+}
+.colGrade {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 10px;
+  color: #fff;
+}
+.rowLabel {
+  padding: 6px 10px;
+  color: var(--c-slate);
+  font-weight: 600;
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+}
+.cell {
+  padding: 6px 10px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.emptyHint {
+  font-size: 11px;
+  color: var(--c-muted);
+  margin-top: 12px;
+  text-align: center;
+}

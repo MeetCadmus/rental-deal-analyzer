@@ -7,6 +7,7 @@ import { calcDealScore } from "../../domain/finance/scoring";
 import { fullState, dealTitle } from "../../domain/deal";
 import { fmtWhen, relTime } from "../../domain/time";
 import type { Deal } from "../../domain/types";
+import s from "./DealsDrawer.module.css";
 
 function DealsDrawer({
   open,
@@ -72,131 +73,30 @@ function DealsDrawer({
     if (editId != null) onRename(editId, editVal.trim());
     setEditId(null);
   };
-  const xbtn = {
-    fontSize: 10,
-    padding: "3px 8px",
-    borderRadius: 6,
-    border: "1px solid " + C.border,
-    background: C.bg,
-    color: C.slate,
-    cursor: "pointer",
-    fontFamily: "inherit",
-  } as const;
   return (
     <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          className="no-print"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            backdropFilter: "blur(2px)",
-            WebkitBackdropFilter: "blur(2px)",
-            zIndex: 1000,
-          }}
-        />
-        <Dialog.Content
-          className="no-print"
-          aria-describedby={undefined}
-          style={{
-            position: "fixed",
-            top: 0,
-            right: 0,
-            width: "min(440px,100%)",
-            height: "100%",
-            background: C.bg,
-            borderLeft: "1px solid " + C.border,
-            display: "flex",
-            flexDirection: "column",
-            boxShadow: "-12px 0 40px rgba(0,0,0,0.55)",
-            zIndex: 1001,
-          }}
-        >
-          <div
-            style={{
-              padding: "14px 16px",
-              background: "var(--c-head)",
-              borderBottom: "1px solid " + C.border,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexShrink: 0,
-            }}
-          >
+        <Dialog.Overlay className={`no-print ${s.overlay}`} />
+        <Dialog.Content className={`no-print ${s.panel}`} aria-describedby={undefined}>
+          <div className={s.head}>
             <Dialog.Title asChild>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--c-headfg)", letterSpacing: "0.04em" }}>
-                My deals <span style={{ opacity: 0.55, fontWeight: 400 }}>({deals.length})</span>
+              <span className={s.title}>
+                My deals <span className={s.titleCount}>({deals.length})</span>
               </span>
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--c-headborder)",
-                  color: "var(--c-headfg)",
-                  borderRadius: "calc(var(--c-rad) - 4px)",
-                  padding: "4px 10px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                }}
-              >
-                ✕ Close
-              </button>
+              <button className={s.close}>✕ Close</button>
             </Dialog.Close>
           </div>
-          <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid " + C.border, background: C.white, flexShrink: 0 }}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search by address / name…"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: "7px 10px",
-                  fontSize: 13,
-                  border: "1px solid " + C.border,
-                  borderRadius: 8,
-                  background: C.bg,
-                  color: C.text,
-                  outline: "none",
-                }}
-              />
-              <button
-                onClick={onNew}
-                style={{
-                  padding: "7px 13px",
-                  borderRadius: 8,
-                  background: C.navy,
-                  color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  whiteSpace: "nowrap",
-                }}
-              >
+          <div className={s.toolbar}>
+            <div className={s.searchRow}>
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by address / name…" className={s.search} />
+              <button onClick={onNew} className={s.newBtn}>
                 + New
               </button>
             </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                title="Sort deals"
-                style={{
-                  padding: "5px 8px",
-                  fontSize: 12,
-                  border: "1px solid " + C.border,
-                  borderRadius: 8,
-                  fontFamily: "inherit",
-                  color: C.text,
-                  background: C.bg,
-                }}
-              >
+            <div className={s.filterRow}>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} title="Sort deals" className={s.sort}>
                 {Object.keys(SORTS).map((k) => (
                   <option key={k} value={k}>
                     Sort: {SORTS[k][0]}
@@ -209,17 +109,8 @@ function DealsDrawer({
                   <button
                     key={g}
                     onClick={() => setGradeF(g)}
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      padding: "4px 9px",
-                      borderRadius: 20,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      border: "1.5px solid " + (on ? C.navy : C.border),
-                      background: on ? C.navy : C.bg,
-                      color: on ? "#fff" : C.slate,
-                    }}
+                    className={s.gradeBtn}
+                    style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.bg, color: on ? "#fff" : C.slate }}
                   >
                     {g === "all" ? "All" : g}
                   </button>
@@ -227,14 +118,14 @@ function DealsDrawer({
               })}
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px", WebkitOverflowScrolling: "touch" }}>
+          <div className={s.list}>
             {list.length === 0 && (
-              <div style={{ textAlign: "center", color: C.muted, fontSize: 12, padding: "28px 12px" }}>
+              <div className={s.empty}>
                 No deals match{ql ? " “" + q + "”" : ""}
                 {gradeF !== "all" ? " · grade " + gradeF : ""}.
               </div>
             )}
-            {list.map(({ d, R, Y, sc }) => {
+            {list.map(({ d, R, sc }) => {
               const isA = d._id === activeId,
                 editing = editId === d._id;
               return (
@@ -246,17 +137,11 @@ function DealsDrawer({
                       onClose();
                     }
                   }}
-                  style={{
-                    border: "1px solid " + (isA ? C.navy : C.border),
-                    background: isA ? C.hl : C.white,
-                    borderRadius: 10,
-                    padding: "9px 11px",
-                    marginBottom: 7,
-                    cursor: "pointer",
-                  }}
+                  className={s.card}
+                  style={{ border: "1px solid " + (isA ? C.navy : C.border), background: isA ? C.hl : C.white }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className={s.cardTop}>
+                    <div className={s.cardMain}>
                       {editing ? (
                         <input
                           ref={(el) => el?.focus()}
@@ -269,45 +154,36 @@ function DealsDrawer({
                           }}
                           onBlur={commitEdit}
                           placeholder="Name this deal…"
-                          style={{
-                            width: "100%",
-                            padding: "3px 6px",
-                            fontSize: 13,
-                            border: "1px solid " + C.navy,
-                            borderRadius: 6,
-                            fontFamily: "inherit",
-                            color: C.text,
-                            background: C.white,
-                          }}
+                          className={s.editInput}
                         />
                       ) : (
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.heading, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {isA ? liveTitle || dealTitle(d) : dealTitle(d)}
-                        </div>
+                        <div className={s.cardName}>{isA ? liveTitle || dealTitle(d) : dealTitle(d)}</div>
                       )}
-                      <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>
+                      <div className={s.cardMeta}>
                         {fmtD(d.price)} · {(d.units || []).length} units{isA ? " · open now" : ""}
                       </div>
-                      <div style={{ fontSize: 9, color: C.muted, marginTop: 1 }}>
+                      <div className={s.cardMeta2}>
                         ✎ {fmtWhen(d._ts)} <span style={{ opacity: 0.6 }}>· {relTime(d._ts || 0)}</span>
                         {d.aiSource ? <span> · {d.aiSource}</span> : ""}
                       </div>
                     </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 9, background: sc.color, color: "#fff" }}>
+                    <div className={s.cardRight}>
+                      <span className={s.gradeBadge} style={{ background: sc.color }}>
                         {sc.grade}
                       </span>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: R.cf >= 0 ? C.teal : C.red, marginTop: 3 }}>{fmtD(R.cf / 12)}/mo</div>
+                      <div className={s.cfVal} style={{ color: R.cf >= 0 ? C.teal : C.red }}>
+                        {fmtD(R.cf / 12)}/mo
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => startEdit(d)} style={xbtn}>
+                  <div className={s.cardActions} onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => startEdit(d)} className={s.xbtn}>
                       ✎ Rename
                     </button>
-                    <button onClick={() => onDuplicate(d._id!)} style={xbtn}>
+                    <button onClick={() => onDuplicate(d._id!)} className={s.xbtn}>
                       ⧉ Duplicate
                     </button>
-                    <button onClick={() => onDelete(d._id!)} style={{ ...xbtn, color: C.red, borderColor: C.redL }}>
+                    <button onClick={() => onDelete(d._id!)} className={s.xbtn} style={{ color: C.red, borderColor: C.redL }}>
                       Delete
                     </button>
                     {/^https?:\/\//i.test(d.listingUrl || "") && (
@@ -315,7 +191,8 @@ function DealsDrawer({
                         href={d.listingUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ ...xbtn, color: C.heading, textDecoration: "none", marginLeft: "auto" }}
+                        className={s.xbtn}
+                        style={{ color: C.heading, textDecoration: "none", marginLeft: "auto" }}
                       >
                         ↗︎ Listing
                       </a>
@@ -325,46 +202,16 @@ function DealsDrawer({
               );
             })}
           </div>
-          <div style={{ flexShrink: 0, borderTop: "1px solid " + C.border, background: C.white, padding: "10px 12px" }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={onExportAll}
-                style={{
-                  flex: 1,
-                  padding: "7px 10px",
-                  borderRadius: 8,
-                  border: "1px solid " + C.border,
-                  background: C.bg,
-                  color: C.slate,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
+          <div className={s.footer}>
+            <div className={s.footerRow}>
+              <button onClick={onExportAll} className={s.footBtn}>
                 Export all ({deals.length})
               </button>
-              <button
-                onClick={onImportAll}
-                style={{
-                  flex: 1,
-                  padding: "7px 10px",
-                  borderRadius: 8,
-                  border: "1px solid " + C.border,
-                  background: C.bg,
-                  color: C.slate,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
+              <button onClick={onImportAll} className={s.footBtn}>
                 Import all
               </button>
             </div>
-            <div style={{ fontSize: 9, color: C.muted, marginTop: 6, lineHeight: 1.5 }}>
-              Backs up every deal to one JSON file (your deals live only in this browser). Import adds them to your library.
-            </div>
+            <div className={s.footNote}>Backs up every deal to one JSON file (your deals live only in this browser). Import adds them to your library.</div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
