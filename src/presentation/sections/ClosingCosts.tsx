@@ -4,6 +4,7 @@ import { Field, MoneyInput } from "../ui/inputs";
 import { SecLabel } from "../ui/primitives";
 import { fmtD, num } from "../../domain/money";
 import type { Closing } from "../../domain/types";
+import s from "./sections.module.css";
 
 interface ClosingCostsProps {
   cc: Closing;
@@ -53,7 +54,7 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
       storeKey="closing"
       summary={collapsible ? fmtD(total) : undefined}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
+      <div className={s.modeRow}>
         {(
           [
             ["quick", "Quick %"],
@@ -65,17 +66,8 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
             <button
               key={id}
               onClick={() => sf("mode", id)}
-              style={{
-                padding: "5px 12px",
-                borderRadius: 7,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 12,
-                fontWeight: 700,
-                border: "1.5px solid " + (on ? C.navy : C.border),
-                background: on ? C.navy : C.white,
-                color: on ? "#fff" : C.slate,
-              }}
+              className={s.segBtn}
+              style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white, color: on ? "#fff" : C.slate }}
             >
               {lbl}
             </button>
@@ -97,15 +89,15 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
             step={0.1}
             sub={fmtD((p * (cc.quickPct || 3)) / 100) + " estimated"}
           />
-          <div style={{ marginTop: 9, background: C.bg, borderRadius: 8, padding: "9px 12px", border: "1px solid " + C.border, fontSize: 11 }}>
-            <div style={{ fontWeight: 700, color: C.heading, marginBottom: 4 }}>Typical buyer ranges</div>
+          <div className={s.rangeBox}>
+            <div className={s.rangeBoxTitle}>Typical buyer ranges</div>
             {[
               ["Cash, no inspection", "1.5–2%"],
               ["Standard (financed)", "2.5–3.5%"],
               ["With inspection + survey", "3–4%"],
               ["Investment / multifamily", "3–4.5%"],
             ].map(([l2, r2]) => (
-              <div key={l2} style={{ display: "flex", justifyContent: "space-between", color: C.slate, marginBottom: 2 }}>
+              <div key={l2} className={s.rangeRow}>
                 <span>{l2}</span>
                 <span style={{ fontWeight: 600, color: C.text }}>{r2}</span>
               </div>
@@ -116,7 +108,7 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
       {cc.mode === "detailed" && (
         <div>
           <SecLabel text="Lender fees" right={"= " + fmtD(lT)} />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 12 }}>
+          <div className={s.fieldGrid}>
             <Field
               label="Origination fee"
               suffix="% of loan"
@@ -143,7 +135,7 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
             <Field label="Underwriting" prefix="$" value={cc.underwriting || 0} onChange={(x) => sf("underwriting", x)} min={0} step={50} sub="$500–1,500" xs />
           </div>
           <SecLabel text="Transfer & recording tax" right={"= " + fmtD(taxT)} />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 12 }}>
+          <div className={s.fieldGrid}>
             <Field
               label="Transfer/deed tax"
               suffix="% of price"
@@ -167,14 +159,14 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
             />
           </div>
           <SecLabel text="Title & attorney" right={"= " + fmtD(titleT)} />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 12 }}>
+          <div className={s.fieldGrid}>
             <Field label="Closing attorney" prefix="$" value={cc.attyFee || 0} onChange={(x) => sf("attyFee", x)} min={0} step={50} sub="Required in GA" xs />
             <Field label="Title search" prefix="$" value={cc.titleSearch || 0} onChange={(x) => sf("titleSearch", x)} min={0} step={25} xs />
             <Field label="Lender's title ins." prefix="$" value={cc.lenderTitle || 0} onChange={(x) => sf("lenderTitle", x)} min={0} step={50} xs />
             <Field label="Owner's title ins." prefix="$" value={cc.ownerTitle || 0} onChange={(x) => sf("ownerTitle", x)} min={0} step={50} xs />
           </div>
           <SecLabel text="Prepaids & escrow" right={"= " + fmtD(prepT)} />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 12 }}>
+          <div className={s.fieldGrid}>
             <MoneyInput label="First-year insurance" value={cc.firstYearInsurance || 0} onChange={(x) => sf("firstYearInsurance", x)} small />
             <Field
               label="Prepaid interest"
@@ -208,7 +200,7 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
             />
           </div>
           <SecLabel text="Inspection & DD" right={"= " + fmtD(ddT)} />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 12 }}>
+          <div className={s.fieldGrid}>
             <Field
               label="Property inspection"
               prefix="$"
@@ -230,67 +222,26 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
               className="del-row-cc"
               style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 110px 28px", gap: 7, marginBottom: 7, alignItems: "end" }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {i === 0 && <label style={{ fontSize: 10, color: C.slate, fontWeight: 600 }}>Description</label>}
-                <input
-                  value={item.name || ""}
-                  onChange={(e) => setI(i, "name", e.target.value)}
-                  placeholder="e.g. HOA fee"
-                  style={{
-                    padding: "6px 8px",
-                    fontSize: 12,
-                    border: "1px solid " + C.border,
-                    borderRadius: 7,
-                    fontFamily: "inherit",
-                    color: C.text,
-                    outline: "none",
-                  }}
-                />
+              <div className={s.fieldCol}>
+                {i === 0 && <label className={s.miniLabel}>Description</label>}
+                <input value={item.name || ""} onChange={(e) => setI(i, "name", e.target.value)} placeholder="e.g. HOA fee" className={s.customNameInput} />
               </div>
               <Field label={i === 0 ? "Amount" : undefined} prefix="$" value={item.amt || 0} onChange={(x) => setI(i, "amt", x)} min={0} step={10} xs />
-              <button
-                className="tap-sm"
-                aria-label="Remove item"
-                onClick={() => remI(i)}
-                style={{
-                  padding: "6px",
-                  background: C.redL,
-                  border: "1px solid " + C.border,
-                  borderRadius: 7,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  color: C.red,
-                  marginTop: i === 0 ? 17 : 0,
-                }}
-              >
+              <button className={`tap-sm ${s.delBtn}`} aria-label="Remove item" onClick={() => remI(i)} style={{ marginTop: i === 0 ? 17 : 0 }}>
                 ✕
               </button>
             </div>
           ))}
-          <button
-            onClick={addI}
-            style={{
-              fontSize: 11,
-              padding: "5px 11px",
-              borderRadius: 7,
-              border: "1px dashed " + C.border,
-              background: C.white,
-              cursor: "pointer",
-              color: C.slate,
-              fontFamily: "inherit",
-            }}
-          >
+          <button onClick={addI} className={s.addItemBtn}>
             + Add item
           </button>
-          <div
-            style={{ background: "linear-gradient(90deg," + C.navy + "," + C.navyM + ")", borderRadius: 9, padding: "10px 14px", color: "#fff", marginTop: 12 }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11, opacity: 0.7 }}>
+          <div className={s.totalBox}>
+            <div className={s.totalBoxHead}>
               <span>Total closing costs</span>
               <span>{p > 0 ? ((grand / p) * 100).toFixed(2) : 0}% of price</span>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: C.gold, marginBottom: 7 }}>{fmtD(grand)}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 5 }}>
+            <div className={s.totalBoxValue}>{fmtD(grand)}</div>
+            <div className={s.totalBoxGrid}>
               {(
                 [
                   ["Lender", lT],
@@ -299,9 +250,9 @@ export function ClosingCosts({ cc, setCC, price, loan, annTax, annIns, rate, col
                   ["Prepaids", prepT],
                 ] as const
               ).map(([l2, v2]) => (
-                <div key={l2} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 6, padding: "4px 7px" }}>
-                  <div style={{ fontSize: 9, opacity: 0.65 }}>{l2}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.gold }}>{fmtD(v2)}</div>
+                <div key={l2} className={s.totalTile}>
+                  <div className={s.totalTileLabel}>{l2}</div>
+                  <div className={s.totalTileValue}>{fmtD(v2)}</div>
                 </div>
               ))}
             </div>

@@ -55,6 +55,114 @@
   border: 1px solid var(--c-border);
 }
 
+/* Closing costs */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.modeRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.segBtn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.rangeBox {
+  margin-top: 9px;
+  background: var(--c-bg);
+  border-radius: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--c-border);
+  font-size: 11px;
+}
+.rangeBoxTitle {
+  font-weight: 700;
+  color: var(--c-heading);
+  margin-bottom: 4px;
+}
+.rangeRow {
+  display: flex;
+  justify-content: space-between;
+  color: var(--c-slate);
+  margin-bottom: 2px;
+}
+.customNameInput {
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  font-family: inherit;
+  color: var(--c-text);
+  outline: none;
+}
+.delBtn {
+  padding: 6px;
+  background: var(--c-redL);
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--c-red);
+}
+.addItemBtn {
+  font-size: 11px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  border: 1px dashed var(--c-border);
+  background: var(--c-white);
+  cursor: pointer;
+  color: var(--c-slate);
+  font-family: inherit;
+}
+.totalBox {
+  background: linear-gradient(90deg, var(--c-navy), var(--c-navyM));
+  border-radius: 9px;
+  padding: 10px 14px;
+  color: #fff;
+  margin-top: 12px;
+}
+.totalBoxHead {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.totalBoxValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-gold);
+  margin-bottom: 7px;
+}
+.totalBoxGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.totalTile {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 7px;
+}
+.totalTileLabel {
+  font-size: 9px;
+  opacity: 0.65;
+}
+.totalTileValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-gold);
+}
+
 /* Quick fill */
 .primaryBtn {
   padding: 6px 12px;
