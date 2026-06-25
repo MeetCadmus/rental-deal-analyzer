@@ -3,6 +3,7 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { C } from "../theme/tokens";
 import { clamp } from "../../domain/money";
 import type { Level } from "../../domain/types";
+import s from "./primitives.module.css";
 
 // Accessible toggle: Radix Switch (role="switch", keyboard, aria-checked) styled to
 // match the original pill. Visuals are driven by the controlled `checked` prop.
@@ -57,15 +58,19 @@ export function Pill({ text, lvl }: { text: ReactNode; lvl?: Level | "n" }) {
     n: ["#F7F8FA", "#4A5568"],
   };
   const [bg, fg] = m[lvl || "n"] || m.n;
-  return <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: bg, color: fg, fontWeight: 700, whiteSpace: "nowrap" }}>{text}</span>;
+  return (
+    <span className={s.pill} style={{ background: bg, color: fg }}>
+      {text}
+    </span>
+  );
 }
 
 export function Bar({ val, max, good, warn, inv = false }: { val: number; max: number; good: number; warn: number; inv?: boolean }) {
   const pct = clamp((val / (max || 1)) * 100, 0, 100);
   const col = !inv ? (val >= good ? C.teal : val >= warn ? C.gold : C.red) : val <= warn ? C.teal : val <= good ? C.gold : C.red;
   return (
-    <div style={{ height: 4, background: C.grid, borderRadius: 3, overflow: "hidden", marginTop: 4 }}>
-      <div style={{ width: pct + "%", height: "100%", background: col, transition: "width 0.4s" }} />
+    <div className={s.barTrack}>
+      <div className={s.barFill} style={{ width: pct + "%", background: col }} />
     </div>
   );
 }
@@ -78,7 +83,7 @@ interface Pos {
   below: boolean;
 }
 export function Info({ lines, tint }: { lines: string[]; tint?: string }) {
-  const [s, setS] = useState(false);
+  const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const show = () => {
@@ -96,21 +101,21 @@ export function Info({ lines, tint }: { lines: string[]; tint?: string }) {
     } catch {
       setPos(null);
     }
-    setS(true);
+    setOpen(true);
   };
-  const hide = () => setS(false);
+  const hide = () => setOpen(false);
   useEffect(() => {
-    if (!s) return;
-    const h = () => setS(false);
+    if (!open) return;
+    const h = () => setOpen(false);
     document.addEventListener("click", h);
     document.addEventListener("scroll", h, true);
     return () => {
       document.removeEventListener("click", h);
       document.removeEventListener("scroll", h, true);
     };
-  }, [s]);
+  }, [open]);
   return (
-    <span style={{ position: "relative", display: "inline-block", marginLeft: 4 }}>
+    <span className={s.infoWrap}>
       <span
         ref={ref}
         role="button"
@@ -120,22 +125,23 @@ export function Info({ lines, tint }: { lines: string[]; tint?: string }) {
         onMouseLeave={hide}
         onClick={(e) => {
           e.stopPropagation();
-          if (s) hide();
+          if (open) hide();
           else show();
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             e.stopPropagation();
-            if (s) hide();
+            if (open) hide();
             else show();
           } else if (e.key === "Escape") hide();
         }}
-        style={{ cursor: "pointer", color: tint || C.muted, fontSize: 13, fontWeight: 700, userSelect: "none", padding: "0 2px" }}
+        className={s.infoTrigger}
+        style={{ color: tint || C.muted }}
       >
         ⓘ
       </span>
-      {s && pos && (
+      {open && pos && (
         <div
           role="tooltip"
           style={{
@@ -194,21 +200,7 @@ export function Info({ lines, tint }: { lines: string[]; tint?: string }) {
 
 export function SmBtn({ active, onClick, label }: { active?: boolean; onClick: () => void; label: ReactNode }) {
   return (
-    <button
-      className="tap-sm"
-      onClick={onClick}
-      style={{
-        padding: "2px 8px",
-        borderRadius: 5,
-        cursor: "pointer",
-        fontFamily: "inherit",
-        fontSize: 10,
-        fontWeight: 700,
-        border: "1px solid " + (active ? C.navy : C.border),
-        background: active ? C.navy : C.white,
-        color: active ? "#fff" : C.slate,
-      }}
-    >
+    <button className={`tap-sm ${s.smbtn}${active ? " " + s.smbtnActive : ""}`} onClick={onClick}>
       {label}
     </button>
   );
@@ -216,22 +208,9 @@ export function SmBtn({ active, onClick, label }: { active?: boolean; onClick: (
 
 export function SecLabel({ text, right }: { text: ReactNode; right?: ReactNode }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        fontSize: 10,
-        fontWeight: 700,
-        color: C.heading,
-        letterSpacing: "0.07em",
-        textTransform: "uppercase",
-        borderBottom: "1px solid " + C.border,
-        paddingBottom: 4,
-        marginBottom: 8,
-      }}
-    >
+    <div className={s.secLabel}>
       <span>{text}</span>
-      {right && <span style={{ fontWeight: 400, color: C.slate, textTransform: "none", fontSize: 11 }}>{right}</span>}
+      {right && <span className={s.secLabelRight}>{right}</span>}
     </div>
   );
 }
@@ -256,21 +235,10 @@ export function PLRow({
   note?: ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "5px 8px 5px " + (indent ? "20px" : "8px"),
-        background: hl ? "var(--c-hl)" : "transparent",
-        borderBottom: "1px solid var(--c-rowline)",
-        fontWeight: bold ? 600 : 400,
-        fontSize: 12,
-      }}
-    >
+    <div className={`${s.plRow}${indent ? " " + s.plRowIndent : ""}${hl ? " " + s.plRowHl : ""}${bold ? " " + s.plRowBold : ""}`}>
       <span style={{ color: bold ? C.text : C.slate }}>
         {label}
-        {note && <span style={{ fontSize: 10, color: C.muted, marginLeft: 5 }}>{note}</span>}
+        {note && <span className={s.plNote}>{note}</span>}
       </span>
       <span style={{ color: neg ? C.red : pos ? C.blueS : C.text, fontVariantNumeric: "tabular-nums" }}>{value}</span>
     </div>
@@ -302,13 +270,15 @@ export function MBox({
 }) {
   const col = ({ good: C.teal, warn: C.amber, bad: C.red } as Record<string, string>)[lvl || ""] || C.slate;
   return (
-    <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: 10, padding: "10px 12px" }}>
-      <div style={{ fontSize: 10, color: C.slate, fontWeight: 700, letterSpacing: "0.04em", marginBottom: 3, display: "flex", alignItems: "center" }}>
+    <div className={s.mbox}>
+      <div className={s.mboxLabel}>
         {label}
         {tip && <Info lines={tip} />}
       </div>
-      <div style={{ fontSize: 17, fontWeight: 700, color: col, lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{sub}</div>}
+      <div className={s.mboxValue} style={{ color: col }}>
+        {value}
+      </div>
+      {sub && <div className={s.mboxSub}>{sub}</div>}
       {bar !== undefined && <Bar val={bar} max={bMax!} good={bGood!} warn={bWarn!} inv={bInv} />}
     </div>
   );
