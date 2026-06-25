@@ -1,0 +1,206 @@
+/* Shared section-form styling. Static layout + chrome here; dynamic colors
+   (toggle-state borders/backgrounds) stay inline on the elements. */
+
+.grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fieldCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Generic free-text input / textarea (address, notes, listing URL). */
+.textInput {
+  padding: 7px 10px;
+  font-size: 13px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  font-family: inherit;
+  color: var(--c-text);
+  outline: none;
+}
+.textArea {
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  font-family: inherit;
+  color: var(--c-text);
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.miniLabel {
+  font-size: 10px;
+  color: var(--c-slate);
+  font-weight: 600;
+}
+.fieldLabel {
+  font-size: 11px;
+  color: var(--c-slate);
+  font-weight: 600;
+}
+
+/* Read-only computed-value box (the muted bordered tiles) */
+.box {
+  padding: 7px 10px;
+  background: var(--c-bg);
+  border-radius: 8px;
+  border: 1px solid var(--c-border);
+}
+.boxLabel {
+  font-size: 10px;
+  color: var(--c-slate);
+  margin-bottom: 2px;
+}
+.boxValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-heading);
+}
+.boxSub {
+  font-size: 10px;
+  color: var(--c-muted);
+}
+
+/* Tinted info boxes */
+.tealBox {
+  padding: 7px 10px;
+  background: var(--c-tealL);
+  border-radius: 8px;
+  border: 1px solid var(--c-border);
+  font-size: 11px;
+}
+.tealBoxTitle {
+  color: var(--c-teal);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.tealBoxValue {
+  font-weight: 700;
+  color: var(--c-teal);
+  font-size: 14px;
+}
+.goldBox {
+  padding: 7px 10px;
+  background: var(--c-goldL);
+  border-radius: 8px;
+  border: 1px solid var(--c-border);
+  font-size: 10px;
+  color: var(--c-amber);
+}
+
+.warn {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--c-amber);
+}
+
+.dividerTop {
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--c-border);
+}
+
+/* A pill-style toggle button whose colors are set inline from state. */
+.toggleBtn {
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Units & Rents */
+.unitList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.unitCard {
+  border: 1px solid var(--c-border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: var(--c-bg);
+}
+.unitRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.unitLabelInput {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-heading);
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  flex: 0 1 72px;
+  min-width: 0;
+}
+.removeBtn {
+  padding: 5px 9px;
+  background: var(--c-redL);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--c-red);
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.unitDetailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+}
+.addUnitBtn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 7px;
+  border-radius: 8px;
+  border: 1px dashed var(--c-border);
+  background: var(--c-white);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-slate);
+  font-family: inherit;
+}
+.addUnitBtn:hover {
+  border-color: var(--c-slate);
+}
+.totalRow {
+  margin-top: 9px;
+  padding: 6px 9px;
+  background: var(--c-bg);
+  border-radius: 7px;
+  border: 1px solid var(--c-border);
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+.totalRowLabel {
+  color: var(--c-slate);
+}
+.totalRowValue {
+  font-weight: 700;
+  color: var(--c-heading);
+}

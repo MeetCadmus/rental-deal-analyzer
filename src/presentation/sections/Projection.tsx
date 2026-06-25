@@ -2,10 +2,10 @@ import { useWorkspace } from "../../application/workspaceStore";
 import { fmtD, fmtP } from "../../domain/money";
 import type { computeBase } from "../../domain/finance/computeBase";
 import type { computeYearly } from "../../domain/finance/computeYearly";
-import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
 import { Field } from "../ui/inputs";
 import { Tog, SecLabel } from "../ui/primitives";
+import s from "./sections.module.css";
 
 type Base = ReturnType<typeof computeBase>;
 type Yearly = ReturnType<typeof computeYearly>;
@@ -25,7 +25,7 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
       storeKey="proj"
       summary={S.projection.holdYears + "yr · " + fmtP(S.projection.appreciationPct)}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9, marginBottom: 12 }}>
+      <div className={s.grid2} style={{ marginBottom: 12 }}>
         <Field label="Hold period" suffix="years" value={S.projection.holdYears} onChange={(x) => setProj("holdYears", x)} min={1} max={30} />
         <Field
           label="Appreciation/yr"
@@ -47,16 +47,16 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
           step={0.25}
           sub="Applied to all units each year"
         />
-        <div style={{ padding: "7px 10px", background: C.tealL, borderRadius: 8, border: "1px solid " + C.border, fontSize: 11 }}>
-          <div style={{ color: C.teal, fontWeight: 700, marginBottom: 2 }}>Rent in year {S.projection.holdYears}</div>
-          <div style={{ fontWeight: 700, color: C.teal, fontSize: 14 }}>
+        <div className={s.tealBox}>
+          <div className={s.tealBoxTitle}>Rent in year {S.projection.holdYears}</div>
+          <div className={s.tealBoxValue}>
             {fmtD(Math.round((totalRent / numU) * Math.pow(1 + (S.projection.rentGrowthPct || 0) / 100, (S.projection.holdYears || 5) - 1)))}/unit/mo
           </div>
         </div>
       </div>
       <SecLabel text="Exit assumptions" />
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9, marginBottom: 9 }}>
+        <div className={s.grid2} style={{ marginBottom: 9 }}>
           <Field
             label="Selling costs"
             suffix="%"
@@ -68,11 +68,9 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
             sub="agent + closing at sale"
             showZero
           />
-          <div style={{ padding: "7px 10px", background: C.bg, borderRadius: 8, border: "1px solid " + C.border }}>
-            <div style={{ fontSize: 10, color: C.slate, marginBottom: 2 }}>Net sale proceeds (yr {S.projection.holdYears})</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.heading }}>
-              {fmtD(Y.exitVal * (1 - (S.projection.sellingCostPct ?? 6) / 100) - (Y.yearly[Y.yearly.length - 1]?.balance || 0))}
-            </div>
+          <div className={s.box}>
+            <div className={s.boxLabel}>Net sale proceeds (yr {S.projection.holdYears})</div>
+            <div className={s.boxValue}>{fmtD(Y.exitVal * (1 - (S.projection.sellingCostPct ?? 6) / 100) - (Y.yearly[Y.yearly.length - 1]?.balance || 0))}</div>
           </div>
         </div>
         <div style={{ marginBottom: 8 }}>
@@ -84,7 +82,7 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
           />
         </div>
         {S.projection.exitCapEnabled && (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
+          <div className={s.grid2}>
             <Field
               label="Exit cap rate"
               suffix="%"
@@ -95,9 +93,7 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
               step={0.1}
               sub={"vs entry cap " + fmtP(R.capRate)}
             />
-            <div style={{ padding: "7px 10px", background: C.goldL, borderRadius: 8, border: "1px solid " + C.border, fontSize: 10, color: C.amber }}>
-              Higher exit cap than entry = conservative (value compresses); lower = optimistic.
-            </div>
+            <div className={s.goldBox}>Higher exit cap than entry = conservative (value compresses); lower = optimistic.</div>
           </div>
         )}
       </div>
@@ -112,7 +108,7 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
           />
         </div>
         {S.projection.vaEnabled && (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
+          <div className={s.grid2}>
             <Field
               label="Market rent / unit"
               prefix="$"
@@ -137,7 +133,7 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
           />
         </div>
         {S.projection.refiEnabled && (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
+          <div className={s.grid2}>
             <Field label="Refi year" value={S.projection.refiYear || 3} onChange={(x) => setProj("refiYear", x)} min={1} max={S.projection.holdYears || 5} />
             <Field label="New rate" suffix="%" value={S.projection.refiRate || 6.5} onChange={(x) => setProj("refiRate", x)} min={1} max={15} step={0.125} />
           </div>
