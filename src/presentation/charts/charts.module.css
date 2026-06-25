@@ -1,0 +1,82 @@
+/* Chart chrome. The SVG geometry (coordinates) and data-driven fills/strokes
+   stay as inline styles — only the static wrapper/legend chrome lives here. */
+
+.box {
+  border: 1px solid var(--c-border);
+  border-radius: 11px;
+  overflow: hidden;
+  margin-bottom: 11px;
+}
+.boxTitle {
+  padding: 7px 12px;
+  background: var(--c-bg);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-heading);
+  border-bottom: 1px solid var(--c-border);
+}
+.boxBody {
+  padding: 12px 13px;
+  background: var(--c-white);
+}
+.boxNote {
+  font-size: 10px;
+  color: var(--c-muted);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--c-slate);
+}
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.donutWrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.donutSvg {
+  width: 128px;
+  height: 128px;
+  flex-shrink: 0;
+}
+.donutLegend {
+  flex: 1;
+  min-width: 160px;
+}
+.donutRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.donutRowLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-slate);
+}
+.donutDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
