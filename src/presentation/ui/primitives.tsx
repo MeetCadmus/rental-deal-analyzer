@@ -1,13 +1,19 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useId, type ReactNode } from "react";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { C } from "../theme/tokens";
 import { clamp } from "../../domain/money";
 import type { Level } from "../../domain/types";
 
+// Accessible toggle: Radix Switch (role="switch", keyboard, aria-checked) styled to
+// match the original pill. Visuals are driven by the controlled `checked` prop.
 export function Tog({ checked, onChange, label, sub }: { checked: boolean; onChange: (v: boolean) => void; label: ReactNode; sub?: ReactNode }) {
+  const id = useId();
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
-      <div
-        onClick={() => onChange(!checked)}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, userSelect: "none" }}>
+      <SwitchPrimitive.Root
+        id={id}
+        checked={checked}
+        onCheckedChange={onChange}
         style={{
           width: 32,
           height: 18,
@@ -16,10 +22,14 @@ export function Tog({ checked, onChange, label, sub }: { checked: boolean; onCha
           transition: "background 0.2s",
           position: "relative",
           flexShrink: 0,
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
         }}
       >
-        <div
+        <SwitchPrimitive.Thumb
           style={{
+            display: "block",
             width: 14,
             height: 14,
             borderRadius: "50%",
@@ -30,12 +40,12 @@ export function Tog({ checked, onChange, label, sub }: { checked: boolean; onCha
             transition: "left 0.2s",
           }}
         />
-      </div>
-      <div>
+      </SwitchPrimitive.Root>
+      <label htmlFor={id} style={{ cursor: "pointer" }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{label}</div>
         {sub && <div style={{ fontSize: 10, color: C.slate }}>{sub}</div>}
-      </div>
-    </label>
+      </label>
+    </div>
   );
 }
 

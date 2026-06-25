@@ -50,7 +50,11 @@ export default tseslint.config(
   {
     files: ["src/presentation/**/*.tsx"],
     plugins: jsxA11y.flatConfigs.recommended.plugins,
-    rules: a11yWarn,
+    rules: {
+      ...a11yWarn,
+      // Deprecated and redundant with label-has-associated-control (which we keep).
+      "jsx-a11y/label-has-for": "off",
+    },
   },
 
   // ── Tests: ported 1:1 from the old JS suite (carry @ts-nocheck) — relax. ──
