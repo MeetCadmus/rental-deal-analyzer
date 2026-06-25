@@ -9,7 +9,11 @@ export function useGrouped(value: number, onChange: (n: number) => void, decimal
   const caret = useRef<number | null>(null);
   useLayoutEffect(() => {
     if (caret.current != null && ref.current) {
-      try { ref.current.setSelectionRange(caret.current, caret.current); } catch { /* ignore */ }
+      try {
+        ref.current.setSelectionRange(caret.current, caret.current);
+      } catch {
+        /* ignore */
+      }
       caret.current = null;
     }
   });

@@ -5,14 +5,24 @@ import * as M from "../index";
 import { close, pmtOf } from "../../test/util";
 
 function deal(over) {
-  return M.fullState(Object.assign({
-    price: 600000,
-    units: [{ id: 1, rent: 2000 }, { id: 2, rent: 2000 }, { id: 3, rent: 1600 }, { id: 4, rent: 1600 }],
-    financing: { downPct: 25, rate: 6.5, loanYears: 30 },
-    expenses: { mode: "quick", ratio: 42, vacancyPct: 5 },
-    closing: { mode: "quick", quickPct: 3 },
-    projection: { holdYears: 5, appreciationPct: 4, rentGrowthPct: 3 },
-  }, over));
+  return M.fullState(
+    Object.assign(
+      {
+        price: 600000,
+        units: [
+          { id: 1, rent: 2000 },
+          { id: 2, rent: 2000 },
+          { id: 3, rent: 1600 },
+          { id: 4, rent: 1600 },
+        ],
+        financing: { downPct: 25, rate: 6.5, loanYears: 30 },
+        expenses: { mode: "quick", ratio: 42, vacancyPct: 5 },
+        closing: { mode: "quick", quickPct: 3 },
+        projection: { holdYears: 5, appreciationPct: 4, rentGrowthPct: 3 },
+      },
+      over,
+    ),
+  );
 }
 
 test("computeYearly: loan fully amortizes to ~0 over its term & balance never increases", () => {
@@ -40,7 +50,7 @@ test("computeYearly: equity, appreciation & total-return identities hold", () =>
   // return components
   close(Y.appGain, Y.exitVal - st.price, 1, "appreciation gain");
   close(Y.equityBuild, R.loan - last.balance, 1, "principal paydown = loan - final balance");
-  close(Y.deprBen, (st.price * 0.85 / 27.5) * 0.28 * 5, 1e-6, "depreciation benefit formula");
+  close(Y.deprBen, ((st.price * 0.85) / 27.5) * 0.28 * 5, 1e-6, "depreciation benefit formula");
   close(Y.totRet, Y.appGain + Y.equityBuild + Y.totCF + Y.deprBen, 2, "total return = sum of components");
 });
 
@@ -54,7 +64,9 @@ test("computeYearly: IRR actually solves NPV(flows) ≈ 0", () => {
   const flows = [-R.cashIn].concat(Y.yearly.map((y, i) => (i < years - 1 ? y.cf : y.cf + sellProc)));
   const r = Y.irr / 100;
   let npv = 0;
-  flows.forEach((f, j) => { npv += f / Math.pow(1 + r, j); });
+  flows.forEach((f, j) => {
+    npv += f / Math.pow(1 + r, j);
+  });
   assert.ok(Math.abs(npv) < 1, "NPV at the reported IRR should be ~0, got " + npv);
 });
 
@@ -86,14 +98,21 @@ test("computeYearly: exit-cap valuation prices the sale off final-year NOI", () 
 });
 
 test("computeYearly: a lower exit cap raises both exit value and IRR", () => {
-  const mk = (cap) => { const st = deal({ projection: { holdYears: 5, rentGrowthPct: 0, exitCapEnabled: true, exitCapRate: cap } }); return M.computeYearly(st, M.computeBase(st)); };
-  const hi = mk(8), lo = mk(5);
+  const mk = (cap) => {
+    const st = deal({ projection: { holdYears: 5, rentGrowthPct: 0, exitCapEnabled: true, exitCapRate: cap } });
+    return M.computeYearly(st, M.computeBase(st));
+  };
+  const hi = mk(8),
+    lo = mk(5);
   assert.ok(lo.exitVal > hi.exitVal, "lower cap -> higher exit value");
   assert.ok(lo.irr > hi.irr, "lower cap -> higher IRR");
 });
 
 test("computeYearly: higher selling costs reduce IRR", () => {
-  const mk = (sc) => { const st = deal({ projection: { holdYears: 5, appreciationPct: 4, rentGrowthPct: 0, sellingCostPct: sc } }); return M.computeYearly(st, M.computeBase(st)); };
+  const mk = (sc) => {
+    const st = deal({ projection: { holdYears: 5, appreciationPct: 4, rentGrowthPct: 0, sellingCostPct: sc } });
+    return M.computeYearly(st, M.computeBase(st));
+  };
   assert.ok(mk(2).irr > mk(10).irr, "higher selling cost -> lower IRR");
 });
 

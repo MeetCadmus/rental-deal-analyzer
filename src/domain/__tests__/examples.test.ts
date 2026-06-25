@@ -10,7 +10,7 @@ import { close, pmtOf } from "../../test/util";
 const EXPECT = {
   en: { grade: "D", cap: 4.9, dscr: 0.69 },
   cp: { grade: "D", cap: 6.0, dscr: 0.96 },
-  cl: { grade: "C", cap: 6.7, dscr: 1.10 },
+  cl: { grade: "C", cap: 6.7, dscr: 1.1 },
   sm: { grade: "B", cap: 7.1, dscr: 1.21 },
   kw: { grade: "A", cap: 8.6, dscr: 1.47 },
 };

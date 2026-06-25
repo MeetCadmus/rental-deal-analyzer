@@ -19,10 +19,10 @@ test("fmtGroup: tolerates clearing and partials", () => {
 
 test("fmtGroup: decimals preserved, integer part grouped", () => {
   assert.equal(M.fmtGroup("1234.5", true), "1,234.5");
-  assert.equal(M.fmtGroup("7.", true), "7.");      // mid-typing a decimal
+  assert.equal(M.fmtGroup("7.", true), "7."); // mid-typing a decimal
   assert.equal(M.fmtGroup("7.25", true), "7.25");
-  assert.equal(M.fmtGroup(".5", true), ".5");      // mid-edit: don't inject a leading 0 (it normalizes on blur)
-  assert.equal(M.fmtGroup(".", true), ".");        // just a lone decimal point while typing
+  assert.equal(M.fmtGroup(".5", true), ".5"); // mid-edit: don't inject a leading 0 (it normalizes on blur)
+  assert.equal(M.fmtGroup(".", true), "."); // just a lone decimal point while typing
 });
 
 test("fmtGroup: integer mode strips a stray decimal point then groups", () => {
@@ -31,7 +31,7 @@ test("fmtGroup: integer mode strips a stray decimal point then groups", () => {
 
 test("fmtGroup: negative values", () => {
   assert.equal(M.fmtGroup("-5000", true), "-5,000");
-  assert.equal(M.fmtGroup("-", true), "-");        // mid-typing a negative
+  assert.equal(M.fmtGroup("-", true), "-"); // mid-typing a negative
 });
 
 test("fmtGroup: strips leading zeros but keeps a single zero", () => {

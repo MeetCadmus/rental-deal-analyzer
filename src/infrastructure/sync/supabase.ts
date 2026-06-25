@@ -1,11 +1,15 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { DealStore } from "../storage/dealRepository";
 
-export interface CloudConfig { url: string; key: string }
+export interface CloudConfig {
+  url: string;
+  key: string;
+}
 
 // Public Supabase keys come from public/config.js (window.SUPABASE_*). Dormant if absent.
 export function getCloudConfig(): CloudConfig | null {
-  const url = window.SUPABASE_URL, key = window.SUPABASE_ANON_KEY;
+  const url = window.SUPABASE_URL,
+    key = window.SUPABASE_ANON_KEY;
   return url && key ? { url, key } : null;
 }
 
@@ -22,15 +26,16 @@ export async function fetchUserData(client: SupabaseClient, userId: string): Pro
 }
 
 export async function pushUserData(client: SupabaseClient, userId: string, store: DealStore): Promise<{ error: unknown }> {
-  const { error } = await client.from("user_data")
-    .upsert({ user_id: userId, data: store, updated_at: new Date().toISOString() });
+  const { error } = await client.from("user_data").upsert({ user_id: userId, data: store, updated_at: new Date().toISOString() });
   return { error };
 }
 
 export function signInWithGoogle(client: SupabaseClient): void {
-  client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.href.split("#")[0] } });
+  void client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.href.split("#")[0] } });
 }
 
-export function signOut(client: SupabaseClient): void { client.auth.signOut(); }
+export function signOut(client: SupabaseClient): void {
+  void client.auth.signOut();
+}
 
 export type { SupabaseClient, User };

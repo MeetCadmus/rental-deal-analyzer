@@ -42,7 +42,10 @@ test("calcDealScore: exposes a color and human label for each grade", () => {
 
 test("calcKillers: DSCR below 1.0 is flagged critical", () => {
   const k = M.calcKillers(R({ dscr: 0.8, beOcc: 90, cf: -3000, pct1: 0.9, adjThresh: 1.0, beRent: 1500, monRent: 6000 }), {});
-  assert.ok(k.some((x) => x[0] === "critical" && /DSCR/.test(x[1])), "expected a critical DSCR killer");
+  assert.ok(
+    k.some((x) => x[0] === "critical" && /DSCR/.test(x[1])),
+    "expected a critical DSCR killer",
+  );
 });
 
 test("calcKillers: a healthy deal raises no critical flags", () => {
@@ -52,5 +55,8 @@ test("calcKillers: a healthy deal raises no critical flags", () => {
 
 test("calcKillers: near-100% break-even occupancy is flagged", () => {
   const k = M.calcKillers(R({ dscr: 1.1, beOcc: 98, cf: 100, pct1: 1, adjThresh: 0.85, beRent: 1500, monRent: 6000 }), {});
-  assert.ok(k.some((x) => /[Bb]reak-even/.test(x[1])), "expected a break-even occupancy warning");
+  assert.ok(
+    k.some((x) => /[Bb]reak-even/.test(x[1])),
+    "expected a break-even occupancy warning",
+  );
 });

@@ -3,6 +3,7 @@ node_modules/
 .idea/
 *.log
 dist/
+coverage/
 legacy-index.html.bak
 
 # local smoke-test harness

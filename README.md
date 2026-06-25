@@ -53,12 +53,12 @@ npm test
 
 ## Project layout
 
-| Path | What it is |
-| --- | --- |
-| `index.html` | Loader: fetches the JSX, rewrites the React import, compiles with Babel, mounts the app |
-| `fourplex_calculator.jsx` | The entire app — math, components, and state |
-| `test-harness.js` | Loads the app's pure functions for testing |
-| `test/*.test.js` | Math/metrics test suites (`node --test`) |
+| Path                      | What it is                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `index.html`              | Loader: fetches the JSX, rewrites the React import, compiles with Babel, mounts the app |
+| `fourplex_calculator.jsx` | The entire app — math, components, and state                                            |
+| `test-harness.js`         | Loads the app's pure functions for testing                                              |
+| `test/*.test.js`          | Math/metrics test suites (`node --test`)                                                |
 
 ## Data & privacy
 
