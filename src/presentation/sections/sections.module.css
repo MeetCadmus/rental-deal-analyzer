@@ -22,6 +22,160 @@
   flex-direction: column;
   gap: 8px;
 }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Listing link buttons */
+.listingWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.linkBtn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.linkBtnPrimary {
+  background: var(--c-navy);
+  color: #fff;
+  border: 1px solid var(--c-navy);
+  text-decoration: none;
+}
+.linkBtnGhost {
+  background: var(--c-white);
+  color: var(--c-slate);
+  border: 1px solid var(--c-border);
+}
+
+/* Quick fill */
+.primaryBtn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--c-navy);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.qfTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-white);
+  outline: none;
+  resize: vertical;
+  line-height: 1.45;
+}
+.smallTextInput {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-white);
+  outline: none;
+}
+.msgBox {
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  border: 1px solid var(--c-border);
+}
+
+/* Area & due-diligence */
+.addNotesBtn {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 11px;
+  border: 1px dashed var(--c-border);
+  background: transparent;
+  color: var(--c-slate);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 11px;
+  text-align: left;
+}
+.editBtn {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-slate);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  padding: 4px 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.aiInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-white);
+  outline: none;
+}
+.aiTextarea {
+  composes: aiInput;
+  resize: vertical;
+  line-height: 1.4;
+}
+.aiLbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-slate);
+  margin-bottom: 3px;
+  display: block;
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.badge {
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  min-width: 0;
+}
+.badgeLabel {
+  font-size: 9px;
+  color: var(--c-muted);
+  margin-bottom: 2px;
+}
+.badgeValue {
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Generic free-text input / textarea (address, notes, listing URL). */
 .textInput {
