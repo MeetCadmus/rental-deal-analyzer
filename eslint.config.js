@@ -11,7 +11,7 @@ import globals from "globals";
 const a11yWarn = Object.fromEntries(Object.keys(jsxA11y.flatConfigs.recommended.rules).map((k) => [k, "warn"]));
 
 export default tseslint.config(
-  { ignores: ["dist", "node_modules", "coverage", "*.config.js", "config.js"] },
+  { ignores: ["dist", "node_modules", "coverage", "e2e", "playwright-report", "test-results", "*.config.js", "config.js"] },
 
   // ── Application source: type-aware linting (catches real bugs) ──
   {

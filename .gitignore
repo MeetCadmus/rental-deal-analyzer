@@ -4,6 +4,9 @@ node_modules/
 *.log
 dist/
 coverage/
+playwright-report/
+test-results/
+.playwright/
 legacy-index.html.bak
 
 # local smoke-test harness
