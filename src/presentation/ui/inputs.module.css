@@ -1,0 +1,96 @@
+/* Number/text input primitives. Static chrome here; the focus ring is global
+   (theme.css input:focus). Disabled colors are intentional literals, not tokens. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--c-slate);
+  font-weight: 600;
+}
+.labelSm {
+  font-size: 10px;
+}
+.labelFlex {
+  display: flex;
+  align-items: center;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--c-white);
+}
+.rowGrow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rowDisabled {
+  border-color: #e8e8e8;
+  background: #f4f4f4;
+}
+
+.affix {
+  font-size: 11px;
+  color: var(--c-slate);
+  flex-shrink: 0;
+}
+.prefix {
+  padding: 6px 7px 6px 9px;
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-border);
+}
+.prefixRent {
+  padding: 6px 6px 6px 9px;
+  font-size: 12px;
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-border);
+}
+.suffix {
+  padding: 6px 8px 6px 4px;
+}
+.suffixRent {
+  padding: 6px 8px 6px 2px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-text);
+  outline: none;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+.inputMoney {
+  padding: 6px 10px;
+}
+.inputSm {
+  font-size: 12px;
+}
+.inputXs {
+  font-size: 12px;
+}
+.inputRent {
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-heading);
+}
+
+.sub {
+  font-size: 10px;
+  color: var(--c-muted);
+}
+.hint {
+  font-size: 10px;
+  color: #0f6e56;
+}

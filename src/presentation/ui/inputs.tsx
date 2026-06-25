@@ -1,8 +1,8 @@
 import { useId, type ReactNode } from "react";
-import { C } from "../theme/tokens";
 import { fmtGroup } from "../../domain/money";
 import { useGrouped } from "./useGrouped";
 import { Info } from "./primitives";
+import s from "./inputs.module.css";
 
 export function MoneyInput({
   value,
@@ -22,16 +22,14 @@ export function MoneyInput({
   const g = useGrouped(value, onChange, false, (v) => (v > 0 ? fmtGroup(v, false) : ""));
   const id = useId();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <div className={s.wrap}>
       {label && (
-        <label htmlFor={id} style={{ fontSize: small ? 10 : 11, color: C.slate, fontWeight: 600 }}>
+        <label htmlFor={id} className={`${s.label}${small ? " " + s.labelSm : ""}`}>
           {label}
         </label>
       )}
-      <div style={{ display: "flex", alignItems: "center", border: "1px solid " + C.border, borderRadius: 7, overflow: "hidden", background: C.white }}>
-        <span style={{ padding: "6px 7px 6px 9px", fontSize: 11, color: C.slate, background: C.bg, borderRight: "1px solid " + C.border, flexShrink: 0 }}>
-          $
-        </span>
+      <div className={s.row}>
+        <span className={`${s.affix} ${s.prefix}`}>$</span>
         <input
           id={id}
           ref={g.ref}
@@ -41,19 +39,10 @@ export function MoneyInput({
           placeholder="0"
           onChange={g.onInput}
           onBlur={g.clearBuf}
-          style={{
-            flex: 1,
-            padding: "6px 10px",
-            fontSize: small ? 12 : 13,
-            border: "none",
-            background: "transparent",
-            color: C.text,
-            outline: "none",
-            minWidth: 0,
-          }}
+          className={`${s.input} ${s.inputMoney}${small ? " " + s.inputSm : ""}`}
         />
       </div>
-      {(sub || hint) && <span style={{ fontSize: 10, color: hint ? "#0F6E56" : C.muted }}>{sub || hint}</span>}
+      {(sub || hint) && <span className={hint ? s.hint : s.sub}>{sub || hint}</span>}
     </div>
   );
 }
@@ -61,19 +50,8 @@ export function MoneyInput({
 export function RentInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const g = useGrouped(value, onChange, false, (v) => (v > 0 ? fmtGroup(v, false) : ""));
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        border: "1px solid " + C.border,
-        borderRadius: 7,
-        overflow: "hidden",
-        background: C.white,
-        flex: "1 1 auto",
-        minWidth: 0,
-      }}
-    >
-      <span style={{ padding: "6px 6px 6px 9px", fontSize: 12, color: C.slate, background: C.bg, borderRight: "1px solid " + C.border, flexShrink: 0 }}>$</span>
+    <div className={`${s.row} ${s.rowGrow}`}>
+      <span className={`${s.affix} ${s.prefixRent}`}>$</span>
       <input
         ref={g.ref}
         type="text"
@@ -82,19 +60,9 @@ export function RentInput({ value, onChange }: { value: number; onChange: (n: nu
         placeholder="0"
         onChange={g.onInput}
         onBlur={g.clearBuf}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          padding: "6px 8px",
-          fontSize: 14,
-          fontWeight: 600,
-          border: "none",
-          background: "transparent",
-          color: C.heading,
-          outline: "none",
-        }}
+        className={`${s.input} ${s.inputRent}`}
       />
-      <span style={{ padding: "6px 8px 6px 2px", fontSize: 11, color: C.slate, flexShrink: 0 }}>/mo</span>
+      <span className={`${s.affix} ${s.suffixRent}`}>/mo</span>
     </div>
   );
 }
@@ -125,28 +93,15 @@ export function Field({ label, prefix, suffix, value, onChange, min, max, sub, d
     else if (max != null && n > max) onChange(max);
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <div className={s.wrap}>
       {label && (
-        <label htmlFor={id} style={{ fontSize: xs ? 10 : 11, color: C.slate, fontWeight: 600, display: "flex", alignItems: "center" }}>
+        <label htmlFor={id} className={`${s.label}${xs ? " " + s.labelSm : ""} ${s.labelFlex}`}>
           {label}
           {tip && <Info lines={tip} />}
         </label>
       )}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          border: "1px solid " + (disabled ? "#e8e8e8" : C.border),
-          borderRadius: 7,
-          overflow: "hidden",
-          background: disabled ? "#F4F4F4" : C.white,
-        }}
-      >
-        {prefix && (
-          <span style={{ padding: "6px 7px 6px 9px", fontSize: 11, color: C.slate, background: C.bg, borderRight: "1px solid " + C.border, flexShrink: 0 }}>
-            {prefix}
-          </span>
-        )}
+      <div className={`${s.row}${disabled ? " " + s.rowDisabled : ""}`}>
+        {prefix && <span className={`${s.affix} ${s.prefix}`}>{prefix}</span>}
         <input
           id={id}
           ref={g.ref}
@@ -157,20 +112,11 @@ export function Field({ label, prefix, suffix, value, onChange, min, max, sub, d
           placeholder={placeholder || "0"}
           onChange={g.onInput}
           onBlur={onBlur}
-          style={{
-            flex: 1,
-            padding: "6px 8px",
-            fontSize: xs ? 12 : 13,
-            border: "none",
-            background: "transparent",
-            color: C.text,
-            outline: "none",
-            minWidth: 0,
-          }}
+          className={`${s.input}${xs ? " " + s.inputXs : ""}`}
         />
-        {suffix && <span style={{ padding: "6px 8px 6px 4px", fontSize: 11, color: C.slate, flexShrink: 0 }}>{suffix}</span>}
+        {suffix && <span className={`${s.affix} ${s.suffix}`}>{suffix}</span>}
       </div>
-      {sub && <span style={{ fontSize: 10, color: C.muted }}>{sub}</span>}
+      {sub && <span className={s.sub}>{sub}</span>}
     </div>
   );
 }
