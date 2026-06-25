@@ -11,7 +11,7 @@ export function useMetrics() {
   const R = useMemo(() => computeBase(state), [state]);
   const Y = useMemo(() => computeYearly(state, R), [state, R]);
   const SEN = useMemo(() => computeSensitivity(state, R), [state, R]);
-  const score = useMemo(() => calcDealScore(R, Y), [R, Y]);
+  const score = useMemo(() => calcDealScore(R, Y, state.price), [R, Y, state.price]);
   const totalRent = state.units.reduce((s, u) => s + u.rent, 0);
   const numU = state.units.length;
   const title = useWorkspace(activeTitle);

@@ -40,6 +40,25 @@ test("calcDealScore: exposes a color and human label for each grade", () => {
   assert.equal(s.metrics.length, 6);
 });
 
+test("calcDealScore: a deal with no rent (gpi 0) is incomplete, grade —", () => {
+  const s = M.calcDealScore(R({ capRate: 0, coc: 0, dscr: 0, gpi: 0 }), { irr: 0 });
+  assert.equal(s.incomplete, true);
+  assert.equal(s.grade, "—");
+  assert.equal(s.metrics.length, 0);
+});
+
+test("calcDealScore: a 0 purchase price is incomplete even with rent", () => {
+  const s = M.calcDealScore(R({ capRate: 9, coc: 12, dscr: 1.5, gpi: 50000 }), { irr: 18 }, 0);
+  assert.equal(s.incomplete, true);
+  assert.equal(s.grade, "—");
+});
+
+test("calcDealScore: a filled deal (gpi>0, price>0) still grades normally", () => {
+  const s = M.calcDealScore(R({ capRate: 9, coc: 12, dscr: 1.5, cf: 4 * 12 * 300, beOcc: 60, gpi: 50000 }), { irr: 18 }, 620000);
+  assert.equal(s.grade, "A");
+  assert.ok(!s.incomplete);
+});
+
 test("calcKillers: DSCR below 1.0 is flagged critical", () => {
   const k = M.calcKillers(R({ dscr: 0.8, beOcc: 90, cf: -3000, pct1: 0.9, adjThresh: 1.0, beRent: 1500, monRent: 6000 }), {});
   assert.ok(

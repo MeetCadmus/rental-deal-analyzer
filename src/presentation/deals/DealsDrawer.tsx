@@ -48,7 +48,7 @@ function DealsDrawer({
         const fs = fullState(d),
           R = computeBase(fs),
           Y = computeYearly(fs, R),
-          sc = calcDealScore(R, Y);
+          sc = calcDealScore(R, Y, fs.price);
         return { d, R, Y, sc };
       })
     : [];

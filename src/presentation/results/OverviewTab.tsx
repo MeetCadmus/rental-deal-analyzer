@@ -6,7 +6,7 @@ import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
 import s from "./results.module.css";
 
 export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyResult; S: Deal; compact?: boolean }) {
-  const score = calcDealScore(R, Y);
+  const score = calcDealScore(R, Y, S.price);
   const killers = calcKillers(R);
   const pct1Pass = R.pct1 >= R.adjThresh;
   const adjLbl = S.price > 800000 ? "≥0.65% HCOL" : S.price > 500000 ? "≥0.75%" : S.price > 300000 ? "≥0.85%" : "≥1.0%";
@@ -30,28 +30,30 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
           >
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginBottom: 2 }}>Deal score</div>
             <div style={{ fontSize: 42, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{score.grade}</div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{Math.round(score.pct * 100)}%</div>
+            {!score.incomplete && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{Math.round(score.pct * 100)}%</div>}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: score.color, marginBottom: 4 }}>{score.label}</div>
             <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>{score.desc}</div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {["Cap rate", "CoC", "DSCR", "CF/unit", "Break-even", "IRR"].map((l, i) => (
-                <span
-                  key={l}
-                  style={{
-                    fontSize: 10,
-                    padding: "2px 7px",
-                    borderRadius: 10,
-                    background: score.metrics[i] === "good" ? C.tealL : score.metrics[i] === "warn" ? C.amberL : C.redL,
-                    color: score.metrics[i] === "good" ? C.teal : score.metrics[i] === "warn" ? C.amber : C.red,
-                    fontWeight: 600,
-                  }}
-                >
-                  {l}
-                </span>
-              ))}
-            </div>
+            {!score.incomplete && (
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {["Cap rate", "CoC", "DSCR", "CF/unit", "Break-even", "IRR"].map((l, i) => (
+                  <span
+                    key={l}
+                    style={{
+                      fontSize: 10,
+                      padding: "2px 7px",
+                      borderRadius: 10,
+                      background: score.metrics[i] === "good" ? C.tealL : score.metrics[i] === "warn" ? C.amberL : C.redL,
+                      color: score.metrics[i] === "good" ? C.teal : score.metrics[i] === "warn" ? C.amber : C.red,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {l}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
