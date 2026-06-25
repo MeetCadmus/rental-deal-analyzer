@@ -1,32 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { C } from "../theme/tokens";
+import s from "./sections.module.css";
 
 // ── Listing link: compact Open + Edit (input only while editing) ──
 function ListingLink({ url, onChange }: { url: string; onChange: (v: string) => void }) {
   const [edit, setEdit] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const valid = /^https?:\/\//i.test(url || "");
-  const b = { fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } as const;
   // Focus the URL field when the user reveals it (replaces autoFocus, which is a11y-flagged).
   useEffect(() => {
     if (edit) inputRef.current?.focus();
   }, [edit]);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Listing</span>
+    <div className={s.listingWrap}>
+      <div className={s.row}>
+        <span className={s.fieldLabel}>Listing</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           {valid && (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ ...b, background: C.navy, color: "#fff", border: "1px solid " + C.navy, textDecoration: "none" }}
-            >
+            <a href={url} target="_blank" rel="noopener noreferrer" className={`${s.linkBtn} ${s.linkBtnPrimary}`}>
               ↗︎ Open
             </a>
           )}
-          <button onClick={() => setEdit((e) => !e)} style={{ ...b, background: C.white, color: C.slate, border: "1px solid " + C.border }}>
+          <button onClick={() => setEdit((e) => !e)} className={`${s.linkBtn} ${s.linkBtnGhost}`}>
             {edit ? "Done" : valid ? "✎ Edit" : "+ Add link"}
           </button>
         </div>
@@ -41,7 +35,8 @@ function ListingLink({ url, onChange }: { url: string; onChange: (v: string) => 
           }}
           placeholder="https://www.zillow.com/homedetails/…"
           inputMode="url"
-          style={{ padding: "7px 10px", fontSize: 13, border: "1px solid " + C.navy, borderRadius: 7, fontFamily: "inherit", color: C.text, outline: "none" }}
+          className={s.textInput}
+          style={{ borderColor: "var(--c-navy)" }}
         />
       )}
     </div>
