@@ -36,12 +36,13 @@ Supabase.
 Supabase dashboard → **Authentication → URL Configuration**:
 
 - **Site URL:** `https://meetcadmus.github.io/rental-deal-analyzer/`
-- **Redirect URLs:** add the same URL (and `http://localhost:8000` for local testing).
+- **Redirect URLs:** add the same URL (and `http://localhost:4173` — the `npm run preview`
+  port — for local testing).
 
 ## 5. Add the public keys to the app
 
 From **Project Settings → API**, copy the **Project URL** and the **anon public**
-key into `config.js`:
+key into `public/config.js` (loaded by `index.html` via `%BASE_URL%config.js`):
 
 ```js
 window.SUPABASE_URL = "https://<ref>.supabase.co";
@@ -59,5 +60,6 @@ Commit it — both are safe to expose (RLS protects the data). Reload the app an
 - Every change is then saved back to the cloud (debounced).
 - localStorage stays as the offline cache, and **Export all** (JSON) remains a
   manual backup.
-- Note: this v1 does not propagate **deletions** across devices (a deal deleted on
-  one device can return from another). Tombstone-based delete sync can be added later.
+- **Deletions propagate** via tombstones (`dealRepository`): a delete is recorded with a
+  timestamp and unioned across devices, so a deleted deal won't resurrect from another
+  device unless it was genuinely edited there after the deletion.
