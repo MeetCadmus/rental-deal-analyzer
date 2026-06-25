@@ -16,8 +16,15 @@ workspace, optional cloud sync, an AI-assisted "Quick fill" flow, and shareable 
 - **React 18 + TypeScript (strict), built with Vite.** Tests run on **Vitest** (jsdom).
 - This replaced the old single-file `fourplex_calculator.jsx` + Babel-in-browser loader
   (removed). There is now a real build step.
-- Styling is **inline styles driven by CSS variables** (the `C` token map in
-  `src/presentation/theme/tokens.ts` → vars defined in `theme.css`). Use `C.*`, not raw hex.
+- Styling is **CSS Modules** (`*.module.css` co-located with each component) for static
+  chrome, with **dynamic values kept as inline styles** (score colors, bar widths, toggle
+  state, etc.). Both reference the CSS-variable tokens from `theme.css`; in inline styles
+  use the `C` token map (`src/presentation/theme/tokens.ts`), in CSS use `var(--c-*)`.
+  Never raw hex. Add `:hover`/`:focus-visible`/media rules in the module, not inline.
+  A few shared style **objects** (e.g. the header-button `hb` passed to `HeaderMenu`) stay
+  inline because they're passed via props. Global responsive hooks (`.layout`,
+  `.sticky-col`, `.mobile-bar`, `.no-print`, `.preset-grid`, `.ytable-scroll`,
+  `.tap-sm`, `del-row-*`) live in `theme.css` and are composed alongside module classes.
 
 ## Architecture — Clean Architecture + light DDD (dependency rule: inward only)
 
@@ -92,7 +99,8 @@ npm run preview       # serve the production build (base path /rental-deal-analy
 - One theme — **Calm** (Apple/Claude/Google spirit: warm off-white canvas, near-black text,
   one muted clay accent). It's the base `:root` in `theme.css`; **dark mode** via
   `html[data-theme="dark"]`. (The old multi-skin switcher was removed.)
-- Components use inline styles referencing `var(--c-*)` (via the `C` map). Treatment vars:
+- Components style static chrome via CSS Modules and dynamic bits inline, both on the
+  `var(--c-*)` tokens (via `C` in inline styles). Treatment vars:
   `--c-rad` (radius), `--c-head`/`--c-headfg`/`--c-headborder` (card/header chrome),
   `--c-fdisp`/`--c-fui` (fonts), `--c-ring` (focus). No emoji in chrome — use `<Icon name=…/>`.
 - Fonts (Inter + Playfair Display) load from Google Fonts in `index.html`.
