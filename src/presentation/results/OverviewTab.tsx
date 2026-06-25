@@ -3,6 +3,7 @@ import { MBox, Pill } from "../ui/primitives";
 import { fmt, fmtD, fmtP, fmtX, lv } from "../../domain/money";
 import { calcDealScore, calcKillers } from "../../domain/finance/scoring";
 import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
+import s from "./results.module.css";
 
 export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyResult; S: Deal; compact?: boolean }) {
   const score = calcDealScore(R, Y);
@@ -86,7 +87,7 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
       {/* Verdict banner (compact hero shows the same headline CF up top) */}
       {!compact && (
         <div style={{ borderRadius: "var(--c-rad)", padding: "4px 0 0", marginBottom: 11 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+          <div className={s.cols2} style={{ gap: 8 }}>
             {(
               [
                 ["Monthly CF", fmtD(R.cf / 12) + "/mo", R.cf >= 0],
@@ -107,7 +108,7 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
       {partnerEnabled && (
         <div style={{ padding: "9px 11px", background: C.hl, border: "1px solid " + C.border, borderRadius: "var(--c-rad)", marginBottom: 11 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.blueS, marginBottom: 5, letterSpacing: "0.04em" }}>MY SHARE ({S.partnership.myPct}%)</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+          <div className={s.cols3} style={{ gap: 8 }}>
             {[
               ["My CF/mo", fmtD(R.myCF / 12) + "/mo"],
               ["My CoC", fmtP(R.myCoc)],
@@ -166,7 +167,7 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
         )}
       </div>
       {/* Key metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 11 }}>
+      <div className={s.cols2} style={{ gap: 8, marginBottom: 11 }}>
         <MBox
           label="Cap rate"
           value={fmtP(R.capRate)}
@@ -251,21 +252,11 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
           ["GRM", fmtX(R.grm)],
         ];
         return (
-          <div style={{ border: "1px solid " + C.border, borderRadius: "var(--c-rad)", overflow: "hidden", marginBottom: 8 }}>
-            <div
-              style={{
-                padding: "8px 13px",
-                background: C.bg,
-                fontSize: 11,
-                fontWeight: 700,
-                color: C.heading,
-                borderBottom: "1px solid " + C.border,
-                letterSpacing: "0.02em",
-              }}
-            >
+          <div className={`${s.panel} ${s.panelRad}`} style={{ marginBottom: 8 }}>
+            <div className={s.panelHead} style={{ padding: "8px 13px", letterSpacing: "0.02em" }}>
               Acquisition
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", padding: "11px 13px", gap: 10 }}>
+            <div className={s.cols4} style={{ padding: "11px 13px", gap: 10 }}>
               {cells.map(([l2, v2]) => (
                 <div key={l2}>
                   <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>{l2}</div>
@@ -277,8 +268,8 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
         );
       })()}
       {/* Quick checks */}
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden" }}>
-        <div style={{ padding: "8px 13px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
+      <div className={s.panel}>
+        <div className={s.panelHead} style={{ padding: "8px 13px" }}>
           Quick checks
         </div>
         <div style={{ padding: "6px 13px" }}>
@@ -302,7 +293,7 @@ export function OverviewTab({ R, Y, S, compact }: { R: BaseMetrics; Y: YearlyRes
       {R.vaEnabled && (
         <div style={{ padding: "9px 11px", background: C.goldL, border: "1px solid " + C.border, borderRadius: 10, marginTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.amber, marginBottom: 5 }}>VALUE-ADD AT STABILIZATION</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+          <div className={s.cols3} style={{ gap: 8 }}>
             {[
               ["Cap rate", fmtP(R.vaCapRate)],
               ["Cash-on-cash", fmtP(R.vaCoc)],

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { C } from "../theme/tokens";
 import { fmtD, fmtP } from "../../domain/money";
 import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
+import s from "./results.module.css";
 
 interface ProjRow {
   l: string;
@@ -75,33 +76,21 @@ export function ProjTrace({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S: Dea
     },
   ];
   return (
-    <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          width: "100%",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "9px 13px",
-          background: open ? "var(--c-hl)" : C.bg,
-          border: "none",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          borderBottom: open ? "1px solid " + C.border : "none",
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 700, color: C.heading }}>How total return, IRR & the cash chart are calculated</span>
-        <span style={{ fontSize: 14, color: C.slate, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
+    <div className={s.panel} style={{ marginBottom: 11 }}>
+      <button onClick={() => setOpen(!open)} className={`${s.traceToggle}${open ? " " + s.traceToggleOpen : ""}`}>
+        <span className={s.traceTitle}>How total return, IRR & the cash chart are calculated</span>
+        <span className={s.traceChevron} style={{ transform: open ? "rotate(180deg)" : "none" }}>
+          ▾
+        </span>
       </button>
       {open && (
-        <div style={{ padding: "10px 13px", background: C.white }}>
+        <div className={s.traceBody}>
           {sections.map((sec, si) => (
             <div key={si} style={{ marginBottom: si < sections.length - 1 ? 14 : 2 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.heading, marginBottom: 6 }}>{sec.t}</div>
               {sec.rows.map((row, i) => (
                 <div key={i} style={{ marginBottom: 7, borderLeft: "3px solid " + (row.bold ? row.c || C.heading : "var(--c-grid)"), paddingLeft: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <div className={s.traceRowTop} style={{ gap: 8 }}>
                     <span style={{ fontSize: 12, fontWeight: row.bold ? 700 : 400, color: row.bold ? row.c || C.heading : C.slate }}>{row.l}</span>
                     <span
                       style={{ fontSize: 12, fontWeight: 700, color: row.c || C.text, flexShrink: 0, fontVariantNumeric: "tabular-nums", textAlign: "right" }}
@@ -109,12 +98,14 @@ export function ProjTrace({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S: Dea
                       {row.v}
                     </span>
                   </div>
-                  <div style={{ fontSize: 10, color: C.muted, marginTop: 1, lineHeight: 1.5 }}>{row.f}</div>
+                  <div className={s.traceRowFormula} style={{ lineHeight: 1.5 }}>
+                    {row.f}
+                  </div>
                 </div>
               ))}
             </div>
           ))}
-          <div style={{ padding: "7px 9px", background: C.goldL, borderRadius: 7, fontSize: 10, color: C.amber, border: "1px solid " + C.border }}>
+          <div className={s.goldNote}>
             Estimates only — appreciation, rent growth, vacancy and exit are assumptions you set in “Projection &amp; Growth”. Depreciation benefit is a rough
             figure; consult a CPA.
           </div>

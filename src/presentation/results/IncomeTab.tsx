@@ -1,14 +1,15 @@
-import { C } from "../theme/tokens";
 import { PLRow } from "../ui/primitives";
+import { C } from "../theme/tokens";
 import { fmtD, fmtP } from "../../domain/money";
 import type { BaseMetrics, Deal } from "../../domain/types";
 import { CalcTrace } from "./CalcTrace";
+import s from "./results.module.css";
 
 export function IncomeTab({ R, S }: { R: BaseMetrics; S: Deal }) {
   return (
     <div>
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 8 }}>
-        <div style={{ padding: "8px 13px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
+      <div className={s.panel} style={{ marginBottom: 8 }}>
+        <div className={s.panelHead} style={{ padding: "8px 13px" }}>
           P&L statement (annual)
         </div>
         <div style={{ paddingBottom: 4 }}>
@@ -45,7 +46,7 @@ export function IncomeTab({ R, S }: { R: BaseMetrics; S: Deal }) {
             note={fmtD(R.pmt) + "/mo × 12"}
           />
           <PLRow label="= Annual cashflow" value={fmtD(R.cf) + "/yr"} bold hl neg={R.cf < 0} pos={R.cf >= 0} />
-          <div style={{ padding: "5px 8px", background: C.bg, fontSize: 11, color: C.slate, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div className={s.plFooter}>
             <span>
               Monthly: <strong style={{ color: R.cf >= 0 ? C.teal : C.red }}>{fmtD(R.cf / 12)}/mo</strong>
             </span>

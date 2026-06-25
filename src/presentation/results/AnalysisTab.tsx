@@ -5,6 +5,7 @@ import { fmtD, fmtP } from "../../domain/money";
 import { whatNeedsToBeTrue, calcLoanOptions } from "../../domain/finance/scoring";
 import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
 import type { Sensitivity } from "../../domain/finance/computeSensitivity";
+import s from "./results.module.css";
 
 interface WntItem {
   label: string;
@@ -28,18 +29,8 @@ export function AnalysisTab({ SEN, R, S, Y: _Y }: { SEN: Sensitivity; R: BaseMet
   return (
     <div>
       {/* What needs to be true */}
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-        <div
-          style={{
-            padding: "8px 13px",
-            background: C.bg,
-            fontSize: 11,
-            fontWeight: 700,
-            color: C.heading,
-            borderBottom: "1px solid " + C.border,
-            letterSpacing: "0.02em",
-          }}
-        >
+      <div className={s.panel} style={{ marginBottom: 11 }}>
+        <div className={s.panelHead} style={{ padding: "8px 13px", letterSpacing: "0.02em" }}>
           What needs to be true
         </div>
         <div style={{ padding: "12px 13px", background: C.white }}>
@@ -58,7 +49,7 @@ export function AnalysisTab({ SEN, R, S, Y: _Y }: { SEN: Sensitivity; R: BaseMet
               />
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 9 }}>
+          <div className={s.cols3} style={{ gap: 9 }}>
             {(
               [
                 {
@@ -104,12 +95,12 @@ export function AnalysisTab({ SEN, R, S, Y: _Y }: { SEN: Sensitivity; R: BaseMet
       </div>
 
       {/* Sensitivity table */}
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-        <div style={{ padding: "7px 12px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
+      <div className={s.panel} style={{ marginBottom: 11 }}>
+        <div className={s.panelHead} style={{ padding: "7px 12px" }}>
           Monthly CF — price vs rate
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+        <div className={s.scrollX}>
+          <table className={s.table} style={{ fontSize: 11 }}>
             <thead>
               <tr style={{ background: C.bg }}>
                 <th style={{ padding: "5px 10px", fontWeight: 600, color: C.slate, textAlign: "left", borderBottom: "1px solid " + C.border }}>Price</th>
@@ -173,8 +164,8 @@ export function AnalysisTab({ SEN, R, S, Y: _Y }: { SEN: Sensitivity; R: BaseMet
       </div>
 
       {/* Rent sensitivity */}
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-        <div style={{ padding: "7px 12px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
+      <div className={s.panel} style={{ marginBottom: 11 }}>
+        <div className={s.panelHead} style={{ padding: "7px 12px" }}>
           CF sensitivity — rent/unit
         </div>
         <div style={{ padding: "8px 12px", display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -202,12 +193,12 @@ export function AnalysisTab({ SEN, R, S, Y: _Y }: { SEN: Sensitivity; R: BaseMet
       </div>
 
       {/* Loan comparison */}
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-        <div style={{ padding: "7px 12px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
+      <div className={s.panel} style={{ marginBottom: 11 }}>
+        <div className={s.panelHead} style={{ padding: "7px 12px" }}>
           Loan type comparison
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+        <div className={s.scrollX}>
+          <table className={s.table} style={{ fontSize: 11 }}>
             <thead>
               <tr style={{ background: C.bg }}>
                 {["Type", "Rate", "Payment/mo", "CF/mo", "Notes"].map((h) => (

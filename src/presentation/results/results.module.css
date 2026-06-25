@@ -1,0 +1,125 @@
+/* Results tabs. Static chrome (panels, grid templates, table base, trace rows,
+   metric cards) here; data-driven colors and per-instance spacing stay inline. */
+
+.panel {
+  border: 1px solid var(--c-border);
+  border-radius: 11px;
+  overflow: hidden;
+}
+.panelRad {
+  border-radius: var(--c-rad);
+}
+.panelHead {
+  background: var(--c-bg);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-heading);
+  border-bottom: 1px solid var(--c-border);
+}
+.panelHeadRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.cols2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.cols3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cols4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.scrollX {
+  overflow-x: auto;
+}
+
+/* Step-by-step calculation traces (CalcTrace / ProjTrace) */
+.traceToggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 13px;
+  background: var(--c-bg);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.traceToggleOpen {
+  background: var(--c-hl);
+  border-bottom: 1px solid var(--c-border);
+}
+.traceTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-heading);
+}
+.traceChevron {
+  font-size: 14px;
+  color: var(--c-slate);
+  transition: transform 0.2s;
+}
+.traceBody {
+  padding: 10px 13px;
+  background: var(--c-white);
+}
+.traceRowTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.traceRowFormula {
+  font-size: 10px;
+  color: var(--c-muted);
+  margin-top: 1px;
+}
+
+.goldNote {
+  padding: 7px 9px;
+  background: var(--c-goldL);
+  border-radius: 7px;
+  font-size: 10px;
+  color: var(--c-amber);
+  border: 1px solid var(--c-border);
+}
+
+/* Metric cards (ProjectionTab top tiles) */
+.metricCard {
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-rad);
+  padding: 11px 13px;
+}
+.metricLabel {
+  font-size: 9px;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  color: var(--c-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.metricSub {
+  font-size: 10px;
+  color: var(--c-muted);
+}
+
+/* Income P&L footer summary */
+.plFooter {
+  padding: 5px 8px;
+  background: var(--c-bg);
+  font-size: 11px;
+  color: var(--c-slate);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
