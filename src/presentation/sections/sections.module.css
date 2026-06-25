@@ -163,6 +163,98 @@
   color: var(--c-gold);
 }
 
+/* Expenses */
+.subGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px;
+  margin-bottom: 13px;
+}
+.classHeadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.classBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--c-border);
+}
+.classRow {
+  display: flex;
+  gap: 5px;
+}
+.classBtn {
+  flex: 1;
+  padding: 5px 4px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.classBtnLabel {
+  font-size: 10px;
+  font-weight: 700;
+}
+.classBtnHint {
+  font-size: 9px;
+  opacity: 0.7;
+}
+.modeFieldHead {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.modeFieldLabel {
+  font-size: 10px;
+  color: var(--c-slate);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.ratioLabelRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.ratioValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-heading);
+}
+.range {
+  width: 100%;
+  cursor: pointer;
+  accent-color: var(--c-navy);
+}
+.ratioHints {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--c-slate);
+  margin-top: 2px;
+}
+.quickNote {
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: var(--c-goldL);
+  border-radius: 7px;
+  border: 1px solid var(--c-border);
+  font-size: 10px;
+  color: var(--c-amber);
+}
+.periodSelect {
+  padding: 6px 7px;
+  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-white);
+}
+
 /* Quick fill */
 .primaryBtn {
   padding: 6px 12px;
