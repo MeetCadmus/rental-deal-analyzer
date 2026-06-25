@@ -1,0 +1,140 @@
+/* Shared UI primitives. Static styling lives here; dynamic values (score colors,
+   bar widths, tooltip position) stay as inline styles on the elements. */
+
+.pill {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.barTrack {
+  height: 4px;
+  background: var(--c-grid);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.barFill {
+  height: 100%;
+  transition: width 0.4s;
+}
+
+.smbtn {
+  padding: 2px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
+  color: var(--c-slate);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.smbtn:hover {
+  border-color: var(--c-navy);
+  color: var(--c-heading);
+}
+.smbtn:focus-visible {
+  outline: 2px solid var(--c-ring);
+  outline-offset: 1px;
+}
+.smbtnActive {
+  border-color: var(--c-navy);
+  background: var(--c-navy);
+  color: #fff;
+}
+.smbtnActive:hover {
+  color: #fff;
+}
+
+.secLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-heading);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+.secLabelRight {
+  font-weight: 400;
+  color: var(--c-slate);
+  text-transform: none;
+  font-size: 11px;
+}
+
+.plRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--c-rowline);
+  font-size: 12px;
+}
+.plRowIndent {
+  padding-left: 20px;
+}
+.plRowHl {
+  background: var(--c-hl);
+}
+.plRowBold {
+  font-weight: 600;
+}
+.plNote {
+  font-size: 10px;
+  color: var(--c-muted);
+  margin-left: 5px;
+}
+
+.mbox {
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.mboxLabel {
+  font-size: 10px;
+  color: var(--c-slate);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+}
+.mboxValue {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.mboxSub {
+  font-size: 10px;
+  color: var(--c-muted);
+  margin-top: 2px;
+}
+
+.infoWrap {
+  position: relative;
+  display: inline-block;
+  margin-left: 4px;
+}
+.infoTrigger {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  user-select: none;
+  padding: 0 2px;
+}
+.infoTrigger:focus-visible {
+  outline: 2px solid var(--c-ring);
+  outline-offset: 2px;
+  border-radius: 3px;
+}

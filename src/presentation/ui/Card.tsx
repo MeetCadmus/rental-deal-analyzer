@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { C } from "../theme/tokens";
 import { Icon } from "./Icon";
 import { loadCardState, saveCardState } from "../../infrastructure/storage/preferences";
+import s from "./Card.module.css";
 
 interface CardProps {
   title: ReactNode;
@@ -32,33 +33,28 @@ export function Card({ title, icon, children, right, summary, collapsible, defau
       return n;
     });
   return (
-    <div style={{ border: "1px solid " + C.border, borderRadius: "var(--c-rad)", overflow: "hidden", marginBottom: 12, background: C.white }}>
+    <div className={s.card}>
       <div
-        onClick={collapsible ? toggle : undefined}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 9,
-          padding: "10px 14px",
-          background: "var(--c-head)",
-          borderBottom: isOpen ? "1px solid " + C.border : "none",
-          cursor: collapsible ? "pointer" : "default",
-        }}
+        {...(collapsible
+          ? {
+              role: "button",
+              tabIndex: 0,
+              "aria-expanded": isOpen,
+              onClick: toggle,
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggle();
+                }
+              },
+            }
+          : {})}
+        className={`${s.head}${isOpen ? " " + s.headOpen : ""}${collapsible ? " " + s.clickable : ""}`}
       >
         {icon && <Icon name={icon} size={15} style={{ color: C.gold }} />}
-        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--c-headfg)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{title}</span>
+        <span className={s.title}>{title}</span>
         {summary != null && (
-          <span
-            style={{
-              marginLeft: "auto",
-              fontSize: 11.5,
-              fontWeight: 600,
-              color: C.gold,
-              whiteSpace: "nowrap",
-              fontVariantNumeric: "tabular-nums",
-              letterSpacing: "0.02em",
-            }}
-          >
+          <span className={s.summary} style={{ marginLeft: "auto" }}>
             {summary}
           </span>
         )}
@@ -68,22 +64,12 @@ export function Card({ title, icon, children, right, summary, collapsible, defau
           </div>
         )}
         {collapsible && (
-          <span
-            style={{
-              marginLeft: summary != null || right ? 10 : "auto",
-              flexShrink: 0,
-              fontSize: 11,
-              color: "var(--c-headfg)",
-              opacity: 0.7,
-              transform: isOpen ? "rotate(180deg)" : "none",
-              transition: "transform .2s",
-            }}
-          >
+          <span className={`${s.chev}${isOpen ? " " + s.chevOpen : ""}`} style={{ marginLeft: summary != null || right ? 10 : "auto" }}>
             ▾
           </span>
         )}
       </div>
-      {isOpen && <div style={{ padding: "15px", background: C.white }}>{children}</div>}
+      {isOpen && <div className={s.body}>{children}</div>}
     </div>
   );
 }
