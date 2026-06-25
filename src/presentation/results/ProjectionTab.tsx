@@ -4,6 +4,7 @@ import { CashflowChart, EquityChart, ReturnDonut } from "../charts/charts";
 import { fmtD, fmtP } from "../../domain/money";
 import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
 import { ProjTrace } from "./ProjTrace";
+import s from "./results.module.css";
 
 export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S: Deal }) {
   const hold = S.projection.holdYears || 5;
@@ -29,52 +30,37 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
   ];
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 11 }}>
-        <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: "var(--c-rad)", padding: "11px 13px" }}>
-          <div
-            style={{ fontSize: 9, marginBottom: 3, display: "flex", alignItems: "center", color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}
-          >
+      <div className={s.cols2} style={{ gap: 8, marginBottom: 11 }}>
+        <div className={s.metricCard}>
+          <div className={s.metricLabel}>
             <span>Total return ({hold}yr)</span>
             <Info lines={totRetTip} />
           </div>
           <div style={{ fontSize: 19, fontWeight: 700, color: Y.totRet >= 0 ? C.heading : C.red, fontVariantNumeric: "tabular-nums" }}>{fmtD(Y.totRet)}</div>
-          <div style={{ fontSize: 10, color: C.muted }}>
+          <div className={s.metricSub}>
             {fmtP((Y.totRet / (R.cashIn || 1)) * 100)} on cash in · {((R.cashIn + Y.totRet) / (R.cashIn || 1)).toFixed(2)}× equity multiple
           </div>
         </div>
-        <div style={{ background: C.white, border: "1px solid " + C.border, borderRadius: "var(--c-rad)", padding: "11px 13px" }}>
-          <div
-            style={{ fontSize: 9, marginBottom: 3, display: "flex", alignItems: "center", color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}
-          >
+        <div className={s.metricCard}>
+          <div className={s.metricLabel}>
             <span>Est. IRR</span>
             <Info lines={irrTip} />
           </div>
           <div style={{ fontSize: 19, fontWeight: 700, color: Y.irr >= 15 ? C.tealS : Y.irr >= 10 ? C.amberS : C.redS, fontVariantNumeric: "tabular-nums" }}>
             {fmtP(Y.irr)}
           </div>
-          <div style={{ fontSize: 10, color: C.muted }}>{Y.irr >= 15 ? "Excellent" : Y.irr >= 10 ? "Good" : "Below target"}</div>
+          <div className={s.metricSub}>{Y.irr >= 15 ? "Excellent" : Y.irr >= 10 ? "Good" : "Below target"}</div>
         </div>
       </div>
       <CashflowChart yearly={Y.yearly} cashIn={R.cashIn} />
       <EquityChart yearly={Y.yearly} loan={R.loan} />
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-        <div
-          style={{
-            padding: "7px 12px",
-            background: C.bg,
-            fontSize: 11,
-            fontWeight: 700,
-            color: C.heading,
-            borderBottom: "1px solid " + C.border,
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
+      <div className={s.panel} style={{ marginBottom: 11 }}>
+        <div className={`${s.panelHead} ${s.panelHeadRow}`} style={{ padding: "7px 12px" }}>
           <span>Year-by-year</span>
           {hold > 12 && <span style={{ fontWeight: 400, color: C.muted }}>scroll ↓ · {hold} yrs</span>}
         </div>
-        <div className={"ytable-scroll" + (hold > 12 ? " cap" : "")} style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+        <div className={"ytable-scroll" + (hold > 12 ? " cap" : "") + " " + s.scrollX}>
+          <table className={s.table} style={{ fontSize: 11 }}>
             <thead>
               <tr>
                 {["Yr", "Rent/unit", "NOI/yr", "CF/yr", "CF/mo", "Equity", "Value"].map((h) => (
@@ -114,8 +100,8 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
           </table>
         </div>
       </div>
-      <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden" }}>
-        <div style={{ padding: "7px 12px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
+      <div className={s.panel}>
+        <div className={s.panelHead} style={{ padding: "7px 12px" }}>
           Return components
         </div>
         <div style={{ padding: "12px" }}>
