@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { C } from "../theme/tokens";
 import { fmtGroup } from "../../domain/money";
 import { useGrouped } from "./useGrouped";
@@ -20,14 +20,20 @@ export function MoneyInput({
   hint?: ReactNode;
 }) {
   const g = useGrouped(value, onChange, false, (v) => (v > 0 ? fmtGroup(v, false) : ""));
+  const id = useId();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {label && <label style={{ fontSize: small ? 10 : 11, color: C.slate, fontWeight: 600 }}>{label}</label>}
+      {label && (
+        <label htmlFor={id} style={{ fontSize: small ? 10 : 11, color: C.slate, fontWeight: 600 }}>
+          {label}
+        </label>
+      )}
       <div style={{ display: "flex", alignItems: "center", border: "1px solid " + C.border, borderRadius: 7, overflow: "hidden", background: C.white }}>
         <span style={{ padding: "6px 7px 6px 9px", fontSize: 11, color: C.slate, background: C.bg, borderRight: "1px solid " + C.border, flexShrink: 0 }}>
           $
         </span>
         <input
+          id={id}
           ref={g.ref}
           type="text"
           inputMode="numeric"
@@ -111,6 +117,7 @@ interface FieldProps {
 }
 export function Field({ label, prefix, suffix, value, onChange, min, max, sub, disabled, xs, placeholder, tip }: FieldProps) {
   const g = useGrouped(value, onChange, true, (v) => (v === null || v === undefined || v === 0 ? "" : fmtGroup(v, true)));
+  const id = useId();
   const onBlur = () => {
     g.clearBuf();
     const n = value;
@@ -120,7 +127,7 @@ export function Field({ label, prefix, suffix, value, onChange, min, max, sub, d
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {label && (
-        <label style={{ fontSize: xs ? 10 : 11, color: C.slate, fontWeight: 600, display: "flex", alignItems: "center" }}>
+        <label htmlFor={id} style={{ fontSize: xs ? 10 : 11, color: C.slate, fontWeight: 600, display: "flex", alignItems: "center" }}>
           {label}
           {tip && <Info lines={tip} />}
         </label>
@@ -141,6 +148,7 @@ export function Field({ label, prefix, suffix, value, onChange, min, max, sub, d
           </span>
         )}
         <input
+          id={id}
           ref={g.ref}
           type="text"
           inputMode="decimal"

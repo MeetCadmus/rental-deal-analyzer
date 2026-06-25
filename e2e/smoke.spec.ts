@@ -20,6 +20,15 @@ test("app loads, shows results, and persists an edit across reload", async ({ pa
   await expect(page.getByPlaceholder(/Maple St/)).toHaveValue("999 E2E Ave");
 });
 
+test("toggles are keyboard-accessible Radix switches", async ({ page }) => {
+  await page.goto(APP);
+  const sw = page.getByRole("switch", { name: /Show unit details/ });
+  await expect(sw).toHaveAttribute("aria-checked", "false");
+  await sw.focus();
+  await page.keyboard.press("Space");
+  await expect(sw).toHaveAttribute("aria-checked", "true");
+});
+
 test("a new deal can be created from the header", async ({ page }) => {
   await page.goto(APP);
   const switcher = page.getByTitle(/Browse, search & switch deals/);

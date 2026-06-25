@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { C } from "../theme/tokens";
 
 // ── Listing link: compact Open + Edit (input only while editing) ──
 function ListingLink({ url, onChange }: { url: string; onChange: (v: string) => void }) {
   const [edit, setEdit] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const valid = /^https?:\/\//i.test(url || "");
   const b = { fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } as const;
+  // Focus the URL field when the user reveals it (replaces autoFocus, which is a11y-flagged).
+  useEffect(() => {
+    if (edit) inputRef.current?.focus();
+  }, [edit]);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <label style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Listing</label>
+        <span style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Listing</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           {valid && (
             <a
@@ -28,7 +33,7 @@ function ListingLink({ url, onChange }: { url: string; onChange: (v: string) => 
       </div>
       {edit && (
         <input
-          autoFocus
+          ref={inputRef}
           value={url || ""}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {

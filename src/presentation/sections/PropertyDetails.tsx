@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useWorkspace } from "../../application/workspaceStore";
 import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
@@ -7,12 +8,17 @@ import { ListingLink } from "./ListingLink";
 export function PropertyDetails() {
   const S = useWorkspace((s) => s.state);
   const set = useWorkspace((s) => s.set);
+  const addrId = useId();
+  const notesId = useId();
   return (
     <Card title="Property details" icon="pin" collapsible defaultOpen storeKey="prop">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <label style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Address / MLS #</label>
+          <label htmlFor={addrId} style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>
+            Address / MLS #
+          </label>
           <input
+            id={addrId}
             value={S.address || ""}
             onChange={(e) => set("address", e.target.value)}
             placeholder="123 Maple St, Atlanta, GA 30308"
@@ -29,8 +35,11 @@ export function PropertyDetails() {
         </div>
         <ListingLink url={S.listingUrl} onChange={(v) => set("listingUrl", v)} />
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <label style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>Notes / assumptions</label>
+          <label htmlFor={notesId} style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>
+            Notes / assumptions
+          </label>
           <textarea
+            id={notesId}
             value={S.notes || ""}
             onChange={(e) => set("notes", e.target.value)}
             placeholder="Seller motivated, rents below market, new roof 2022..."
