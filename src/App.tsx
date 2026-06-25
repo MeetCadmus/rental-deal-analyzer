@@ -13,7 +13,6 @@ import { ListingLink } from "./presentation/sections/ListingLink";
 import { ClosingCosts } from "./presentation/sections/ClosingCosts";
 import { Expenses } from "./presentation/sections/Expenses";
 import { AreaInsights } from "./presentation/sections/AreaInsights";
-import { ComparablesCard } from "./presentation/sections/ComparablesCard";
 import { OverviewTab } from "./presentation/results/OverviewTab";
 import { IncomeTab } from "./presentation/results/IncomeTab";
 import { ProjectionTab } from "./presentation/results/ProjectionTab";
@@ -212,7 +211,6 @@ export default function App() {
           </Card>
 
           <AreaInsights data={S.insights} onChange={w.setInsights} />
-          <ComparablesCard comps={S.comparables || []} setComps={w.setComps} currentR={R} />
         </div>
 
         {/* RIGHT: Results */}
