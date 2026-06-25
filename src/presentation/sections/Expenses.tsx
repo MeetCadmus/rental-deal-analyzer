@@ -6,6 +6,7 @@ import { fmtD } from "../../domain/money";
 import { calcExp } from "../../domain/finance/expenses";
 import { CLASS_PRESETS } from "../../domain/defaults";
 import type { Expenses as ExpensesT } from "../../domain/types";
+import s from "./sections.module.css";
 
 interface ExpensesProps {
   ex: ExpensesT;
@@ -73,42 +74,24 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
     >
       {/* Property class preset (a starting point — clears to "Custom" once edited) */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+        <div className={s.classHeadRow}>
           <span style={{ fontSize: 10, fontWeight: 700, color: C.slate }}>Start from a property class</span>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              padding: "1px 8px",
-              borderRadius: 10,
-              background: activeCls ? C.tealL : C.bg,
-              color: activeCls ? C.teal : C.muted,
-              border: "1px solid " + C.border,
-            }}
-          >
+          <span className={s.classBadge} style={{ background: activeCls ? C.tealL : C.bg, color: activeCls ? C.teal : C.muted }}>
             {activeCls ? CLASS_PRESETS[activeCls].label : "Custom"}
           </span>
         </div>
-        <div style={{ display: "flex", gap: 5 }}>
+        <div className={s.classRow}>
           {Object.entries(CLASS_PRESETS).map(([cls, p]) => {
             const on = activeCls === cls;
             return (
               <button
                 key={cls}
                 onClick={() => applyClass(cls)}
-                style={{
-                  flex: 1,
-                  padding: "5px 4px",
-                  borderRadius: 7,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  border: "1.5px solid " + (on ? C.navy : C.border),
-                  background: on ? C.navy : C.white,
-                  color: on ? "#fff" : C.slate,
-                }}
+                className={s.classBtn}
+                style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white, color: on ? "#fff" : C.slate }}
               >
-                <div style={{ fontSize: 10, fontWeight: 700 }}>{p.label}</div>
-                <div style={{ fontSize: 9, opacity: 0.7 }}>{p.hint}</div>
+                <div className={s.classBtnLabel}>{p.label}</div>
+                <div className={s.classBtnHint}>{p.hint}</div>
               </button>
             );
           })}
@@ -121,7 +104,7 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
             : "Custom values — tap a class to prefill " + (ex.mode === "quick" ? "its typical ratio." : "typical expense fields.")}
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
+      <div className={s.modeRow}>
         {(
           [
             ["quick", "Quick %"],
@@ -133,17 +116,8 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
             <button
               key={id}
               onClick={() => sf("mode", id)}
-              style={{
-                padding: "5px 12px",
-                borderRadius: 7,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 12,
-                fontWeight: 700,
-                border: "1.5px solid " + (on ? C.navy : C.border),
-                background: on ? C.navy : C.white,
-                color: on ? "#fff" : C.slate,
-              }}
+              className={s.segBtn}
+              style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white, color: on ? "#fff" : C.slate }}
             >
               {lbl}
             </button>
@@ -167,31 +141,19 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
       </div>
       {ex.mode === "quick" && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+          <div className={s.ratioLabelRow}>
             <label style={{ fontSize: 11, fontWeight: 600, color: C.slate }}>Expense ratio (% of EGI/yr)</label>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.heading }}>
+            <span className={s.ratioValue}>
               {ex.ratio || 45}% = {fmtD((egi * (ex.ratio || 45)) / 100)}/yr
             </span>
           </div>
-          <input
-            type="range"
-            min={30}
-            max={60}
-            step={1}
-            value={ex.ratio || 45}
-            onChange={(e) => sf("ratio", parseInt(e.target.value))}
-            style={{ width: "100%", accentColor: C.navy, cursor: "pointer" }}
-          />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.slate, marginTop: 2 }}>
+          <input type="range" min={30} max={60} step={1} value={ex.ratio || 45} onChange={(e) => sf("ratio", parseInt(e.target.value))} className={s.range} />
+          <div className={s.ratioHints}>
             <span>30% new/stable</span>
             <span>45% typical</span>
             <span>60% old/C-class</span>
           </div>
-          <div
-            style={{ marginTop: 8, padding: "7px 10px", background: C.goldL, borderRadius: 7, border: "1px solid " + C.border, fontSize: 10, color: C.amber }}
-          >
-            Covers all costs: taxes, insurance, management, repairs, CapEx, utilities. Switch to Itemized for full control.
-          </div>
+          <div className={s.quickNote}>Covers all costs: taxes, insurance, management, repairs, CapEx, utilities. Switch to Itemized for full control.</div>
         </div>
       )}
       {ex.mode === "detailed" &&
@@ -202,7 +164,6 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
           const taxIns = items.taxes + items.insurance,
             maintRes = items.maint + items.capex,
             other = items.util + items.landscape + items.acctg + items.misc + items.custom;
-          const sub2 = { display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 9, marginBottom: 13 } as const;
           return (
             <div>
               <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>
@@ -210,10 +171,10 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
               </div>
 
               <SecLabel text="Taxes & insurance" right={"= " + fmtD(taxIns) + "/yr"} />
-              <div style={sub2}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <label style={{ fontSize: 10, color: C.slate, fontWeight: 600, display: "flex", alignItems: "center" }}>
+              <div className={s.subGrid}>
+                <div className={s.col}>
+                  <div className={s.modeFieldHead}>
+                    <label className={s.modeFieldLabel}>
                       Property taxes
                       <Info lines={["Annual property tax bill.", "· GA est ≈ 1.0–1.5% of price/yr", "· Check the county assessor for the real figure"]} />
                     </label>
@@ -259,7 +220,7 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
               </div>
 
               <SecLabel text="Management" right={"= " + fmtD(items.mgmt) + "/yr"} />
-              <div style={sub2}>
+              <div className={s.subGrid}>
                 <Field
                   label="Management fee"
                   suffix="% of rent"
@@ -280,10 +241,10 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
               </div>
 
               <SecLabel text="Maintenance & reserves" right={"= " + fmtD(maintRes) + "/yr"} />
-              <div style={sub2}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <label style={{ fontSize: 10, color: C.slate, fontWeight: 600, display: "flex", alignItems: "center" }}>
+              <div className={s.subGrid}>
+                <div className={s.col}>
+                  <div className={s.modeFieldHead}>
+                    <label className={s.modeFieldLabel}>
                       Maintenance
                       <Info
                         lines={[
@@ -321,9 +282,9 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
                     />
                   )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <label style={{ fontSize: 10, color: C.slate, fontWeight: 600, display: "flex", alignItems: "center" }}>
+                <div className={s.col}>
+                  <div className={s.modeFieldHead}>
+                    <label className={s.modeFieldLabel}>
                       CapEx reserve
                       <Info
                         lines={[
@@ -355,7 +316,7 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
               </div>
 
               <SecLabel text="Other operating" right={"= " + fmtD(other - items.custom) + "/yr"} />
-              <div style={sub2}>
+              <div className={s.subGrid}>
                 <Field
                   label="Utilities"
                   prefix="$"
@@ -417,95 +378,41 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
                   className="del-row-ex"
                   style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 92px 86px 26px", gap: 6, marginBottom: 6, alignItems: "end" }}
                 >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    {i === 0 && <label style={{ fontSize: 10, color: C.slate, fontWeight: 600 }}>Name</label>}
+                  <div className={s.fieldCol}>
+                    {i === 0 && <label className={s.miniLabel}>Name</label>}
                     <input
                       value={e.name || ""}
                       onChange={(ev) => setCE(i, "name", ev.target.value)}
                       placeholder="e.g. pest control"
-                      style={{
-                        padding: "6px 8px",
-                        fontSize: 12,
-                        border: "1px solid " + C.border,
-                        borderRadius: 7,
-                        fontFamily: "inherit",
-                        color: C.text,
-                        outline: "none",
-                      }}
+                      className={s.customNameInput}
                     />
                   </div>
                   <Field label={i === 0 ? "Amount" : undefined} prefix="$" value={e.amt || 0} onChange={(x) => setCE(i, "amt", x)} min={0} step={10} xs />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    {i === 0 && <label style={{ fontSize: 10, color: C.slate, fontWeight: 600 }}>Period</label>}
-                    <select
-                      value={e.period || "annual"}
-                      onChange={(ev) => setCE(i, "period", ev.target.value)}
-                      style={{
-                        padding: "6px 7px",
-                        fontSize: 12,
-                        border: "1px solid " + C.border,
-                        borderRadius: 7,
-                        fontFamily: "inherit",
-                        color: C.text,
-                        background: C.white,
-                      }}
-                    >
+                  <div className={s.fieldCol}>
+                    {i === 0 && <label className={s.miniLabel}>Period</label>}
+                    <select value={e.period || "annual"} onChange={(ev) => setCE(i, "period", ev.target.value)} className={s.periodSelect}>
                       <option value="annual">/yr</option>
                       <option value="monthly">/mo</option>
                     </select>
                   </div>
-                  <button
-                    className="tap-sm"
-                    aria-label="Remove expense"
-                    onClick={() => remCE(i)}
-                    style={{
-                      padding: "6px",
-                      background: C.redL,
-                      border: "1px solid " + C.border,
-                      borderRadius: 7,
-                      cursor: "pointer",
-                      fontSize: 12,
-                      color: C.red,
-                      marginTop: i === 0 ? 17 : 0,
-                    }}
-                  >
+                  <button className={`tap-sm ${s.delBtn}`} aria-label="Remove expense" onClick={() => remCE(i)} style={{ marginTop: i === 0 ? 17 : 0 }}>
                     ✕
                   </button>
                 </div>
               ))}
-              <button
-                onClick={addCE}
-                style={{
-                  fontSize: 11,
-                  padding: "5px 11px",
-                  borderRadius: 7,
-                  border: "1px dashed " + C.border,
-                  background: C.white,
-                  cursor: "pointer",
-                  color: C.slate,
-                  fontFamily: "inherit",
-                }}
-              >
+              <button onClick={addCE} className={s.addItemBtn}>
                 + Add expense
               </button>
 
-              <div
-                style={{
-                  background: "linear-gradient(90deg," + C.navy + "," + C.navyM + ")",
-                  borderRadius: 9,
-                  padding: "10px 14px",
-                  color: "#fff",
-                  marginTop: 13,
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11, opacity: 0.75 }}>
+              <div className={s.totalBox} style={{ marginTop: 13 }}>
+                <div className={s.totalBoxHead} style={{ opacity: 0.75 }}>
                   <span>Total operating expenses</span>
                   <span>
                     {egi > 0 ? ((totExp / egi) * 100).toFixed(0) : 0}% of EGI · {fmtD(totExp / u / 12)}/unit/mo
                   </span>
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: C.gold, marginBottom: 7 }}>{fmtD(totExp)}/yr</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 5 }}>
+                <div className={s.totalBoxValue}>{fmtD(totExp)}/yr</div>
+                <div className={s.totalBoxGrid}>
                   {(
                     [
                       ["Tax & ins", taxIns],
@@ -514,9 +421,9 @@ export function Expenses({ ex, setEx, units, egi, price, collapsible, defaultOpe
                       ["Other", other],
                     ] as const
                   ).map(([l2, v2]) => (
-                    <div key={l2} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 6, padding: "4px 7px" }}>
-                      <div style={{ fontSize: 9, opacity: 0.65 }}>{l2}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: C.gold }}>{fmtD(v2)}</div>
+                    <div key={l2} className={s.totalTile}>
+                      <div className={s.totalTileLabel}>{l2}</div>
+                      <div className={s.totalTileValue}>{fmtD(v2)}</div>
                     </div>
                   ))}
                 </div>
