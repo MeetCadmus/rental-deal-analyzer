@@ -2,8 +2,10 @@ import { C } from "./presentation/theme/tokens";
 import { fmtD, fmtP } from "./domain/money";
 import { dealTitle } from "./domain/deal";
 import { EXAMPLES } from "./domain/examples";
-import { useDealWorkspace } from "./application/useDealWorkspace";
-import { useTheme, useToast, useViewTab } from "./application/uiState";
+import { useWorkspace, cloudCfg } from "./application/workspaceStore";
+import { useWorkspaceEffects } from "./application/useWorkspaceEffects";
+import { useMetrics } from "./application/useMetrics";
+import { useTheme, useViewTab } from "./application/uiState";
 import { Card } from "./presentation/ui/Card";
 import { MoneyInput, RentInput, Field } from "./presentation/ui/inputs";
 import { Tog, SecLabel } from "./presentation/ui/primitives";
@@ -24,11 +26,14 @@ import { ScenarioCompare } from "./presentation/deals/ScenarioCompare";
 const TABS: [string, string][] = [["overview", "Overview"], ["income", "Income"], ["projection", "Projection"], ["analysis", "Analysis"]];
 
 export default function App() {
+  useWorkspaceEffects();
   const { dark, setDark } = useTheme();
-  const { toast, setToast } = useToast();
   const { tab, setTab } = useViewTab();
-  const w = useDealWorkspace(setToast);
+  const store = useWorkspace();
+  const metrics = useMetrics();
+  const w = { ...store, ...metrics, S: store.state, cloudCfg };
   const { S, R, Y, SEN, score, totalRent, numU } = w;
+  const toast = store.toast, setToast = store.setToast;
   const hb = { fontSize: 11, fontWeight: 500, padding: "7px 13px", borderRadius: "var(--c-rad)", border: "1px solid var(--c-headborder)", background: "transparent", color: "var(--c-headfg)", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", letterSpacing: "0.02em" } as const;
 
   return (
