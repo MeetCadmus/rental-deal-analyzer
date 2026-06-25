@@ -6,6 +6,7 @@ import { SecLabel } from "../ui/primitives";
 import { num } from "../../domain/money";
 import { parseListing } from "../../infrastructure/listing";
 import { buildAIPrompt, parseAIResult } from "../../infrastructure/ai";
+import { validateAIResult } from "../../infrastructure/validation";
 import type { Deal } from "../../domain/types";
 
 interface Msg { t: string; e?: number; prompt?: string }
@@ -28,7 +29,13 @@ function QuickFill({ state, onListing, onAI, onSource }: { state: Deal; onListin
     const txt = buildAIPrompt(merged, lt);
     try { navigator.clipboard.writeText(txt).then(() => flash("copy"), () => setMsg({ t: "Select the prompt below and copy it manually.", prompt: txt })); } catch (e) { setMsg({ t: "Copy not supported here — select & copy the prompt below:", prompt: txt }); }
   };
-  const doAI = () => { const o = parseAIResult(at); if (!o) { setMsg({ e: 1, t: "Couldn't read JSON — paste the AI's JSON answer." }); return; } onAI(o); flash("ai"); };
+  const doAI = () => {
+    const o = parseAIResult(at);
+    if (!o) { setMsg({ e: 1, t: "Couldn't read JSON — paste the AI's JSON answer." }); return; }
+    const v = validateAIResult(o);
+    if (!v.ok) { setMsg({ e: 1, t: v.error }); return; }
+    onAI(v.data); flash("ai");
+  };
   return <Card title="Auto-fill — paste a listing & round-trip AI" icon="bolt" collapsible defaultOpen={false} storeKey="quickfill">
     <div>
       <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Paste a Zillow link to grab the address, then let any chat AI estimate rents, taxes &amp; expenses. Tip: hit <strong>＋ New deal</strong> first to keep this as its own saved property.</div>
