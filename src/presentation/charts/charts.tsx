@@ -2,6 +2,7 @@ import { useState } from "react";
 import { C } from "../theme/tokens";
 import { fmtD } from "../../domain/money";
 import type { YearRow } from "../../domain/types";
+import s from "./charts.module.css";
 
 const _pol = (cx: number, cy: number, r: number, a: number): [number, number] => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
 function _donutArc(cx: number, cy: number, R: number, r: number, a1: number, a2: number) {
@@ -14,13 +15,11 @@ function _donutArc(cx: number, cy: number, R: number, r: number, a1: number, a2:
 }
 export function ChartBox({ title, children, note }: { title: React.ReactNode; children: React.ReactNode; note?: React.ReactNode }) {
   return (
-    <div style={{ border: "1px solid " + C.border, borderRadius: 11, overflow: "hidden", marginBottom: 11 }}>
-      <div style={{ padding: "7px 12px", background: C.bg, fontSize: 11, fontWeight: 700, color: C.heading, borderBottom: "1px solid " + C.border }}>
-        {title}
-      </div>
-      <div style={{ padding: "12px 13px", background: C.white }}>
+    <div className={s.box}>
+      <div className={s.boxTitle}>{title}</div>
+      <div className={s.boxBody}>
         {children}
-        {note && <div style={{ fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>{note}</div>}
+        {note && <div className={s.boxNote}>{note}</div>}
       </div>
     </div>
   );
@@ -64,7 +63,7 @@ export function CashflowChart({ yearly, cashIn }: { yearly: YearRow[]; cashIn: n
           : "Does not recover initial investment from cash flow alone within the hold period — most of the return is at sale."
       }
     >
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} onMouseLeave={() => setHi(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className={s.svg} onMouseLeave={() => setHi(null)}>
         {ticks.map((v, i) => (
           <g key={i}>
             <line x1={pad.l} y1={py(v)} x2={W - pad.r} y2={py(v)} strokeWidth="1" style={{ stroke: "var(--c-grid)" }} />
@@ -144,7 +143,7 @@ export function EquityChart({ yearly, loan }: { yearly: YearRow[]; loan: number 
       title="Equity vs. loan balance"
       note="Each bar = property value, split into your equity (gold) and remaining loan balance (navy). Equity grows from appreciation + principal paydown."
     >
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} onMouseLeave={() => setHi(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className={s.svg} onMouseLeave={() => setHi(null)}>
         {ticks.map((v, i) => (
           <g key={i}>
             <line x1={pad.l} y1={py(v)} x2={W - pad.r} y2={py(v)} strokeWidth="1" style={{ stroke: "var(--c-grid)" }} />
@@ -217,13 +216,13 @@ export function EquityChart({ yearly, loan }: { yearly: YearRow[]; loan: number 
             );
           })()}
       </svg>
-      <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10, color: C.slate }}>
+      <div className={s.legend}>
         <span>
-          <span style={{ display: "inline-block", width: 9, height: 9, background: C.gold, borderRadius: 2, marginRight: 4 }} />
+          <span className={s.swatch} style={{ background: C.gold }} />
           Equity
         </span>
         <span>
-          <span style={{ display: "inline-block", width: 9, height: 9, background: C.navy, borderRadius: 2, marginRight: 4 }} />
+          <span className={s.swatch} style={{ background: C.navy }} />
           Loan balance
         </span>
       </div>
@@ -243,8 +242,8 @@ export function ReturnDonut({ segs }: { segs: { label: string; value: number; co
   });
   const grand = segs.reduce((s, x) => s + x.value, 0);
   return (
-    <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-      <svg viewBox="0 0 128 128" style={{ width: 128, height: 128, flexShrink: 0 }}>
+    <div className={s.donutWrap}>
+      <svg viewBox="0 0 128 128" className={s.donutSvg}>
         {arcs.map((a2, i) => (
           <path key={i} d={a2.path} style={{ fill: a2.color }} />
         ))}
@@ -255,14 +254,14 @@ export function ReturnDonut({ segs }: { segs: { label: string; value: number; co
           {fmtD(grand)}
         </text>
       </svg>
-      <div style={{ flex: 1, minWidth: 160 }}>
-        {segs.map((s, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, color: C.slate }}>
-              <span style={{ width: 10, height: 10, background: s.color, borderRadius: 2, opacity: s.value > 0 ? 1 : 0.3 }} />
-              {s.label}
+      <div className={s.donutLegend}>
+        {segs.map((seg, i) => (
+          <div key={i} className={s.donutRow}>
+            <span className={s.donutRowLabel}>
+              <span className={s.donutDot} style={{ background: seg.color, opacity: seg.value > 0 ? 1 : 0.3 }} />
+              {seg.label}
             </span>
-            <span style={{ fontWeight: 700, color: s.value >= 0 ? C.text : C.red, fontVariantNumeric: "tabular-nums" }}>{fmtD(s.value)}</span>
+            <span style={{ fontWeight: 700, color: seg.value >= 0 ? C.text : C.red, fontVariantNumeric: "tabular-nums" }}>{fmtD(seg.value)}</span>
           </div>
         ))}
       </div>
