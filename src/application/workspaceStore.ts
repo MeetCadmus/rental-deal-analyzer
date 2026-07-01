@@ -33,6 +33,29 @@ const mergeImported = (p: Partial<Deal>): Deal => ({
   comparables: Array.isArray(p.comparables) ? p.comparables : [],
 });
 
+// Numeric closing-cost fields the AI may itemize (all map to `number` on Closing).
+const CLOSING_NUM_KEYS = [
+  "origPct",
+  "pointsPct",
+  "transferTaxPct",
+  "appraisal",
+  "creditReport",
+  "underwriting",
+  "recordingFees",
+  "attyFee",
+  "titleSearch",
+  "lenderTitle",
+  "ownerTitle",
+  "firstYearInsurance",
+  "prepaidDays",
+  "taxEscrowMonths",
+  "insEscrowMonths",
+  "inspection",
+  "termite",
+  "survey",
+  "enviro",
+] as const satisfies readonly (keyof Deal["closing"])[];
+
 let _uid = 1000;
 const uid = () => ++_uid;
 
@@ -240,7 +263,23 @@ export const useWorkspace = create<WorkspaceStore>((set, get) => ({
         np.financing = fz;
         if (num(o.financing.refiRate) > 0) np.projection = { ...np.projection, refiRate: num(o.financing.refiRate) };
       }
-      if (num(o.closingPct) > 0) np.closing = { ...np.closing, mode: "quick", quickPct: num(o.closingPct) };
+      if (o.closing && typeof o.closing === "object") {
+        // Itemized closing costs → detailed mode. Only overwrite fields the AI actually gave.
+        const src = o.closing as Record<string, unknown>;
+        const cz = { ...np.closing, mode: "detailed" as const };
+        let anyCC = false;
+        for (const k of CLOSING_NUM_KEYS) {
+          const v = src[k];
+          if (v != null && v !== "") {
+            cz[k] = num(v);
+            anyCC = true;
+          }
+        }
+        if (anyCC) np.closing = cz;
+      } else if (num(o.closingPct) > 0) {
+        // Back-compat: a model that still returns a single lump % → quick mode.
+        np.closing = { ...np.closing, mode: "quick", quickPct: num(o.closingPct) };
+      }
       if (o.projection && typeof o.projection === "object") {
         const pz = { ...np.projection };
         const pp = o.projection;

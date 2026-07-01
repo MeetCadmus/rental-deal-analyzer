@@ -51,6 +51,16 @@ test("buildAIPrompt: embeds known fields and the JSON schema", () => {
   assert.match(prompt, /MARKET monthly rent/);
 });
 
+test("buildAIPrompt: asks for ITEMIZED closing costs, not a single lump %", () => {
+  const prompt = M.buildAIPrompt({ units: [] });
+  assert.match(prompt, /ITEMIZED closing costs/i);
+  assert.match(prompt, /transferTaxPct/);
+  assert.match(prompt, /firstYearInsurance/);
+  assert.match(prompt, /taxEscrowMonths/);
+  // the old single-percent field is gone from the requested shape
+  assert.doesNotMatch(prompt, /"closingPct"/);
+});
+
 test("buildAIPrompt: asks the model to self-report its active name + tier", () => {
   const prompt = M.buildAIPrompt({ units: [] });
   assert.match(prompt, /current active model name and tier/i);
