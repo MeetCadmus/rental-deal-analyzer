@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
 import { num } from "../../domain/money";
+import { overallRiskLabel } from "./areaRisk";
 import s from "./sections.module.css";
 
 // ── Area & due-diligence: qualitative context (AI-filled + editable). Non-math.
@@ -26,11 +27,11 @@ const FIELDS: F[] = [
   { k: "safety", label: "Safety", type: "text", ph: "low crime" },
   { k: "appreciation", label: "Appreciation", type: "text", ph: "e.g. high — near BeltLine" },
   { k: "demand", label: "Rental demand", type: "text", ph: "e.g. strong; students nearby" },
-  { k: "floodZone", label: "Flood zone", type: "text", ph: "e.g. Zone X (minimal)", climate: true },
+  { k: "floodZone", label: "Flood zone", type: "text", ph: "e.g. Minimal — Zone X", climate: true },
   { k: "elevation", label: "Elevation / sea level", type: "text", ph: "e.g. ~1,050 ft, inland", climate: true },
-  { k: "storms", label: "Storms", type: "text", ph: "hurricane / tornado exposure", climate: true },
-  { k: "wildfire", label: "Wildfire", type: "text", ph: "e.g. low — urban", climate: true },
-  { k: "heat", label: "Extreme heat", type: "text", ph: "e.g. rising summers", climate: true },
+  { k: "storms", label: "Storms", type: "text", ph: "e.g. Moderate — severe wind", climate: true },
+  { k: "wildfire", label: "Wildfire", type: "text", ph: "e.g. Low — urban", climate: true },
+  { k: "heat", label: "Extreme heat", type: "text", ph: "e.g. Moderate — rising summers", climate: true },
   { k: "history", label: "Incident history", type: "area", ph: "known flooding, fire, claims…", climate: true },
   { k: "pros", label: "Pros", type: "list", col: C.teal, mark: "✓" },
   { k: "cons", label: "Cons", type: "list", col: C.amber, mark: "•" },
@@ -85,23 +86,9 @@ function AreaInsights({ data, onChange }: { data: any; onChange: (v: any) => voi
   const focusRef = (el: HTMLElement | null) => el?.focus();
 
   // Collapsed summary: grade, schools, and ONE overall risk level that rolls up all the
-  // hazards + red flags (rather than cherry-picking flood). Rough heuristic — the real
-  // detail lives in the expanded view. Only shown when there's something to base it on.
-  const overallRisk = (): string => {
-    const g = String(d.neighborhoodGrade || "")
-      .charAt(0)
-      .toUpperCase();
-    const risksN = (d.risks || []).length;
-    const hazVals = [c.floodZone, c.elevation, c.storms, c.wildfire, c.heat, d.safety].map((x: any) => String(x || "").toLowerCase());
-    const hasBasis = g === "C" || g === "D" || risksN > 0 || hazVals.some((v) => v);
-    if (!hasBasis) return "";
-    let score = g === "D" ? 3 : g === "C" ? 1 : 0;
-    if (hazVals.some((v) => /(sever|extreme|\bhigh|higher crime|zone ae|zone ve|zone a\b|100-?yr|floodplain)/.test(v))) score += 2;
-    else if (hazVals.some((v) => /moderate/.test(v))) score += 1;
-    score += risksN >= 3 ? 2 : risksN >= 1 ? 1 : 0;
-    return (score >= 4 ? "High" : score >= 2 ? "Moderate" : "Low") + " risk";
-  };
-  const summaryParts = [d.neighborhoodGrade ? "Grade " + d.neighborhoodGrade : "", d.schools > 0 ? d.schools + "/10 schools" : "", overallRisk()].filter(
+  // hazards + red flags (rather than cherry-picking flood). See areaRisk.ts; full detail
+  // lives in the expanded view.
+  const summaryParts = [d.neighborhoodGrade ? "Grade " + d.neighborhoodGrade : "", d.schools > 0 ? d.schools + "/10 schools" : "", overallRiskLabel(d)].filter(
     Boolean,
   );
   const summary = summaryParts.length ? summaryParts.join(" · ") : "Not filled";
