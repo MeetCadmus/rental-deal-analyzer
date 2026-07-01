@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { Deal } from "../domain/types";
 import { persistDeals, mergeDealStores, getTomb, setTomb, type DealStore } from "../infrastructure/storage/dealRepository";
 import { createSupabase, fetchUserData, pushUserData, type User } from "../infrastructure/sync/supabase";
+import { writeDealIdToUrl } from "../infrastructure/dealUrl";
 import { useWorkspace, cloudCfg, setSupa, getSupa, wasTouched, setTouched } from "./workspaceStore";
 
 // Side-effects that wire the workspace store to the outside world. Mounted once by App.
@@ -26,6 +27,15 @@ export function useWorkspaceEffects(): void {
   // ── Open a shared #deal= link once on load.
   useEffect(() => {
     useWorkspace.getState().importShared();
+  }, []);
+
+  // ── Keep `?deal=<id>` in the URL in sync with the active deal, so each tab reloads its
+  //    own deal on refresh (the store already reads this id on boot).
+  useEffect(() => {
+    writeDealIdToUrl(useWorkspace.getState().activeId);
+    return useWorkspace.subscribe((s, prev) => {
+      if (s.activeId !== prev.activeId) writeDealIdToUrl(s.activeId);
+    });
   }, []);
 
   // ── Cloud sync (Supabase) — dormant unless config.js provides keys.
