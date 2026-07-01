@@ -126,6 +126,7 @@ export interface Deal {
   _label?: string;
   _ts?: number;
   _created?: string | number;
+  _fav?: boolean;
 }
 
 export type Level = "good" | "warn" | "bad";

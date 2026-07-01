@@ -126,7 +126,9 @@ Working state `S` (see `INIT` in `domain/defaults.ts`): `address, notes, listing
 aiSource/aiAt, price, otherIncome, units[], financing, closing(DCC), expenses(DEX), projection,
 repairs, partnership, comparables[]`.
 
-- **Deals library**: array of deals, each with `_id, _label, _ts, _created`, persisted to
+- **Deals library**: array of deals, each with `_id, _label, _ts, _created, _fav` (favorite
+  flag — toggled via `toggleFav`, filterable in the drawer; metadata, so it never bumps `_ts`),
+  persisted to
   `localStorage` (`re_deals_v1`) via `dealRepository`, optionally synced to Supabase.
   Deletions use **tombstones** so they stick and propagate. `+ New deal` uses `BLANK`.
 - **Expenses are stored ANNUAL** (`expenses.v === 2`); `migrateExpenses` upgrades old data.

@@ -95,6 +95,7 @@ export interface WorkspaceStore {
   newDeal: () => void;
   duplicateDeal: (id: string) => void;
   renameDeal: (id: string, label: string) => void;
+  toggleFav: (id: string) => void;
   deleteDeal: (id: string) => void;
   undoDelete: () => void;
   loadEx: (ex: Example) => void;
@@ -310,6 +311,12 @@ export const useWorkspace = create<WorkspaceStore>((set, get) => ({
   },
   renameDeal: (id, label) => {
     const n = get().deals.map((d) => (d._id === id ? { ...d, _label: label } : d));
+    persistDeals(n, get().activeId);
+    set({ deals: n });
+  },
+  // Favorite is library metadata — like rename, it must NOT bump _ts.
+  toggleFav: (id) => {
+    const n = get().deals.map((d) => (d._id === id ? { ...d, _fav: !d._fav } : d));
     persistDeals(n, get().activeId);
     set({ deals: n });
   },

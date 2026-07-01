@@ -20,6 +20,7 @@ function DealsDrawer({
   onRename,
   onDelete,
   onDuplicate,
+  onToggleFav,
   onExportAll,
   onImportAll,
 }: {
@@ -33,12 +34,15 @@ function DealsDrawer({
   onRename: (id: string, label: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onToggleFav: (id: string) => void;
   onExportAll: () => void;
   onImportAll: () => void;
 }) {
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [gradeF, setGradeF] = useState("all");
+  const [favOnly, setFavOnly] = useState(false);
+  const favCount = deals.filter((d) => d._fav).length;
   const [editId, setEditId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
   // Compute metrics once per deal so we can sort/filter and render without recomputing.
@@ -62,7 +66,9 @@ function DealsDrawer({
     name: ["Name (A–Z)", null],
   };
   const ql = q.trim().toLowerCase();
-  let list = enriched.filter((c) => (gradeF === "all" || c.sc.grade === gradeF) && (!ql || dealTitle(c.d).toLowerCase().includes(ql)));
+  let list = enriched.filter(
+    (c) => (!favOnly || !!c.d._fav) && (gradeF === "all" || c.sc.grade === gradeF) && (!ql || dealTitle(c.d).toLowerCase().includes(ql)),
+  );
   list =
     sortBy === "name" ? list.sort((a, b) => dealTitle(a.d).localeCompare(dealTitle(b.d))) : list.sort((a, b) => SORTS[sortBy][1]!(b) - SORTS[sortBy][1]!(a));
   const startEdit = (d: Deal) => {
@@ -103,6 +109,19 @@ function DealsDrawer({
                   </option>
                 ))}
               </select>
+              <button
+                onClick={() => setFavOnly((v) => !v)}
+                title={favOnly ? "Show all deals" : "Show favorites only"}
+                aria-pressed={favOnly}
+                className={s.gradeBtn}
+                style={{
+                  border: "1.5px solid " + (favOnly ? C.gold : C.border),
+                  background: favOnly ? C.gold : C.bg,
+                  color: favOnly ? "#fff" : C.slate,
+                }}
+              >
+                ★ {favCount}
+              </button>
               {["all", "A", "B", "C", "D"].map((g) => {
                 const on = gradeF === g;
                 return (
@@ -121,7 +140,7 @@ function DealsDrawer({
           <div className={s.list}>
             {list.length === 0 && (
               <div className={s.empty}>
-                No deals match{ql ? " “" + q + "”" : ""}
+                No {favOnly ? "favorite " : ""}deals match{ql ? " “" + q + "”" : ""}
                 {gradeF !== "all" ? " · grade " + gradeF : ""}.
               </div>
             )}
@@ -157,7 +176,14 @@ function DealsDrawer({
                           className={s.editInput}
                         />
                       ) : (
-                        <div className={s.cardName}>{isA ? liveTitle || dealTitle(d) : dealTitle(d)}</div>
+                        <div className={s.cardName}>
+                          {d._fav && (
+                            <span className={s.favStar} aria-label="Favorite" title="Favorite">
+                              ★
+                            </span>
+                          )}
+                          {isA ? liveTitle || dealTitle(d) : dealTitle(d)}
+                        </div>
                       )}
                       <div className={s.cardMeta}>
                         {fmtD(d.price)} · {(d.units || []).length} units{isA ? " · open now" : ""}
@@ -177,6 +203,15 @@ function DealsDrawer({
                     </div>
                   </div>
                   <div className={s.cardActions} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => onToggleFav(d._id!)}
+                      title={d._fav ? "Remove from favorites" : "Add to favorites"}
+                      aria-pressed={!!d._fav}
+                      className={s.xbtn}
+                      style={d._fav ? { color: C.gold, borderColor: C.gold } : undefined}
+                    >
+                      {d._fav ? "★ Favorited" : "☆ Favorite"}
+                    </button>
                     <button onClick={() => startEdit(d)} className={s.xbtn}>
                       ✎ Rename
                     </button>

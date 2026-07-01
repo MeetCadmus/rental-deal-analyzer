@@ -14,7 +14,7 @@ export function useWorkspaceEffects(): void {
       const touched = wasTouched();
       const { deals, activeId } = useWorkspace.getState();
       const n = deals.map((d) =>
-        d._id !== activeId ? d : { ...d, ...s.state, _id: d._id, _label: d._label, _created: d._created, _ts: touched ? Date.now() : d._ts },
+        d._id !== activeId ? d : { ...d, ...s.state, _id: d._id, _label: d._label, _created: d._created, _fav: d._fav, _ts: touched ? Date.now() : d._ts },
       );
       persistDeals(n, activeId);
       useWorkspace.setState({ deals: n });
