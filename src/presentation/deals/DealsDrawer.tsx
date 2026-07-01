@@ -206,11 +206,12 @@ function DealsDrawer({
                     <button
                       onClick={() => onToggleFav(d._id!)}
                       title={d._fav ? "Remove from favorites" : "Add to favorites"}
+                      aria-label={d._fav ? "Remove from favorites" : "Add to favorites"}
                       aria-pressed={!!d._fav}
-                      className={s.xbtn}
-                      style={d._fav ? { color: C.gold, borderColor: C.gold } : undefined}
+                      className={s.favBtn}
+                      style={{ color: d._fav ? C.gold : C.slate }}
                     >
-                      {d._fav ? "★ Favorited" : "☆ Favorite"}
+                      {d._fav ? "★" : "☆"}
                     </button>
                     <button onClick={() => startEdit(d)} className={s.xbtn}>
                       ✎ Rename
