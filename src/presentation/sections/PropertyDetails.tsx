@@ -8,18 +8,32 @@ import s from "./sections.module.css";
 export function PropertyDetails() {
   const S = useWorkspace((st) => st.state);
   const set = useWorkspace((st) => st.set);
+  const activeId = useWorkspace((st) => st.activeId);
   const addrId = useId();
   const notesId = useId();
-  // Auto-grow the notes field to fit its content. iOS Safari ignores the CSS resize
-  // handle, so growing-to-content is the only way to expand notes on iPhone.
+  // Notes auto-grow to fit their content (iOS Safari ignores the drag handle, so this is
+  // the only way to expand on iPhone) — UNTIL you drag the resize handle, after which we
+  // leave your chosen height alone. Switching deals re-enables auto-fit for the new deal.
   const notesRef = useRef<HTMLTextAreaElement>(null);
+  const userSized = useRef(false);
+  const lastAutoH = useRef(0);
   const autosizeNotes = () => {
     const el = notesRef.current;
-    if (!el) return;
+    if (!el || userSized.current) return;
     el.style.height = "auto";
     el.style.height = Math.max(el.scrollHeight, 42) + "px";
+    lastAutoH.current = el.offsetHeight;
+  };
+  // A drag on the resize handle changes the height outside our autosize → respect it.
+  const detectResize = () => {
+    const el = notesRef.current;
+    if (el && Math.abs(el.offsetHeight - lastAutoH.current) > 2) userSized.current = true;
   };
   useEffect(autosizeNotes, [S.notes]);
+  useEffect(() => {
+    userSized.current = false;
+    autosizeNotes();
+  }, [activeId]);
   return (
     <Card title="Property details" icon="pin" collapsible defaultOpen storeKey="prop">
       <div className={s.stack}>
@@ -46,10 +60,11 @@ export function PropertyDetails() {
             value={S.notes || ""}
             onChange={(e) => set("notes", e.target.value)}
             onInput={autosizeNotes}
+            onMouseUp={detectResize}
             placeholder="Seller motivated, rents below market, new roof 2022..."
             rows={2}
             className={s.textArea}
-            style={{ resize: "none", overflow: "hidden", minHeight: 42 }}
+            style={{ resize: "vertical", overflow: "auto", minHeight: 42 }}
           />
         </div>
       </div>
