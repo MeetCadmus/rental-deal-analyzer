@@ -89,7 +89,7 @@ export const INIT: Deal = {
     exitCapEnabled: false,
     exitCapRate: 6,
     vaEnabled: false,
-    vaMarketRentPerUnit: 1750,
+    vaMarketRentPerUnit: 0, // unset — per-unit market rents (vaMarketRents) prefill from current rents
     vaYear: 2,
     refiEnabled: false,
     refiYear: 3,

@@ -84,7 +84,8 @@ export interface Projection {
   exitCapEnabled: boolean;
   exitCapRate: number;
   vaEnabled: boolean;
-  vaMarketRentPerUnit: number;
+  vaMarketRentPerUnit: number; // legacy single per-unit target (fallback); prefer vaMarketRents
+  vaMarketRents?: number[]; // per-unit stabilized market rent, indexed by unit position
   vaYear: number;
   refiEnabled: boolean;
   refiYear: number;
@@ -176,6 +177,7 @@ export interface BaseMetrics {
   monRent: number;
   numU: number;
   vaEnabled: boolean;
+  vaMonthly: number;
   vaCF: number;
   vaCapRate: number;
   vaCoc: number;
