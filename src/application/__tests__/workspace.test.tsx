@@ -44,6 +44,55 @@ test("the active deal id is reflected in ?deal= and updates when the deal change
   expect(dealParam()).toBe(before.activeId);
 });
 
+test("autosave merges into the on-disk store — another tab's edit to a different deal survives", () => {
+  render(<App />);
+  // Two deals; the freshly created one is active.
+  act(() => {
+    fireEvent.click(screen.getByTitle(/Start a new blank deal/i));
+  });
+  const store = read();
+  const active = store.activeId; // the just-created blank deal
+  const other = store.deals.find((d: any) => d._id !== active)._id; // some other saved deal
+
+  // Simulate ANOTHER TAB writing an edit to the non-active deal directly to localStorage.
+  const disk = read();
+  disk.deals = disk.deals.map((d: any) => (d._id === other ? { ...d, address: "OTHER TAB EDIT" } : d));
+  localStorage.setItem(KEY, JSON.stringify(disk));
+
+  // Edit the active deal in THIS tab — autosave must merge into disk, not clobber `other`.
+  const addr = screen.getByPlaceholderText(/Maple St/i) as HTMLInputElement;
+  act(() => {
+    fireEvent.change(addr, { target: { value: "THIS TAB EDIT" } });
+  });
+
+  const after = read();
+  expect(after.deals.find((d: any) => d._id === other).address).toBe("OTHER TAB EDIT"); // preserved
+  expect(after.deals.find((d: any) => d._id === active).address).toBe("THIS TAB EDIT"); // our edit saved
+});
+
+test("a storage event from another tab refreshes the list, keeping the active deal", () => {
+  render(<App />);
+  act(() => {
+    fireEvent.click(screen.getByTitle(/Start a new blank deal/i));
+  });
+  const store = read();
+  const active = store.activeId;
+  const other = store.deals.find((d: any) => d._id !== active)._id;
+
+  const disk = read();
+  disk.deals = disk.deals.map((d: any) => (d._id === other ? { ...d, _label: "Renamed elsewhere" } : d));
+  const newValue = JSON.stringify(disk);
+  localStorage.setItem(KEY, newValue);
+  act(() => {
+    window.dispatchEvent(new StorageEvent("storage", { key: KEY, newValue }));
+  });
+
+  const mem = useWorkspace.getState().deals;
+  expect(mem.find((d) => d._id === other)?._label).toBe("Renamed elsewhere"); // picked up other tab's rename
+  expect(mem.some((d) => d._id === active)).toBe(true); // active deal still present
+  expect(useWorkspace.getState().activeId).toBe(active); // and still active
+});
+
 test("editing the address autosaves through the store subscriber", () => {
   render(<App />);
   const addr = screen.getByPlaceholderText(/Maple St/i) as HTMLInputElement;
