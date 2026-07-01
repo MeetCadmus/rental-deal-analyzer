@@ -35,6 +35,45 @@ test("editing the address autosaves through the store subscriber", () => {
   expect(deal.address).toBe("999 Verify Ave");
 });
 
+test("toggleFav flips a deal's favorite flag, persists it, and does NOT bump _ts", async () => {
+  render(<App />);
+  const before = read();
+  const id = before.activeId;
+  const ts = before.deals.find((d: any) => d._id === id)._ts;
+
+  await act(async () => {
+    useWorkspace.getState().toggleFav(id);
+  });
+  let after = read();
+  let deal = after.deals.find((d: any) => d._id === id);
+  expect(deal._fav).toBe(true);
+  expect(deal._ts).toBe(ts); // favoriting is metadata — must not count as an edit
+
+  // Toggling again clears it.
+  await act(async () => {
+    useWorkspace.getState().toggleFav(id);
+  });
+  after = read();
+  deal = after.deals.find((d: any) => d._id === id);
+  expect(deal._fav).toBe(false);
+});
+
+test("a favorited deal keeps its flag after the active deal is edited", () => {
+  render(<App />);
+  const id = read().activeId;
+  act(() => {
+    useWorkspace.getState().toggleFav(id);
+  });
+  // Edit the active deal — autosave folds `state` back over the deal.
+  const addr = screen.getByPlaceholderText(/Maple St/i) as HTMLInputElement;
+  act(() => {
+    fireEvent.change(addr, { target: { value: "1 Favorite Way" } });
+  });
+  const deal = read().deals.find((d: any) => d._id === id);
+  expect(deal._fav).toBe(true);
+  expect(deal.address).toBe("1 Favorite Way");
+});
+
 test("+ New deal adds a deal; switching back does NOT bump the prior deal's _ts", async () => {
   render(<App />);
   const before = read();

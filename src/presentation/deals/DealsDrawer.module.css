@@ -156,6 +156,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.favStar {
+  color: var(--c-gold);
+  margin-right: 3px;
+}
 .cardMeta {
   font-size: 10px;
   color: var(--c-muted);

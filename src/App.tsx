@@ -165,6 +165,7 @@ export default function App() {
         onRename={w.renameDeal}
         onDelete={w.deleteDeal}
         onDuplicate={w.duplicateDeal}
+        onToggleFav={w.toggleFav}
         onExportAll={w.exportAllDeals}
         onImportAll={w.importAllDeals}
       />
