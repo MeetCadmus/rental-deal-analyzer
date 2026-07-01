@@ -131,6 +131,10 @@ repairs, partnership, comparables[]`.
   persisted to
   `localStorage` (`re_deals_v1`) via `dealRepository`, optionally synced to Supabase.
   Deletions use **tombstones** so they stick and propagate. `+ New deal` uses `BLANK`.
+- **Active deal in the URL**: `?deal=<id>` (see `infrastructure/dealUrl.ts`) pins each browser
+  tab to its own deal. The store reads it on boot (overriding the shared last-active id from
+  `localStorage`); `useWorkspaceEffects` keeps it in sync via `replaceState` on `activeId`
+  change — so a refresh reloads the same deal per tab. Distinct from the share `#deal=<csv>` hash.
 - **Expenses are stored ANNUAL** (`expenses.v === 2`); `migrateExpenses` upgrades old data.
 - Opening/switching a deal must NOT bump `_ts` — only real edits do. The autosave lives in
   `useWorkspaceEffects` (a `store.subscribe` on `state`): switch/open actions set the

@@ -24,6 +24,26 @@ test("App mounts and persists a default deal", () => {
   expect(screen.getByTitle(/Browse, search & switch deals/i)).toBeInTheDocument();
 });
 
+test("the active deal id is reflected in ?deal= and updates when the deal changes", () => {
+  render(<App />);
+  const dealParam = () => new URLSearchParams(location.search).get("deal");
+  const before = read();
+  expect(dealParam()).toBe(before.activeId); // mount syncs the URL to the active deal
+
+  act(() => {
+    fireEvent.click(screen.getByTitle(/Start a new blank deal/i));
+  });
+  const after = read();
+  expect(after.activeId).not.toBe(before.activeId);
+  expect(dealParam()).toBe(after.activeId); // switching updates the URL
+
+  // Switching back updates it again — each tab's URL tracks its own deal.
+  act(() => {
+    useWorkspace.getState().switchDeal(before.activeId);
+  });
+  expect(dealParam()).toBe(before.activeId);
+});
+
 test("editing the address autosaves through the store subscriber", () => {
   render(<App />);
   const addr = screen.getByPlaceholderText(/Maple St/i) as HTMLInputElement;

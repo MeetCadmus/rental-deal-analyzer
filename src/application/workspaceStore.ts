@@ -5,6 +5,7 @@ import { num } from "../domain/money";
 import type { Deal } from "../domain/types";
 import type { Example } from "../domain/examples";
 import { loadDealStore, persistDeals, getTomb, setTomb, type DealStore } from "../infrastructure/storage/dealRepository";
+import { readDealIdFromUrl } from "../infrastructure/dealUrl";
 import { stateToCSV, csvToState } from "../infrastructure/csv";
 import { validateDealImport } from "../infrastructure/validation";
 import { downloadFile } from "../infrastructure/download";
@@ -71,6 +72,10 @@ export const setTouched = (v: boolean) => {
 let undoTimer: ReturnType<typeof setTimeout> | null = null;
 
 const boot = loadDealStore();
+// A `?deal=<id>` in the URL pins this tab to that deal (survives refresh, per-tab),
+// overriding the shared last-active id from localStorage when the deal still exists.
+const urlDealId = readDealIdFromUrl();
+const bootActiveId = urlDealId && boot.deals.some((d) => d._id === urlDealId) ? urlDealId : boot.activeId;
 
 export interface WorkspaceStore {
   deals: Deal[];
@@ -133,8 +138,8 @@ export interface WorkspaceStore {
 
 export const useWorkspace = create<WorkspaceStore>((set, get) => ({
   deals: boot.deals,
-  activeId: boot.activeId,
-  state: fullState(boot.deals.find((d) => d._id === boot.activeId) || boot.deals[0]),
+  activeId: bootActiveId,
+  state: fullState(boot.deals.find((d) => d._id === bootActiveId) || boot.deals[0]),
   undo: null,
   dealsOpen: false,
   showEx: false,
