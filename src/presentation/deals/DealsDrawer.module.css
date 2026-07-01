@@ -202,6 +202,17 @@
   cursor: pointer;
   font-family: inherit;
 }
+/* Compact icon-only favorite toggle — a star, not a labeled button. */
+.favBtn {
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg);
+  cursor: pointer;
+  font-family: inherit;
+}
 
 .footer {
   flex-shrink: 0;
