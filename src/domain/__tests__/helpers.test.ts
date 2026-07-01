@@ -16,6 +16,17 @@ test("fmtD: signed currency with a true minus sign", () => {
   assert.strictEqual(M.fmtD(0), "$0");
 });
 
+test("fmtK: compact currency for dense tables", () => {
+  assert.strictEqual(M.fmtK(850), "$850");
+  assert.strictEqual(M.fmtK(1250), "$1.3k");
+  assert.strictEqual(M.fmtK(12340), "$12k");
+  assert.strictEqual(M.fmtK(145000), "$145k");
+  assert.strictEqual(M.fmtK(1500000), "$1.5M");
+  assert.strictEqual(M.fmtK(12000000), "$12M");
+  assert.strictEqual(M.fmtK(-1250), "−$1.3k");
+  assert.strictEqual(M.fmtK(0), "$0");
+});
+
 test("fmtP / fmtX: percent and multiple, with em-dash for non-finite", () => {
   assert.strictEqual(M.fmtP(6.84), "6.8%");
   assert.strictEqual(M.fmtP(Infinity), "—");

@@ -1,7 +1,7 @@
 import { C } from "../theme/tokens";
 import { Info } from "../ui/primitives";
 import { CashflowChart, EquityChart, ReturnDonut } from "../charts/charts";
-import { fmtD, fmtP } from "../../domain/money";
+import { fmtD, fmtP, fmtK } from "../../domain/money";
 import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
 import { ProjTrace } from "./ProjTrace";
 import s from "./results.module.css";
@@ -60,14 +60,14 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
           {hold > 12 && <span style={{ fontWeight: 400, color: C.muted }}>scroll ↓ · {hold} yrs</span>}
         </div>
         <div className={"ytable-scroll" + (hold > 12 ? " cap" : "") + " " + s.scrollX}>
-          <table className={s.table} style={{ fontSize: 11 }}>
+          <table className={s.table} style={{ fontSize: 11, width: "100%" }}>
             <thead>
               <tr>
                 {["Yr", "Rent/unit", "NOI/yr", "CF/yr", "CF/mo", "Equity", "Value"].map((h) => (
                   <th
                     key={h}
                     style={{
-                      padding: "5px 8px",
+                      padding: "5px 6px",
                       fontWeight: 600,
                       color: C.slate,
                       textAlign: "right",
@@ -87,13 +87,13 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
             <tbody>
               {Y.yearly.map((row, i) => (
                 <tr key={row.year} style={{ background: i % 2 === 0 ? C.white : C.bg }}>
-                  <td style={{ padding: "5px 8px", fontWeight: 600, color: C.heading, textAlign: "right" }}>{row.year}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "right" }}>{fmtD(row.monthlyRent)}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "right" }}>{fmtD(row.noi)}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{fmtD(row.cf)}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{fmtD(row.cf / 12)}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "right", color: C.teal }}>{fmtD(row.equity)}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "right" }}>{fmtD(row.propVal)}</td>
+                  <td style={{ padding: "5px 6px", fontWeight: 600, color: C.heading, textAlign: "right" }}>{row.year}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmtK(row.monthlyRent)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmtK(row.noi)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{fmtK(row.cf)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{fmtK(row.cf / 12)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", color: C.teal }}>{fmtK(row.equity)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmtK(row.propVal)}</td>
                 </tr>
               ))}
             </tbody>
