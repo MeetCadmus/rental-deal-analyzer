@@ -317,6 +317,21 @@ export const useWorkspace = create<WorkspaceStore>((set, get) => ({
           risks: arr(x.risks),
         };
       }
+      if (o.climate && typeof o.climate === "object") {
+        // Natural-hazard / environmental risk, kept alongside insights (non-math context).
+        const cx = o.climate as Record<string, unknown>;
+        const str = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+        const climate = {
+          floodZone: str(cx.floodZone, 120),
+          elevation: str(cx.elevation, 120),
+          storms: str(cx.storms, 160),
+          wildfire: str(cx.wildfire, 120),
+          heat: str(cx.heat, 160),
+          history: str(cx.history, 300),
+        };
+        const base = (np.insights && typeof np.insights === "object" ? np.insights : {}) as Record<string, unknown>;
+        np.insights = { ...base, climate };
+      }
       if (typeof o.opinion === "string" && o.opinion.trim()) np.notes = (np.notes ? np.notes + "\n\n" : "") + "AI: " + o.opinion.trim();
       if (typeof o.model === "string" && o.model.trim()) {
         np.aiSource = o.model.trim().slice(0, 60);
