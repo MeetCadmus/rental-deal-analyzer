@@ -84,14 +84,16 @@ function AreaInsights({ data, onChange }: { data: any; onChange: (v: any) => voi
   };
   const focusRef = (el: HTMLElement | null) => el?.focus();
 
+  // Keep the collapsed summary short & fixed — a few compact tokens (grade, schools, the
+  // flood-zone code only, pros/risks counts), capped so it never overruns the header.
   const summaryParts = [
-    d.neighborhoodGrade ? "Grade " + d.neighborhoodGrade : "",
-    d.schools > 0 ? d.schools + "/10 schools" : "",
-    c.floodZone ? "Flood: " + String(c.floodZone).slice(0, 22) : "",
-    (d.pros || []).length ? (d.pros || []).length + " pros" : "",
-    (d.risks || []).length ? (d.risks || []).length + " risks" : "",
+    d.neighborhoodGrade || "",
+    d.schools > 0 ? d.schools + "/10" : "",
+    c.floodZone ? String(c.floodZone).split(/[—([]/)[0].trim().slice(0, 10) : "",
+    (d.pros || []).length ? (d.pros || []).length + "✓" : "",
+    (d.risks || []).length ? (d.risks || []).length + "⚠" : "",
   ].filter(Boolean);
-  const summary = summaryParts.length ? summaryParts.join(" · ") : "Not filled";
+  const summary = summaryParts.length ? summaryParts.slice(0, 4).join(" · ") : "Not filled";
   const gCol = ({ A: C.teal, B: C.blueS, C: C.amber, D: C.red } as Record<string, string>)[String(d.neighborhoodGrade || "").charAt(0)] || C.slate;
 
   // Wrap a read-only view node so clicking (or Enter/Space) opens its inline editor.

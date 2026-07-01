@@ -43,6 +43,10 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+  /* Never let a long summary overrun the header — truncate with an ellipsis. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
 }
 .chev {
   flex-shrink: 0;
