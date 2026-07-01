@@ -74,6 +74,32 @@ test("a favorited deal keeps its flag after the active deal is edited", () => {
   expect(deal.address).toBe("1 Favorite Way");
 });
 
+test("applyAI: itemized closing costs switch closing to detailed mode and fill line items", () => {
+  render(<App />);
+  act(() => {
+    useWorkspace.getState().applyAI({
+      closing: { origPct: 1, transferTaxPct: 0.4, attyFee: 1500, prepaidDays: 20, taxEscrowMonths: 4 },
+    });
+  });
+  const cc = useWorkspace.getState().state.closing;
+  expect(cc.mode).toBe("detailed");
+  expect(cc.origPct).toBe(1);
+  expect(cc.transferTaxPct).toBe(0.4);
+  expect(cc.attyFee).toBe(1500);
+  expect(cc.prepaidDays).toBe(20);
+  expect(cc.taxEscrowMonths).toBe(4);
+});
+
+test("applyAI: a legacy closingPct still maps to quick mode", () => {
+  render(<App />);
+  act(() => {
+    useWorkspace.getState().applyAI({ closingPct: 3.5 });
+  });
+  const cc = useWorkspace.getState().state.closing;
+  expect(cc.mode).toBe("quick");
+  expect(cc.quickPct).toBe(3.5);
+});
+
 test("+ New deal adds a deal; switching back does NOT bump the prior deal's _ts", async () => {
   render(<App />);
   const before = read();
