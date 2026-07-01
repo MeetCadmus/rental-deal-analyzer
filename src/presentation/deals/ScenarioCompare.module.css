@@ -140,16 +140,33 @@
   text-align: center;
   padding: 16px 8px;
 }
+.pickRow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
 .pickItem {
   display: flex;
   align-items: center;
   gap: 9px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-align: left;
   padding: 7px 9px;
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
+}
+.starBtn {
+  flex-shrink: 0;
+  width: 34px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-white);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
 }
 .checkbox {
   flex-shrink: 0;

@@ -92,7 +92,7 @@ export default function App() {
             <button onClick={w.newDeal} style={hb} title="Start a new blank deal">
               ＋ New deal
             </button>
-            <ScenarioCompare deals={w.deals} activeId={w.activeId} currentState={S} />
+            <ScenarioCompare deals={w.deals} activeId={w.activeId} currentState={S} onToggleFav={w.toggleFav} />
             <HeaderMenu
               btnStyle={hb}
               items={[
