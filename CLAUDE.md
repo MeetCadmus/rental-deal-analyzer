@@ -141,7 +141,7 @@ repairs, partnership, comparables[]`.
   non-reactive `touched` flag false **before** changing `state`, so the subscriber writes
   the deal back without bumping `_ts`. (An e2e test pins this.)
 - **Cross-tab safety**: the autosave re-reads the current on-disk store (`readPersistedStore`)
-  and replaces only the **active** deal before writing, so a second tab editing a *different*
+  and replaces only the **active** deal before writing, so a second tab editing a _different_
   deal isn't clobbered. A `storage`-event listener refreshes the in-memory list when another
   tab writes, keeping this tab's active deal (its unsaved edits) intact. Paired with the
   `?deal=<id>` per-tab URL above.
