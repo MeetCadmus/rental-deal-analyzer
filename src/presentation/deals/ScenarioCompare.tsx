@@ -9,15 +9,27 @@ import { fmtWhen } from "../../domain/time";
 import type { Deal } from "../../domain/types";
 import s from "./ScenarioCompare.module.css";
 
-function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; activeId: string; currentState: Deal }) {
+function ScenarioCompare({
+  deals,
+  activeId,
+  currentState,
+  onToggleFav,
+}: {
+  deals: Deal[];
+  activeId: string;
+  currentState: Deal;
+  onToggleFav: (id: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("irr");
   const [q, setQ] = useState("");
   const [gradeF, setGradeF] = useState("all");
+  const [favOnly, setFavOnly] = useState(false);
   const [pickSort, setPickSort] = useState("grade");
   const [diffOnly, setDiffOnly] = useState(false);
   const pool = (deals || []).filter((d) => d._id !== activeId);
+  const favCount = pool.filter((d) => d._fav).length;
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   // Compute metrics for each selectable deal (only while the modal is open) so we can
   // search, sort, filter by grade, and show grade + cash flow on each row.
@@ -39,7 +51,9 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
     name: ["Name (A–Z)", (c) => c.d],
   };
   const ql = q.trim().toLowerCase();
-  let picks = info.filter((c) => (gradeF === "all" || c.score.grade === gradeF) && (!ql || dealTitle(c.d).toLowerCase().includes(ql)));
+  let picks = info.filter(
+    (c) => (!favOnly || !!c.d._fav) && (gradeF === "all" || c.score.grade === gradeF) && (!ql || dealTitle(c.d).toLowerCase().includes(ql)),
+  );
   picks =
     pickSort === "name"
       ? picks.sort((a, b) => dealTitle(a.d).localeCompare(dealTitle(b.d)))
@@ -161,6 +175,19 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                     </select>
                   </div>
                   <div className={s.gradeRow}>
+                    <button
+                      onClick={() => setFavOnly((v) => !v)}
+                      title={favOnly ? "Show all deals" : "Show favorites only"}
+                      aria-pressed={favOnly}
+                      className={s.gradeBtn}
+                      style={{
+                        border: "1.5px solid " + (favOnly ? C.gold : C.border),
+                        background: favOnly ? C.gold : C.white,
+                        color: favOnly ? "#fff" : C.slate,
+                      }}
+                    >
+                      ★ {favCount}
+                    </button>
                     {["all", "A", "B", "C", "D"].map((g) => {
                       const on = gradeF === g;
                       return (
@@ -181,30 +208,44 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                     {picks.map((c) => {
                       const on = sel.includes(c.d._id!);
                       return (
-                        <button
-                          key={c.d._id}
-                          onClick={() => toggle(c.d._id!)}
-                          className={s.pickItem}
-                          style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.hl : C.white }}
-                        >
-                          <span className={s.checkbox} style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white }}>
-                            {on ? "✓" : ""}
-                          </span>
-                          <span className={s.pickMain}>
-                            <span className={s.pickName}>{dealTitle(c.d)}</span>
-                            <span className={s.pickSub}>
-                              {fmtD(c.st.price)} · cap {fmtP(c.R.capRate)} · {fmtWhen(c.d._ts)}
+                        <div key={c.d._id} className={s.pickRow}>
+                          <button
+                            onClick={() => toggle(c.d._id!)}
+                            className={s.pickItem}
+                            style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.hl : C.white }}
+                          >
+                            <span className={s.checkbox} style={{ border: "1.5px solid " + (on ? C.navy : C.border), background: on ? C.navy : C.white }}>
+                              {on ? "✓" : ""}
                             </span>
-                          </span>
-                          <span className={s.pickRight}>
-                            <span className={s.pickGrade} style={{ background: c.score.color }}>
-                              {c.score.grade}
+                            <span className={s.pickMain}>
+                              <span className={s.pickName}>
+                                {c.d._fav && <span style={{ color: C.gold }}>★ </span>}
+                                {dealTitle(c.d)}
+                              </span>
+                              <span className={s.pickSub}>
+                                {fmtD(c.st.price)} · cap {fmtP(c.R.capRate)} · {fmtWhen(c.d._ts)}
+                              </span>
                             </span>
-                            <span className={s.pickCf} style={{ color: c.R.cf >= 0 ? C.teal : C.red }}>
-                              {fmtD(c.R.cf / 12)}/mo
+                            <span className={s.pickRight}>
+                              <span className={s.pickGrade} style={{ background: c.score.color }}>
+                                {c.score.grade}
+                              </span>
+                              <span className={s.pickCf} style={{ color: c.R.cf >= 0 ? C.teal : C.red }}>
+                                {fmtD(c.R.cf / 12)}/mo
+                              </span>
                             </span>
-                          </span>
-                        </button>
+                          </button>
+                          <button
+                            onClick={() => onToggleFav(c.d._id!)}
+                            title={c.d._fav ? "Remove from favorites" : "Add to favorites"}
+                            aria-label={c.d._fav ? "Remove from favorites" : "Add to favorites"}
+                            aria-pressed={!!c.d._fav}
+                            className={s.starBtn}
+                            style={{ color: c.d._fav ? C.gold : C.slate }}
+                          >
+                            {c.d._fav ? "★" : "☆"}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
