@@ -140,6 +140,11 @@ repairs, partnership, comparables[]`.
   `useWorkspaceEffects` (a `store.subscribe` on `state`): switch/open actions set the
   non-reactive `touched` flag false **before** changing `state`, so the subscriber writes
   the deal back without bumping `_ts`. (An e2e test pins this.)
+- **Cross-tab safety**: the autosave re-reads the current on-disk store (`readPersistedStore`)
+  and replaces only the **active** deal before writing, so a second tab editing a _different_
+  deal isn't clobbered. A `storage`-event listener refreshes the in-memory list when another
+  tab writes, keeping this tab's active deal (its unsaved edits) intact. Paired with the
+  `?deal=<id>` per-tab URL above.
 - `EGI = GPI − vacancy + otherIncome`. Closing "transfer/deed tax" is an editable % of price
   (state-neutral — no Georgia assumptions baked in).
 

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { Deal } from "../domain/types";
-import { persistDeals, mergeDealStores, getTomb, setTomb, type DealStore } from "../infrastructure/storage/dealRepository";
+import { persistDeals, readPersistedStore, mergeDealStores, getTomb, setTomb, DEALS_KEY, type DealStore } from "../infrastructure/storage/dealRepository";
 import { createSupabase, fetchUserData, pushUserData, type User } from "../infrastructure/sync/supabase";
 import { writeDealIdToUrl } from "../infrastructure/dealUrl";
 import { useWorkspace, cloudCfg, setSupa, getSupa, wasTouched, setTouched } from "./workspaceStore";
@@ -9,19 +9,46 @@ import { useWorkspace, cloudCfg, setSupa, getSupa, wasTouched, setTouched } from
 // Kept out of the store so the store stays a pure-ish state container.
 export function useWorkspaceEffects(): void {
   // ── Autosave: fold the working `state` back into its deal, persist, bump _ts if edited.
+  //    Merge into the CURRENT on-disk store (re-read each save) so we only ever touch our
+  //    own active deal — another tab editing a different deal isn't clobbered.
   useEffect(() => {
     const unsub = useWorkspace.subscribe((s, prev) => {
       if (s.state === prev.state) return; // only on working-deal edits, never on `deals` writes
       const touched = wasTouched();
       const { deals, activeId } = useWorkspace.getState();
-      const n = deals.map((d) =>
-        d._id !== activeId ? d : { ...d, ...s.state, _id: d._id, _label: d._label, _created: d._created, _fav: d._fav, _ts: touched ? Date.now() : d._ts },
-      );
-      persistDeals(n, activeId);
-      useWorkspace.setState({ deals: n });
+      const base = readPersistedStore()?.deals ?? deals; // latest from disk (may include other tabs' edits)
+      let found = false;
+      const n = base.map((d) => {
+        if (d._id !== activeId) return d;
+        found = true;
+        // keep the deal's own metadata (a rename/favorite from another tab wins), apply our edit
+        return { ...d, ...s.state, _id: d._id, _label: d._label, _created: d._created, _fav: d._fav, _ts: touched ? Date.now() : d._ts };
+      });
+      // Active deal missing on disk (e.g. removed elsewhere) → keep it so the open screen isn't lost.
+      const merged = found ? n : [...n, { ...s.state, _ts: touched ? Date.now() : s.state._ts || Date.now() }];
+      persistDeals(merged, activeId);
+      useWorkspace.setState({ deals: merged });
       setTouched(true);
     });
     return unsub;
+  }, []);
+
+  // ── Cross-tab sync: when another tab writes the deal store, refresh our in-memory list —
+  //    but keep OUR active deal's in-memory version so in-flight edits aren't overwritten.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== DEALS_KEY || e.newValue == null) return;
+      const disk = readPersistedStore();
+      if (!disk) return;
+      const { activeId, deals: mem } = useWorkspace.getState();
+      const mine = mem.find((d) => d._id === activeId);
+      const deals = disk.deals.map((d) => (d._id === activeId && mine ? mine : d));
+      if (mine && !deals.some((d) => d._id === activeId)) deals.push(mine); // ours was deleted elsewhere — keep it visible
+      setTomb(disk.deleted || getTomb());
+      useWorkspace.setState({ deals });
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   // ── Open a shared #deal= link once on load.

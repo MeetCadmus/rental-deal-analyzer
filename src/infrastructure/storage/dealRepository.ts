@@ -18,6 +18,19 @@ export const setTomb = (t: Record<string, number>): void => {
   TOMB = t || {};
 };
 
+// Read the current persisted store as-is (no legacy migration / default seeding). Used to
+// merge cross-tab writes: each tab re-reads this before saving so it only touches its own
+// deal, and refreshes its in-memory list when another tab writes (`storage` event).
+export function readPersistedStore(): DealStore | null {
+  try {
+    const r = JSON.parse(localStorage.getItem(DEALS_KEY) || "null");
+    if (r && Array.isArray(r.deals)) return { deals: r.deals, activeId: r.activeId ?? null, deleted: r.deleted || {} };
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export function persistDeals(deals: Deal[], activeId: string | null): void {
   try {
     localStorage.setItem(DEALS_KEY, JSON.stringify({ deals, activeId, deleted: TOMB }));
