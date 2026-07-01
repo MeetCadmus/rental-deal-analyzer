@@ -84,23 +84,27 @@ function AreaInsights({ data, onChange }: { data: any; onChange: (v: any) => voi
   };
   const focusRef = (el: HTMLElement | null) => el?.focus();
 
-  // Keep the collapsed summary short & fixed — a few compact tokens (grade, schools, flood
-  // risk, pros/risks counts), capped so it never overruns the header. For flood, show the
-  // plain-English risk word ("Flood: minimal") rather than the cryptic FEMA code ("Zone X").
-  const floodSummary = () => {
-    const t = String(c.floodZone || "").trim();
-    if (!t) return "";
-    const risk = /(minimal|low|moderate|high|severe|extreme|none)/i.exec(t);
-    return "Flood: " + (risk ? risk[1].toLowerCase() : t.split(/[—([]/)[0].trim()).slice(0, 16);
+  // Collapsed summary: grade, schools, and ONE overall risk level that rolls up all the
+  // hazards + red flags (rather than cherry-picking flood). Rough heuristic — the real
+  // detail lives in the expanded view. Only shown when there's something to base it on.
+  const overallRisk = (): string => {
+    const g = String(d.neighborhoodGrade || "")
+      .charAt(0)
+      .toUpperCase();
+    const risksN = (d.risks || []).length;
+    const hazVals = [c.floodZone, c.elevation, c.storms, c.wildfire, c.heat, d.safety].map((x: any) => String(x || "").toLowerCase());
+    const hasBasis = g === "C" || g === "D" || risksN > 0 || hazVals.some((v) => v);
+    if (!hasBasis) return "";
+    let score = g === "D" ? 3 : g === "C" ? 1 : 0;
+    if (hazVals.some((v) => /(sever|extreme|\bhigh|higher crime|zone ae|zone ve|zone a\b|100-?yr|floodplain)/.test(v))) score += 2;
+    else if (hazVals.some((v) => /moderate/.test(v))) score += 1;
+    score += risksN >= 3 ? 2 : risksN >= 1 ? 1 : 0;
+    return (score >= 4 ? "High" : score >= 2 ? "Moderate" : "Low") + " risk";
   };
-  const summaryParts = [
-    d.neighborhoodGrade || "",
-    d.schools > 0 ? d.schools + "/10" : "",
-    floodSummary(),
-    (d.pros || []).length ? (d.pros || []).length + "✓" : "",
-    (d.risks || []).length ? (d.risks || []).length + "⚠" : "",
-  ].filter(Boolean);
-  const summary = summaryParts.length ? summaryParts.slice(0, 4).join(" · ") : "Not filled";
+  const summaryParts = [d.neighborhoodGrade ? "Grade " + d.neighborhoodGrade : "", d.schools > 0 ? d.schools + "/10 schools" : "", overallRisk()].filter(
+    Boolean,
+  );
+  const summary = summaryParts.length ? summaryParts.join(" · ") : "Not filled";
   const gCol = ({ A: C.teal, B: C.blueS, C: C.amber, D: C.red } as Record<string, string>)[String(d.neighborhoodGrade || "").charAt(0)] || C.slate;
 
   // Wrap a read-only view node so clicking (or Enter/Space) opens its inline editor.
