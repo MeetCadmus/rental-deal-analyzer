@@ -2,6 +2,8 @@ import { useWorkspace } from "../../application/workspaceStore";
 import { fmtD, fmtP } from "../../domain/money";
 import type { computeBase } from "../../domain/finance/computeBase";
 import type { computeYearly } from "../../domain/finance/computeYearly";
+import { marketRentFor, vaMonthlyTotal } from "../../domain/finance/valueadd";
+import { C } from "../theme/tokens";
 import { Card } from "../ui/Card";
 import { Field } from "../ui/inputs";
 import { Tog, SecLabel } from "../ui/primitives";
@@ -16,6 +18,14 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
   const setProj = useWorkspace((s) => s.setProj);
   const totalRent = S.units.reduce((a, u) => a + u.rent, 0);
   const numU = S.units.length;
+  // Set one unit's stabilized market rent — seed the whole array from resolved values first
+  // (keeps other units / a legacy single target), then override index i.
+  const setVaRent = (i: number, x: number) => {
+    const arr = S.units.map((u, idx) => marketRentFor(S.projection, u, idx));
+    arr[i] = x;
+    setProj("vaMarketRents", arr);
+  };
+  const vaTotal = vaMonthlyTotal(S.projection, S.units);
   return (
     <Card
       title="Projection & Growth"
@@ -108,17 +118,29 @@ export function Projection({ R, Y }: { R: Base; Y: Yearly }) {
           />
         </div>
         {S.projection.vaEnabled && (
-          <div className={s.grid2}>
-            <Field
-              label="Market rent / unit"
-              prefix="$"
-              value={S.projection.vaMarketRentPerUnit || 1700}
-              onChange={(x) => setProj("vaMarketRentPerUnit", x)}
-              min={0}
-              step={25}
-              sub={"current: " + fmtD(totalRent / numU) + "/unit"}
-            />
-            <Field label="Stabilized by year" value={S.projection.vaYear || 2} onChange={(x) => setProj("vaYear", x)} min={1} max={10} />
+          <div>
+            <div className={s.fieldGrid}>
+              {S.units.map((u, i) => (
+                <Field
+                  key={u.id}
+                  label={u.label || "Unit " + (i + 1)}
+                  prefix="$"
+                  value={marketRentFor(S.projection, u, i)}
+                  onChange={(x) => setVaRent(i, x)}
+                  min={0}
+                  step={25}
+                  sub={"now " + fmtD(u.rent) + "/mo"}
+                  xs
+                />
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: C.slate, marginBottom: 10 }}>
+              Stabilized total: <strong style={{ color: C.heading }}>{fmtD(vaTotal)}/mo</strong>{" "}
+              <span style={{ color: C.muted }}>· now {fmtD(totalRent)}/mo</span>
+            </div>
+            <div className={s.grid2}>
+              <Field label="Stabilized by year" value={S.projection.vaYear || 2} onChange={(x) => setProj("vaYear", x)} min={1} max={10} />
+            </div>
           </div>
         )}
       </div>

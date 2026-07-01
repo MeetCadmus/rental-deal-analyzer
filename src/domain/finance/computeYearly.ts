@@ -8,7 +8,6 @@ export function computeYearly(state: Deal, R: BaseMetrics): YearlyResult {
   const vacPct = (expenses.vacancyPct || 0) / 100;
   const vaEnabled = projection.vaEnabled,
     vaYear = projection.vaYear || 2;
-  const vaMonthlyRent = projection.vaMarketRentPerUnit || R.monRent / R.numU;
   const refiEnabled = projection.refiEnabled,
     refiYear = projection.refiYear || 3;
   const appPct = (projection.appreciationPct || 0) / 100,
@@ -24,7 +23,7 @@ export function computeYearly(state: Deal, R: BaseMetrics): YearlyResult {
   const yearly: YearRow[] = [];
   for (let y = 1; y <= years; y++) {
     let mRent = R.monRent * Math.pow(1 + rentGrowth, y - 1);
-    if (vaEnabled && y >= vaYear) mRent = Math.max(mRent, vaMonthlyRent * R.numU);
+    if (vaEnabled && y >= vaYear) mRent = Math.max(mRent, R.vaMonthly);
     const gpiY = mRent * 12,
       egiY = gpiY * (1 - vacPct) + (R.otherInc || 0) * Math.pow(1 + rentGrowth, y - 1);
     const expY = expenses.mode === "quick" ? egiY * ((expenses.ratio || 45) / 100) : R.totExp * Math.pow(1.02, y - 1);

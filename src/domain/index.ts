@@ -7,6 +7,7 @@ export * from "./examples";
 export * from "./deal";
 export * from "./finance/closing";
 export * from "./finance/expenses";
+export * from "./finance/valueadd";
 export * from "./finance/computeBase";
 export * from "./finance/computeYearly";
 export * from "./finance/computeSensitivity";

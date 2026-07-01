@@ -1,5 +1,6 @@
 import { calcExp } from "./expenses";
 import { calcCC } from "./closing";
+import { vaMonthlyTotal } from "./valueadd";
 import type { Deal, BaseMetrics } from "../types";
 
 // Year-1 underwriting metrics for a deal. Pure.
@@ -37,10 +38,10 @@ export function computeBase(state: Deal): BaseMetrics {
   const expRatio = egi > 0 ? (totExp / egi) * 100 : 0;
   const numU = Math.max(units.length, 1);
   const beRent = numU > 0 && 1 - (expenses.vacancyPct || 0) / 100 > 0 ? (totExp + annPmt) / (numU * 12 * (1 - (expenses.vacancyPct || 0) / 100)) : 0;
-  // Value-add
+  // Value-add — per-unit stabilized market rents (see valueadd.ts)
   const vaEnabled = projection.vaEnabled;
-  const vaMonthlyRent = projection.vaMarketRentPerUnit || monRent / numU;
-  const vaGPI = vaMonthlyRent * numU * 12,
+  const vaMonthly = vaMonthlyTotal(projection, units);
+  const vaGPI = vaMonthly * 12,
     vaEGI = vaGPI * (1 - (expenses.vacancyPct || 0) / 100);
   const { totExp: vaExp } = calcExp(expenses, numU, vaEGI, price);
   const vaNOI = vaEGI - vaExp,
@@ -83,6 +84,7 @@ export function computeBase(state: Deal): BaseMetrics {
     monRent,
     numU,
     vaEnabled,
+    vaMonthly,
     vaCF,
     vaCapRate,
     vaCoc,
