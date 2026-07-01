@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { C } from "../theme/tokens";
 import { Info } from "../ui/primitives";
 import { CashflowChart, EquityChart, ReturnDonut } from "../charts/charts";
@@ -8,6 +9,10 @@ import s from "./results.module.css";
 
 export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S: Deal }) {
   const hold = S.projection.holdYears || 5;
+  // Year table numbers: compact ($1.2k) by default so all columns fit on a phone; toggle
+  // to exact ($1,234) on demand (that view may scroll sideways — an explicit choice).
+  const [compact, setCompact] = useState(true);
+  const money = compact ? fmtK : fmtD;
   const last = Y.yearly[Y.yearly.length - 1] || ({} as Partial<YearlyResult["yearly"][number]>);
   const sc = S.projection.sellingCostPct ?? 6;
   const netSale = Math.round((Y.exitVal || 0) * (1 - sc / 100) - (last.balance || 0));
@@ -57,7 +62,26 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
       <div className={s.panel} style={{ marginBottom: 11 }}>
         <div className={`${s.panelHead} ${s.panelHeadRow}`} style={{ padding: "7px 12px" }}>
           <span>Year-by-year</span>
-          {hold > 12 && <span style={{ fontWeight: 400, color: C.muted }}>scroll ↓ · {hold} yrs</span>}
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+            {hold > 12 && <span style={{ fontWeight: 400, color: C.muted }}>{hold} yrs</span>}
+            <button
+              onClick={() => setCompact((c) => !c)}
+              title={compact ? "Show exact figures (may scroll sideways)" : "Show compact figures"}
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid " + C.border,
+                background: C.bg,
+                color: C.slate,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {compact ? "Show exact" : "Compact"}
+            </button>
+          </span>
         </div>
         <div className={"ytable-scroll" + (hold > 12 ? " cap" : "") + " " + s.scrollX}>
           <table className={s.table} style={{ fontSize: 11, width: "100%" }}>
@@ -88,12 +112,12 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
               {Y.yearly.map((row, i) => (
                 <tr key={row.year} style={{ background: i % 2 === 0 ? C.white : C.bg }}>
                   <td style={{ padding: "5px 6px", fontWeight: 600, color: C.heading, textAlign: "right" }}>{row.year}</td>
-                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmtK(row.monthlyRent)}</td>
-                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmtK(row.noi)}</td>
-                  <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{fmtK(row.cf)}</td>
-                  <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{fmtK(row.cf / 12)}</td>
-                  <td style={{ padding: "5px 6px", textAlign: "right", color: C.teal }}>{fmtK(row.equity)}</td>
-                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmtK(row.propVal)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{money(row.monthlyRent)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{money(row.noi)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{money(row.cf)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600, color: row.cf >= 0 ? C.teal : C.red }}>{money(row.cf / 12)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", color: C.teal }}>{money(row.equity)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right" }}>{money(row.propVal)}</td>
                 </tr>
               ))}
             </tbody>

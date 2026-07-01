@@ -19,8 +19,9 @@ test("fmtD: signed currency with a true minus sign", () => {
 test("fmtK: compact currency for dense tables", () => {
   assert.strictEqual(M.fmtK(850), "$850");
   assert.strictEqual(M.fmtK(1250), "$1.3k");
-  assert.strictEqual(M.fmtK(12340), "$12k");
+  assert.strictEqual(M.fmtK(12340), "$12.3k");
   assert.strictEqual(M.fmtK(145000), "$145k");
+  assert.strictEqual(M.fmtK(2220000), "$2.22M");
   assert.strictEqual(M.fmtK(1500000), "$1.5M");
   assert.strictEqual(M.fmtK(12000000), "$12M");
   assert.strictEqual(M.fmtK(-1250), "−$1.3k");
