@@ -41,6 +41,22 @@ export const tabPref = {
   },
 };
 
+// Generic persisted boolean flag (remembers a UI toggle across reloads).
+export function boolPref(key: string, dflt: boolean) {
+  return {
+    get(): boolean {
+      const v = safeGet(key);
+      return v === null ? dflt : v === "1";
+    },
+    set(on: boolean): void {
+      safeSet(key, on ? "1" : "0");
+    },
+  };
+}
+
+// Year-by-year table: compact ($1.2k) vs exact ($1,234) numbers. Defaults to compact.
+export const yearTableCompactPref = boolPref("re_yeartable_compact", true);
+
 const CARDS_KEY = "re_cards_v1";
 export function loadCardState(): Record<string, boolean> {
   try {

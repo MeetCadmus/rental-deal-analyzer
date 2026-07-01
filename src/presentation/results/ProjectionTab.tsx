@@ -3,6 +3,7 @@ import { C } from "../theme/tokens";
 import { Info } from "../ui/primitives";
 import { CashflowChart, EquityChart, ReturnDonut } from "../charts/charts";
 import { fmtD, fmtP, fmtK } from "../../domain/money";
+import { yearTableCompactPref } from "../../infrastructure/storage/preferences";
 import type { BaseMetrics, YearlyResult, Deal } from "../../domain/types";
 import { ProjTrace } from "./ProjTrace";
 import s from "./results.module.css";
@@ -10,8 +11,13 @@ import s from "./results.module.css";
 export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S: Deal }) {
   const hold = S.projection.holdYears || 5;
   // Year table numbers: compact ($1.2k) by default so all columns fit on a phone; toggle
-  // to exact ($1,234) on demand (that view may scroll sideways — an explicit choice).
-  const [compact, setCompact] = useState(true);
+  // to exact ($1,234) on demand (that view may scroll sideways). Choice persists across reloads.
+  const [compact, setCompact] = useState(() => yearTableCompactPref.get());
+  const toggleCompact = () =>
+    setCompact((c) => {
+      yearTableCompactPref.set(!c);
+      return !c;
+    });
   const money = compact ? fmtK : fmtD;
   const last = Y.yearly[Y.yearly.length - 1] || ({} as Partial<YearlyResult["yearly"][number]>);
   const sc = S.projection.sellingCostPct ?? 6;
@@ -65,7 +71,7 @@ export function ProjectionTab({ R, Y, S }: { R: BaseMetrics; Y: YearlyResult; S:
           <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
             {hold > 12 && <span style={{ fontWeight: 400, color: C.muted }}>{hold} yrs</span>}
             <button
-              onClick={() => setCompact((c) => !c)}
+              onClick={toggleCompact}
               title={compact ? "Show exact figures (may scroll sideways)" : "Show compact figures"}
               style={{
                 fontSize: 10,
