@@ -5,6 +5,18 @@ export const fmt = (n: number): string => new Intl.NumberFormat("en-US", { maxim
 export const fmtD = (n: number): string => (n < 0 ? "−$" : "$") + fmt(Math.abs(Math.round(n || 0)));
 export const fmtP = (n: number, d = 1): string => (isFinite(n) ? n.toFixed(d) + "%" : "—");
 export const fmtX = (n: number): string => (isFinite(n) ? n.toFixed(1) + "×" : "—");
+// Compact currency for dense tables ($850, $1.2k, $145k, $1.4M) so many columns fit on
+// narrow screens. Loses precision by design; exact values live in the detailed trace.
+export const fmtK = (n: number): string => {
+  const v = Math.round(n || 0);
+  const a = Math.abs(v);
+  const sign = v < 0 ? "−" : "";
+  const trim = (x: string) => x.replace(/\.0$/, "");
+  if (a >= 1_000_000) return sign + "$" + trim((a / 1_000_000).toFixed(a >= 10_000_000 ? 0 : 1)) + "M";
+  if (a >= 10_000) return sign + "$" + Math.round(a / 1000) + "k";
+  if (a >= 1000) return sign + "$" + trim((a / 1000).toFixed(1)) + "k";
+  return sign + "$" + a;
+};
 export const clamp = (n: number, a: number, b: number): number => Math.max(a, Math.min(b, n));
 export const num = (v: unknown): number => parseFloat(String(v).replace(/,/g, "")) || 0;
 
