@@ -16,6 +16,7 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
   const [q, setQ] = useState("");
   const [gradeF, setGradeF] = useState("all");
   const [pickSort, setPickSort] = useState("grade");
+  const [diffOnly, setDiffOnly] = useState(false);
   const pool = (deals || []).filter((d) => d._id !== activeId);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   // Compute metrics for each selectable deal (only while the modal is open) so we can
@@ -54,7 +55,7 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
     const Y = computeYearly(c.st, R);
     return { ...c, R, Y, score: calcDealScore(R, Y, c.st.price) };
   });
-  const rows: any[] = [
+  const metricRows: any[] = [
     { l: "Purchase price", f: (c: any) => fmtD(c.st.price), v: (c: any) => c.st.price },
     { l: "Monthly CF", f: (c: any) => fmtD(c.R.cf / 12) + "/mo", col: (c: any) => (c.R.cf >= 0 ? C.teal : C.red), v: (c: any) => c.R.cf, best: "max" },
     {
@@ -72,6 +73,29 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
     { l: "Cash needed", f: (c: any) => fmtD(c.R.cashIn), v: (c: any) => c.R.cashIn, best: "min" },
     { l: "Total return", f: (c: any) => fmtD(c.Y.totRet), v: (c: any) => c.Y.totRet, best: "max" },
     { l: "AI source", f: (c: any) => c.st.aiSource || "—" },
+  ];
+  // Input assumptions behind the metrics — this is what differs when the same property
+  // is filled by different AIs. `ei` reads an itemized expense line (null in quick mode).
+  const ei = (c: any, k: string) => (c.R.expItems ? c.R.expItems[k] : null);
+  const inputRows: any[] = [
+    { l: "Gross rent / mo", f: (c: any) => fmtD(c.R.gpi / 12), v: (c: any) => c.R.gpi },
+    { l: "Avg rent / unit / mo", f: (c: any) => fmtD(c.R.gpi / c.R.numU / 12), v: (c: any) => c.R.gpi / c.R.numU },
+    { l: "Other income / yr", f: (c: any) => fmtD(c.R.otherInc || 0), v: (c: any) => c.R.otherInc || 0 },
+    { l: "Vacancy", f: (c: any) => fmtP(c.st.expenses?.vacancyPct || 0), v: (c: any) => c.st.expenses?.vacancyPct || 0 },
+    { l: "Down payment", f: (c: any) => fmtD(c.R.down) + " · " + fmtP(c.st.financing.downPct), v: (c: any) => c.st.financing.downPct },
+    { l: "Interest rate", f: (c: any) => fmtP(c.st.financing.rate), v: (c: any) => c.st.financing.rate },
+    { l: "Loan term", f: (c: any) => (c.st.financing.loanYears || 0) + " yrs", v: (c: any) => c.st.financing.loanYears || 0 },
+    { l: "Loan amount", f: (c: any) => fmtD(c.R.loan), v: (c: any) => c.R.loan },
+    { l: "Property taxes / yr", f: (c: any) => (ei(c, "taxes") == null ? "—" : fmtD(ei(c, "taxes"))), v: (c: any) => ei(c, "taxes") },
+    { l: "Insurance / yr", f: (c: any) => (ei(c, "insurance") == null ? "—" : fmtD(ei(c, "insurance"))), v: (c: any) => ei(c, "insurance") },
+    { l: "Management / yr", f: (c: any) => (ei(c, "mgmt") == null ? "—" : fmtD(ei(c, "mgmt"))), v: (c: any) => ei(c, "mgmt") },
+    { l: "Maintenance / yr", f: (c: any) => (ei(c, "maint") == null ? "—" : fmtD(ei(c, "maint"))), v: (c: any) => ei(c, "maint") },
+    { l: "CapEx / yr", f: (c: any) => (ei(c, "capex") == null ? "—" : fmtD(ei(c, "capex"))), v: (c: any) => ei(c, "capex") },
+    { l: "Utilities / yr", f: (c: any) => (ei(c, "util") == null ? "—" : fmtD(ei(c, "util"))), v: (c: any) => ei(c, "util") },
+    { l: "Total op. expenses / yr", f: (c: any) => fmtD(c.R.totExp), v: (c: any) => c.R.totExp },
+    { l: "Expense ratio", f: (c: any) => fmtP(c.R.expRatio), v: (c: any) => c.R.expRatio },
+    { l: "Closing costs", f: (c: any) => fmtD(c.R.ccTotal), v: (c: any) => c.R.ccTotal },
+    { l: "Repairs / rehab", f: (c: any) => fmtD(c.R.repairCost), v: (c: any) => c.R.repairCost },
   ];
   const lvlCol: Record<string, string> = { good: C.teal, warn: C.amber, bad: C.red };
   const SORTS: Record<string, [string, (c: any) => any]> = {
@@ -95,6 +119,12 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
     }
     return bi;
   };
+  // Do the columns disagree on this row? (used to flag differing inputs). Numbers compare
+  // with a small relative tolerance; nulls/strings compare exactly.
+  const approxEq = (a: any, b: any) =>
+    typeof a === "number" && typeof b === "number" ? Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b), 1) * 0.005 : a === b;
+  const rowDiffers = (row: any) => ordered.length > 1 && ordered.some((c: any) => !approxEq(row.v(c), row.v(ordered[0])));
+  const shownInputs = diffOnly ? inputRows.filter(rowDiffers) : inputRows;
   return (
     <>
       <button onClick={() => setOpen(true)} title="Compare deals side by side" className={s.trigger}>
@@ -205,7 +235,15 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                       </option>
                     ))}
                   </select>
-                  <span className={s.rankNote}>best → worst · ★ = best in row</span>
+                  <span className={s.rankNote}>best → worst · ★ = best · ≠ = input differs</span>
+                  <button
+                    onClick={() => setDiffOnly((v) => !v)}
+                    title="Show only the input rows whose values differ across deals"
+                    className={s.smallBtn}
+                    style={{ marginLeft: "auto", borderColor: diffOnly ? C.navy : C.border, color: diffOnly ? C.navy : C.slate }}
+                  >
+                    {diffOnly ? "✓ " : ""}Only inputs that differ
+                  </button>
                 </div>
               )}
               <div className={s.tableWrap}>
@@ -229,10 +267,15 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row, ri) => {
+                    <tr>
+                      <td colSpan={ordered.length + 1} className={s.groupHead}>
+                        Returns &amp; metrics
+                      </td>
+                    </tr>
+                    {metricRows.map((row, ri) => {
                       const bi = bestIdx(row);
                       return (
-                        <tr key={ri} style={{ background: ri % 2 ? C.bg : C.white }}>
+                        <tr key={"m" + ri} style={{ background: ri % 2 ? C.bg : C.white }}>
                           <td className={s.rowLabel} style={{ background: ri % 2 ? C.bg : C.white }}>
                             {row.l}
                           </td>
@@ -249,6 +292,43 @@ function ScenarioCompare({ deals, activeId, currentState }: { deals: Deal[]; act
                         </tr>
                       );
                     })}
+                    <tr>
+                      <td colSpan={ordered.length + 1} className={s.groupHead}>
+                        Inputs — rent, financing &amp; expenses
+                      </td>
+                    </tr>
+                    {shownInputs.map((row, ri) => {
+                      const differs = rowDiffers(row);
+                      const stripe = ri % 2 ? C.bg : C.white;
+                      const base = row.v(ordered[0]);
+                      return (
+                        <tr key={"i" + ri} style={{ background: stripe }}>
+                          <td className={s.rowLabel} style={{ background: stripe, borderLeft: "3px solid " + (differs ? C.amber : "transparent") }}>
+                            {row.l}
+                            {differs && (
+                              <span title="values differ across these deals" style={{ color: C.amber, fontWeight: 800, marginLeft: 5 }}>
+                                ≠
+                              </span>
+                            )}
+                          </td>
+                          {ordered.map((c: any, i: number) => {
+                            const diffCell = i > 0 && !approxEq(row.v(c), base);
+                            return (
+                              <td key={i} className={s.cell} style={{ fontWeight: 600, color: C.text, background: diffCell ? C.amberL : "transparent" }}>
+                                {row.f(c)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                    {diffOnly && shownInputs.length === 0 && (
+                      <tr>
+                        <td colSpan={ordered.length + 1} style={{ padding: "8px 10px", fontSize: 11, color: C.muted }}>
+                          All inputs match across these deals.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
