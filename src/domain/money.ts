@@ -11,9 +11,9 @@ export const fmtK = (n: number): string => {
   const v = Math.round(n || 0);
   const a = Math.abs(v);
   const sign = v < 0 ? "−" : "";
-  const trim = (x: string) => x.replace(/\.0$/, "");
-  if (a >= 1_000_000) return sign + "$" + trim((a / 1_000_000).toFixed(a >= 10_000_000 ? 0 : 1)) + "M";
-  if (a >= 10_000) return sign + "$" + Math.round(a / 1000) + "k";
+  const trim = (x: string) => x.replace(/\.?0+$/, "");
+  if (a >= 1_000_000) return sign + "$" + trim((a / 1_000_000).toFixed(2)) + "M";
+  if (a >= 100_000) return sign + "$" + Math.round(a / 1000) + "k";
   if (a >= 1000) return sign + "$" + trim((a / 1000).toFixed(1)) + "k";
   return sign + "$" + a;
 };
