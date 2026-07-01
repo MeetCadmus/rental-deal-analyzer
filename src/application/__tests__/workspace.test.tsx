@@ -90,6 +90,31 @@ test("applyAI: itemized closing costs switch closing to detailed mode and fill l
   expect(cc.taxEscrowMonths).toBe(4);
 });
 
+test("applyAI: climate hazards are stored under insights.climate", () => {
+  render(<App />);
+  act(() => {
+    useWorkspace.getState().applyAI({
+      climate: { floodZone: "Zone AE — high", elevation: "~8 ft, coastal", storms: "hurricane-prone", history: "flooded 2017" },
+    });
+  });
+  const ins = useWorkspace.getState().state.insights as any;
+  expect(ins.climate.floodZone).toBe("Zone AE — high");
+  expect(ins.climate.elevation).toBe("~8 ft, coastal");
+  expect(ins.climate.storms).toBe("hurricane-prone");
+  expect(ins.climate.history).toBe("flooded 2017");
+});
+
+test("applyAI: climate merges without clobbering existing insights", () => {
+  render(<App />);
+  act(() => {
+    useWorkspace.getState().applyAI({ insights: { neighborhoodGrade: "B", safety: "low crime" } });
+    useWorkspace.getState().applyAI({ climate: { floodZone: "Zone X" } });
+  });
+  const ins = useWorkspace.getState().state.insights as any;
+  expect(ins.neighborhoodGrade).toBe("B");
+  expect(ins.climate.floodZone).toBe("Zone X");
+});
+
 test("applyAI: a legacy closingPct still maps to quick mode", () => {
   render(<App />);
   act(() => {

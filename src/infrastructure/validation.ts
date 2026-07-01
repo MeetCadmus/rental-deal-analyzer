@@ -23,6 +23,7 @@ export const aiResultSchema = z
     closingPct: numish,
     projection: z.record(z.string(), z.unknown()).optional(),
     insights: z.record(z.string(), z.unknown()).optional(),
+    climate: z.record(z.string(), z.unknown()).optional(),
     opinion: z.string().optional(),
     model: z.string().optional(),
   })
@@ -33,7 +34,16 @@ export type AIResult = z.infer<typeof aiResultSchema>;
 // True if the validated AI object carries at least one field we can actually apply.
 function aiHasUsableFields(d: AIResult): boolean {
   return Boolean(
-    d.address || d.price != null || (d.units && d.units.length) || d.expenses || d.financing || d.closing || d.projection || d.insights || d.opinion,
+    d.address ||
+    d.price != null ||
+    (d.units && d.units.length) ||
+    d.expenses ||
+    d.financing ||
+    d.closing ||
+    d.projection ||
+    d.insights ||
+    d.climate ||
+    d.opinion,
   );
 }
 

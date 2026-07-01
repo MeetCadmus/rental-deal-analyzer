@@ -61,6 +61,15 @@ test("buildAIPrompt: asks for ITEMIZED closing costs, not a single lump %", () =
   assert.doesNotMatch(prompt, /"closingPct"/);
 });
 
+test("buildAIPrompt: asks for natural-hazard / climate risk about the specific address", () => {
+  const prompt = M.buildAIPrompt({ address: "9 River Rd", units: [] });
+  assert.match(prompt, /"climate"/);
+  assert.match(prompt, /floodZone/);
+  assert.match(prompt, /elevation/);
+  assert.match(prompt, /wildfire/);
+  assert.match(prompt, /KNOWN incident history/i);
+});
+
 test("buildAIPrompt: asks the model to self-report its active name + tier", () => {
   const prompt = M.buildAIPrompt({ units: [] });
   assert.match(prompt, /current active model name and tier/i);
