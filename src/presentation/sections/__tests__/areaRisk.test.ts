@@ -9,34 +9,38 @@ test("hazLevel reads the leading rating word", () => {
   expect(hazLevel("~950 ft, inland")).toBe(-1); // no rating word
 });
 
-test("overallRiskLabel does NOT count positives in free-text safety ('high walkability')", () => {
+test("overallRiskLabel: an A deal with minor hazards is not High (heat-island & red flags don't inflate)", () => {
+  // The real-world case: A grade, minimal flood, low wildfire, moderate storms, HIGH heat,
+  // and several routine DD red flags → driven by storms (moderate) → Moderate, never High.
   const label = overallRiskLabel({
-    neighborhoodGrade: "B",
+    neighborhoodGrade: "A",
     safety: "Low crime; high walkability and strong community presence",
-    climate: { floodZone: "Minimal — Zone X", storms: "Moderate — severe wind", wildfire: "Low — urban", heat: "High — urban heat island" },
+    climate: { floodZone: "Zone X — minimal", storms: "Moderate severe-wind exposure", wildfire: "Low — urban", heat: "High urban heat island" },
+    risks: ["deferred maintenance", "historic restrictions", "system age unknown"],
   });
-  // only heat is high + storms moderate → Moderate, not High
   expect(label).toBe("Moderate risk");
 });
 
-test("overallRiskLabel: multiple high hazards → High", () => {
-  const label = overallRiskLabel({
-    climate: { floodZone: "High — Zone AE, 100-yr floodplain", storms: "High — hurricane exposure", wildfire: "Low", heat: "Moderate" },
-  });
-  expect(label).toBe("High risk");
+test("overallRiskLabel: heat-island alone never drives the level (informational)", () => {
+  expect(overallRiskLabel({ climate: { heat: "High — urban heat island" } })).toBe("");
 });
 
-test("overallRiskLabel: benign inputs → Low", () => {
-  const label = overallRiskLabel({ climate: { floodZone: "Minimal — Zone X", storms: "Low", wildfire: "Low", heat: "Low" } });
-  expect(label).toBe("Low risk");
+test("overallRiskLabel: a serious hazard drives it High", () => {
+  expect(overallRiskLabel({ climate: { floodZone: "High — Zone AE, 100-yr floodplain", storms: "Low", wildfire: "Low" } })).toBe("High risk");
 });
 
-test("overallRiskLabel: no basis → empty string", () => {
+test("overallRiskLabel: benign serious hazards → Low", () => {
+  expect(overallRiskLabel({ climate: { floodZone: "Minimal — Zone X", storms: "Low", wildfire: "Low" } })).toBe("Low risk");
+});
+
+test("overallRiskLabel: weak neighborhood bumps the level", () => {
+  expect(overallRiskLabel({ neighborhoodGrade: "D", climate: { floodZone: "Low", storms: "Low", wildfire: "Low" } })).toBe("Moderate risk");
+  expect(overallRiskLabel({ neighborhoodGrade: "D", climate: { storms: "High" } })).toBe("High risk");
+});
+
+test("overallRiskLabel: no basis (no hazards, strong grade) → empty string", () => {
   expect(overallRiskLabel({ neighborhoodGrade: "A" })).toBe("");
+  expect(overallRiskLabel({ risks: ["a", "b", "c"] })).toBe(""); // red flags alone don't set a level
   expect(overallRiskLabel({})).toBe("");
   expect(overallRiskLabel(null)).toBe("");
-});
-
-test("overallRiskLabel: many red flags raise the level even without hazards", () => {
-  expect(overallRiskLabel({ risks: ["a", "b", "c"] })).toBe("Moderate risk");
 });

@@ -13,17 +13,21 @@ export function hazLevel(t: unknown): number {
 }
 
 // "" when there's no basis to judge; otherwise "Low risk" | "Moderate risk" | "High risk".
+// Driven by the SERIOUS physical hazards only — flood / wildfire / storms — plus a bump for
+// a weak neighborhood (grade C/D). Deliberately ignores heat-island and the qualitative
+// red-flag/cons lists: those are near-constant for typical deals (almost every urban
+// property is "high heat", every deal lists a few DD caveats) so scoring them just inflates
+// everything. They remain visible in the expanded detail.
 export function overallRiskLabel(insights: unknown): string {
   const d = (insights && typeof insights === "object" ? insights : {}) as Record<string, any>;
   const c = (d.climate && typeof d.climate === "object" ? d.climate : {}) as Record<string, any>;
   const g = String(d.neighborhoodGrade || "")
     .charAt(0)
     .toUpperCase();
-  const risksN = Array.isArray(d.risks) ? d.risks.length : 0;
-  const levels = [c.floodZone, c.storms, c.wildfire, c.heat].map(hazLevel).filter((l) => l >= 0);
-  if (!(g === "C" || g === "D" || risksN > 0 || levels.length)) return "";
-  const highs = levels.filter((l) => l === 2).length;
-  const mods = levels.filter((l) => l === 1).length;
-  const score = (g === "D" ? 3 : g === "C" ? 1 : 0) + highs * 2 + mods + (risksN >= 3 ? 2 : risksN >= 1 ? 1 : 0);
-  return (score >= 4 ? "High" : score >= 2 ? "Moderate" : "Low") + " risk";
+  const serious = [c.floodZone, c.wildfire, c.storms].map(hazLevel).filter((l) => l >= 0);
+  if (!(serious.length || g === "C" || g === "D")) return "";
+  let lvl = serious.length ? Math.max(...serious) : 0; // 0 low · 1 moderate · 2 high
+  if (g === "D") lvl = Math.min(2, lvl + 1);
+  else if (g === "C") lvl = Math.max(lvl, 1);
+  return ["Low", "Moderate", "High"][lvl] + " risk";
 }
