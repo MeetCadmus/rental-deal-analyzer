@@ -84,12 +84,19 @@ function AreaInsights({ data, onChange }: { data: any; onChange: (v: any) => voi
   };
   const focusRef = (el: HTMLElement | null) => el?.focus();
 
-  // Keep the collapsed summary short & fixed — a few compact tokens (grade, schools, the
-  // flood-zone code only, pros/risks counts), capped so it never overruns the header.
+  // Keep the collapsed summary short & fixed — a few compact tokens (grade, schools, flood
+  // risk, pros/risks counts), capped so it never overruns the header. For flood, show the
+  // plain-English risk word ("Flood: minimal") rather than the cryptic FEMA code ("Zone X").
+  const floodSummary = () => {
+    const t = String(c.floodZone || "").trim();
+    if (!t) return "";
+    const risk = /(minimal|low|moderate|high|severe|extreme|none)/i.exec(t);
+    return "Flood: " + (risk ? risk[1].toLowerCase() : t.split(/[—([]/)[0].trim()).slice(0, 16);
+  };
   const summaryParts = [
     d.neighborhoodGrade || "",
     d.schools > 0 ? d.schools + "/10" : "",
-    c.floodZone ? String(c.floodZone).split(/[—([]/)[0].trim().slice(0, 10) : "",
+    floodSummary(),
     (d.pros || []).length ? (d.pros || []).length + "✓" : "",
     (d.risks || []).length ? (d.risks || []).length + "⚠" : "",
   ].filter(Boolean);
